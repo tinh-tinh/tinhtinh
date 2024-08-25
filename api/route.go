@@ -1,4 +1,4 @@
-package tinhtinh
+package api
 
 import "strings"
 
