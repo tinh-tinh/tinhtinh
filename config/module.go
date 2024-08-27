@@ -10,7 +10,10 @@ func New[E any](path string) *Module {
 	if path == "" {
 		path = ".emv"
 	}
-	godotenv.Load(path)
+	err := godotenv.Load(path)
+	if err != nil {
+		panic(err)
+	}
 
 	var env E
 	return &Module{
