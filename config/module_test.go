@@ -3,15 +3,15 @@ package config
 import "testing"
 
 type TestEnv struct {
-	Port string `mapstructure:"PORT"`
+	Port int `mapstructure:"PORT"`
 }
 
 func Test_Module(t *testing.T) {
-	configModule := New[TestEnv]("")
+	Register[TestEnv]("")
 
 	t.Run("Test Env", func(t *testing.T) {
-		if configModule.Get("Port") == 5000 {
-			t.Error("error")
+		if Get[TestEnv]().Port != 5000 {
+			t.Error("expect 5000, but got", Get[TestEnv]().Port)
 		}
 	})
 }

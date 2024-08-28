@@ -1,31 +1,35 @@
 package config
 
 import (
-	"fmt"
+	"sync"
 
 	"github.com/joho/godotenv"
 )
 
-func New[E any](path string) *Module {
+type Module struct {
+	sync.Pool
+}
+
+var pool sync.Pool
+
+func Register[E any](path string) {
 	if path == "" {
-		path = ".emv"
+		path = ".env"
 	}
 	err := godotenv.Load(path)
 	if err != nil {
 		panic(err)
 	}
 
-	var env E
-	return &Module{
-		mapper: Scan(&env),
+	pool = sync.Pool{
+		New: func() any {
+			var env E
+			Scan(&env)
+			return env
+		},
 	}
 }
 
-type Module struct {
-	mapper map[string]interface{}
-}
-
-func (m *Module) Get(key string) interface{} {
-	fmt.Print(m.mapper)
-	return m.mapper[key]
+func Get[E any]() E {
+	return pool.Get().(E)
 }

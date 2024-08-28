@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 )
 
 type App struct {
+	pool   sync.Pool
 	prefix string
 	routes map[string]http.Handler
 }
@@ -20,6 +22,7 @@ func New(module *Module) *App {
 	}
 	module = nil
 	return &App{
+		pool:   sync.Pool{},
 		routes: routes,
 	}
 }
