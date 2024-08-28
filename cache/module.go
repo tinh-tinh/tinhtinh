@@ -1,25 +1,42 @@
 package cache
 
-type CacheType string
-
-const (
-	InMemory CacheType = "memory"
-	Redis    CacheType = "redis"
+import (
+	"sync"
+	"time"
 )
 
-type ModuleOptions struct {
-	Type CacheType
-}
+// type CacheType string
 
-type Module struct {
-	memory *Memory
-}
+// const (
+// 	InMemory CacheType = "memory"
+// 	Redis    CacheType = "redis"
+// )
 
-func Register(opt ModuleOptions) *Module {
-	if opt.Type == InMemory {
-		return &Module{
-			memory: NewInMemory(),
-		}
+// type ModuleOptions struct {
+// 	Type CacheType
+// }
+
+// type Module struct {
+// 	memory *Memory
+// }
+
+var pool sync.Pool
+
+func Register() {
+	pool = sync.Pool{
+		New: func() any {
+			return NewInMemory()
+		},
 	}
-	return nil
+}
+
+func Get(key string) interface{} {
+	m := pool.Get().(*Memory)
+	return m.Get(key)
+}
+
+func Set(key string, val interface{}, ttl time.Duration) {
+	m := pool.Get().(*Memory)
+	m.Set(key, val, ttl)
+	pool.Put(m)
 }
