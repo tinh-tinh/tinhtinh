@@ -8,16 +8,24 @@ import (
 )
 
 type DB struct {
+	Name string
 	ctx  context.Context
 	conn *mongo.Client
 }
 
 var db DB
 
-func Connect(ctx context.Context, uri string) {
+type ConnectionOptions struct {
+	Name string
+	Uri  string
+	Ctx  context.Context
+}
+
+func Connect(opt ConnectionOptions) {
 	var err error
-	db.ctx = ctx
-	db.conn, err = mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	db.ctx = opt.Ctx
+	db.Name = opt.Name
+	db.conn, err = mongo.Connect(opt.Ctx, options.Client().ApplyURI(opt.Uri))
 	if err != nil {
 		panic(err)
 	}
