@@ -1,4 +1,4 @@
-package app
+package user
 
 import "github.com/tinh-tinh/tinhtinh/api"
 

@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -37,7 +36,7 @@ func (app *App) Listen(port int) {
 		route := ParseRoute(k)
 		route.SetPrefix(app.prefix)
 
-		fmt.Printf("[RoutesResolvers] %s\n", route.GetPath())
+		log.Printf("[RoutesResolvers] %s\n", route.GetPath())
 		mux.Handle(route.GetPath(), v)
 	}
 

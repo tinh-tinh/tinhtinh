@@ -2,14 +2,12 @@ package app
 
 import (
 	"github.com/tinh-tinh/tinhtinh/api"
-	"github.com/tinh-tinh/tinhtinh/database/sql"
+	"github.com/tinh-tinh/tinhtinh/example/app/user"
 )
 
 func NewModule() *api.Module {
-	sql.ForFeature(&User{})
-
 	appModule := api.NewModule()
-	appModule.Controllers(NewController())
+	appModule.Import(user.NewModule())
 
 	return appModule
 }
