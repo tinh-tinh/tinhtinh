@@ -23,6 +23,7 @@ func ForRoot(dialect gorm.Dialector) {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("Migrated successful")
 	db.conn = conn
 }
 

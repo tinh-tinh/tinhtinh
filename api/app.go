@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"time"
 )
 
 type App struct {
@@ -38,7 +37,7 @@ func (app *App) Listen(port int) {
 		route := ParseRoute(k)
 		route.SetPrefix(app.prefix)
 
-		fmt.Printf("[GAPI] - %s 0 [RoutesResolvers] %s\n", time.Now().String(), route.GetPath())
+		fmt.Printf("[RoutesResolvers] %s\n", route.GetPath())
 		mux.Handle(route.GetPath(), v)
 	}
 
