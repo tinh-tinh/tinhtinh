@@ -7,6 +7,8 @@ type Module struct {
 	mux         map[string]http.Handler
 }
 
+type Factory func(params ...interface{})
+
 func NewModule() *Module {
 	return &Module{
 		middlewares: []Middleware{},
