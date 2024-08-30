@@ -3,6 +3,7 @@ package validator
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -19,6 +20,11 @@ func Scanner(val interface{}) error {
 
 		validators := strings.Split(tagVal, ",")
 		value := ct.Field(i).Interface()
+
+		required := slices.IndexFunc(validators, func(v string) bool { return v == "required" })
+		if required == -1 && value == "" {
+			continue
+		}
 		for _, validate := range validators {
 			switch validate {
 			case "required":
@@ -71,6 +77,10 @@ func Scanner(val interface{}) error {
 				}
 			}
 		}
+	}
+
+	if len(errMsg) == 0 {
+		return nil
 	}
 
 	return errors.New(strings.Join(errMsg, "\n"))
