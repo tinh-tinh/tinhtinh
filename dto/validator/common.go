@@ -1,15 +1,15 @@
-package validation
+package validator
 
 import (
 	"regexp"
 	"strconv"
 	"time"
+	"unicode"
 
 	uuid "github.com/satori/go.uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// String
 func IsAlpha(str string) bool {
 	return IsRegexMatch(`[a-zA-Z]+`, str)
 }
@@ -23,7 +23,31 @@ func IsEmail(str string) bool {
 }
 
 func IsStrongPassword(str string) bool {
-	return IsRegexMatch("^(?=.*[A-Z].*[A-Z])(?=.*[!@#$&*])(?=.*[0-9].*[0-9])(?=.*[a-z].*[a-z].*[a-z]).{8}$", str)
+	if len(str) < 8 {
+		return false
+	}
+
+	var (
+		hasUpper   = false
+		hasLower   = false
+		hasNumber  = false
+		hasSpecial = false
+	)
+
+	for _, char := range str {
+		switch {
+		case unicode.IsUpper(char):
+			hasUpper = true
+		case unicode.IsLower(char):
+			hasLower = true
+		case unicode.IsNumber(char):
+			hasNumber = true
+		case unicode.IsPunct(char) || unicode.IsSymbol(char):
+			hasSpecial = true
+		}
+	}
+
+	return hasUpper && hasLower && hasNumber && hasSpecial
 }
 
 func IsUUID(str string) bool {
@@ -39,7 +63,8 @@ func IsObjectId(str string) bool {
 }
 
 func IsRegexMatch(pattern string, str string) bool {
-	match, _ := regexp.MatchString(pattern, str)
+	regex := regexp.MustCompile(pattern)
+	match := regex.MatchString(str)
 
 	return match
 }
@@ -64,6 +89,13 @@ func IsNumber(str string) bool {
 // Date time
 func IsDateString(str string) bool {
 	_, err := time.Parse("2006-01-02", str)
+
+	return err == nil
+}
+
+// Boolean
+func IsBool(str string) bool {
+	_, err := strconv.ParseBool(str)
 
 	return err == nil
 }
