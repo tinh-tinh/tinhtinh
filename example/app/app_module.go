@@ -6,8 +6,9 @@ import (
 )
 
 func NewModule() *api.Module {
-	appModule := api.NewModule()
-	appModule.Import(user.NewModule())
+	appModule := api.NewModule(api.NewModuleOptions{
+		Import: []api.ModuleParam{user.Module},
+	})
 
 	return appModule
 }

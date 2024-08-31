@@ -6,7 +6,7 @@ import (
 	"time"
 	"unicode"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -51,7 +51,7 @@ func IsStrongPassword(str string) bool {
 }
 
 func IsUUID(str string) bool {
-	_, err := uuid.FromString(str)
+	_, err := uuid.Parse(str)
 
 	return err == nil
 }

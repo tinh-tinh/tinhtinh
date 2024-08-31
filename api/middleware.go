@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,6 +9,12 @@ import (
 
 	"github.com/tinh-tinh/tinhtinh/dto/validator"
 	"github.com/tinh-tinh/tinhtinh/utils"
+)
+
+type CtxKey string
+
+const (
+	Payload CtxKey = "payload"
 )
 
 type Middleware func(http.Handler) http.Handler
@@ -50,6 +57,8 @@ func Body[M any](transform ...bool) Middleware {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
+			ctx := context.WithValue(r.Context(), Payload, payload)
+			r = r.WithContext(ctx)
 			h.ServeHTTP(w, r)
 		})
 	}

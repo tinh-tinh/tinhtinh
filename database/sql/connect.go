@@ -18,6 +18,7 @@ func ForRoot(dialect gorm.Dialector) {
 	if err != nil {
 		panic(err)
 	}
+	conn.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
 	fmt.Println("connected to database migrating...")
 	err = conn.AutoMigrate(db.models...)
 	if err != nil {

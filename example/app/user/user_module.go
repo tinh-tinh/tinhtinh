@@ -2,14 +2,13 @@ package user
 
 import (
 	"github.com/tinh-tinh/tinhtinh/api"
-	"github.com/tinh-tinh/tinhtinh/database/sql"
 )
 
-func NewModule() *api.Module {
-	userModule := api.NewModule()
-
-	sql.ForFeature(&User{})
-	userModule.Controllers(NewController())
+func Module() *api.Module {
+	userModule := api.NewModule(api.NewModuleOptions{
+		Controllers: []api.ControllerParam{managerController, authController},
+		Providers:   []api.ProviderParam{service},
+	})
 
 	return userModule
 }

@@ -14,7 +14,10 @@ type Ctx struct {
 
 func (ctx *Ctx) BodyParser(payload interface{}) error {
 	err := json.NewDecoder(ctx.r.Body).Decode(payload)
-	return err
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (ctx *Ctx) Params(key string) string {
@@ -59,7 +62,7 @@ func (ctx *Ctx) JSON(data Map) {
 	}
 }
 
-func (ctx *Ctx) Get(key string) interface{} {
+func (ctx *Ctx) Get(key any) interface{} {
 	val := ctx.r.Context().Value(key)
 	return val
 }

@@ -6,16 +6,16 @@ type Controller struct {
 	Name              string
 	middlewares       []Middleware
 	globalMiddlewares []Middleware
-	mux               map[string]http.Handler
+	module            *Module
 }
 
 type Handler func(ctx Ctx)
 
-func NewController(name string) *Controller {
+func NewController(name string, module *Module) *Controller {
 	return &Controller{
 		Name:        name,
 		middlewares: []Middleware{},
-		mux:         make(map[string]http.Handler),
+		module:      module,
 	}
 }
 
@@ -72,5 +72,9 @@ func (c *Controller) registry(method string, path string, handler http.Handler) 
 	}
 
 	c.middlewares = []Middleware{}
-	c.mux[route.GetPath()] = mergeHandler
+	c.module.mux[route.GetPath()] = mergeHandler
+}
+
+func (c *Controller) Inject(name string) interface{} {
+	return c.module.Ref(name)
 }
