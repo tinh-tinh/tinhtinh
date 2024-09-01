@@ -1,7 +1,7 @@
 package user
 
 import (
-	"github.com/tinh-tinh/tinhtinh/api"
+	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/database/sql"
 	"github.com/tinh-tinh/tinhtinh/example/app/user/dto"
 	"gorm.io/gorm"
@@ -12,13 +12,12 @@ type Service interface {
 	Create(dto.SignUpUser) error
 }
 
-func service() api.Provider {
-	return api.Provider{
-		Name: "USER",
-		Value: &ServiceImpl{
-			model: sql.GetModel[User](),
-		},
-	}
+func userService(module *core.DynamicModule) *core.DynamicProvider {
+	pd := core.NewProvider("USER", &ServiceImpl{
+		model: sql.GetModel[User](),
+	})
+
+	return pd
 }
 
 type ServiceImpl struct {

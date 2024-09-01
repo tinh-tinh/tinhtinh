@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/tinh-tinh/tinhtinh/api"
 	"github.com/tinh-tinh/tinhtinh/config"
+	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/database/sql"
 	"github.com/tinh-tinh/tinhtinh/example/app"
 	"github.com/tinh-tinh/tinhtinh/example/app/user"
@@ -34,7 +34,7 @@ func init() {
 }
 
 func main() {
-	server := api.New(app.NewModule())
+	server := core.CreateFactory(app.NewModule)
 	server.SetGlobalPrefix("api")
 
 	server.Listen(config.Get[Config]().Port)
