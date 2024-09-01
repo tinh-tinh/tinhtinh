@@ -11,7 +11,6 @@ type DynamicModule struct {
 	global      bool
 	mux         Mux
 	mapperValue MapValue
-	exportValue MapValue
 }
 
 type Module func(module *DynamicModule) *DynamicModule
@@ -29,7 +28,6 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	module := &DynamicModule{
 		mux:         make(Mux),
 		mapperValue: make(MapValue),
-		exportValue: make(MapValue),
 		global:      opt.Global,
 	}
 
@@ -68,5 +66,5 @@ func (m *DynamicModule) setProviders(providers ...*DynamicProvider) {
 }
 
 func (m *DynamicModule) Ref(name string) interface{} {
-	return m.exportValue[name]
+	return m.mapperValue[name]
 }
