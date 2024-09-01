@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"net/http"
 )
 
@@ -42,8 +41,6 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	// Imports
 	for _, m := range opt.Imports {
 		mod := m(module)
-		fmt.Printf("Provider %s\n", mod.mapperValue)
-		fmt.Printf("Module name %v\n", mod)
 		for k, v := range mod.mux {
 			module.mux[k] = v
 		}
@@ -81,8 +78,6 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	// Imports
 	for _, m := range opt.Imports {
 		mod := m(newMod)
-		fmt.Printf("Provider %s\n", mod.mapperValue)
-		fmt.Printf("Module name %v\n", mod)
 		for k, v := range mod.mux {
 			newMod.mux[k] = v
 		}
