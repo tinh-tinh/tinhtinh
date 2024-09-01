@@ -13,6 +13,8 @@ import (
 
 type Middleware func(http.Handler) http.Handler
 
+type Interceptor func(ctx Ctx) http.Handler
+
 type CtxKey string
 
 const (
