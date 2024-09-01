@@ -43,6 +43,9 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 		for k, v := range mod.mux {
 			module.mux[k] = v
 		}
+		for k, v := range mod.mapperValue {
+			module.mapperValue[k] = v
+		}
 
 		if module.global {
 			mod.setProviders(providers...)
