@@ -1,6 +1,7 @@
 package user
 
 import (
+	"fmt"
 	"os/user"
 
 	"github.com/tinh-tinh/tinhtinh/core"
@@ -17,6 +18,7 @@ import (
 // }
 
 func Module(module *core.DynamicModule) *core.DynamicModule {
+	fmt.Println(module.Ref(sql.ConnectDB))
 	userModule := core.NewModule(core.NewModuleOptions{
 		Imports:     []core.Module{sql.ForFeature(&user.User{})},
 		Controllers: []core.Controller{managerController, authController},
