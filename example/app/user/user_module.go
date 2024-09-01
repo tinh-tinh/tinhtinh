@@ -14,7 +14,7 @@ import (
 // 	return userModule
 // }
 
-func Module() *core.DynamicModule {
+func Module(module *core.DynamicModule) *core.DynamicModule {
 	userModule := core.NewModule(core.NewModuleOptions{
 		Controllers: []core.Controller{managerController, authController},
 		Providers: []core.Provider{

@@ -17,7 +17,7 @@ type RegistryOptions struct {
 	Models  []interface{}
 }
 
-func Registry(opt RegistryOptions) *core.DynamicModule {
+func Registry(opt RegistryOptions) core.Module {
 	conn, err := gorm.Open(opt.Dialect, &gorm.Config{})
 	if err != nil {
 		panic(err)
@@ -38,7 +38,9 @@ func Registry(opt RegistryOptions) *core.DynamicModule {
 		}},
 	})
 
-	return dbModule
+	return func(module *core.DynamicModule) *core.DynamicModule {
+		return dbModule
+	}
 }
 
 func RegistryModel[M any](name ...string) core.Provider {

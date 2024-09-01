@@ -13,12 +13,13 @@ type DynamicModule struct {
 	mapperValue MapValue
 }
 
+type Module func(module *DynamicModule) *DynamicModule
 type Controller func(module *DynamicModule) *DynamicController
 type Provider func(module *DynamicModule) *DynamicProvider
 
 type NewModuleOptions struct {
 	Global      bool
-	Imports     []*DynamicModule
+	Imports     []Module
 	Controllers []Controller
 	Providers   []Provider
 }
@@ -39,7 +40,8 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	module.setProviders(providers...)
 
 	// Imports
-	for _, mod := range opt.Imports {
+	for _, m := range opt.Imports {
+		mod := m(module)
 		for k, v := range mod.mux {
 			module.mux[k] = v
 		}

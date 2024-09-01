@@ -23,12 +23,12 @@ func NewModule() *core.DynamicModule {
 
 	appModule := core.NewModule(core.NewModuleOptions{
 		Global: true,
-		Imports: []*core.DynamicModule{
+		Imports: []core.Module{
 			sql.Registry(sql.RegistryOptions{
 				Dialect: postgres.Open(dsn),
 				Models:  []interface{}{&user.User{}},
 			}),
-			user.Module(),
+			user.Module,
 		},
 	})
 
