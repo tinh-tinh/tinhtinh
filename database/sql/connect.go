@@ -11,6 +11,8 @@ type ConnectionOptions struct {
 	Dialect gorm.Dialector
 }
 
+const ConnectDB core.Provide = "ConnectDB"
+
 func ForRoot(opt ConnectionOptions) core.Module {
 	conn, err := gorm.Open(opt.Dialect, &gorm.Config{})
 	if err != nil {
@@ -18,16 +20,13 @@ func ForRoot(opt ConnectionOptions) core.Module {
 	}
 	conn.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
 	fmt.Println("connected to database")
-	// err = conn.AutoMigrate(opt.Models...)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("Migrated successful")
-	provider := core.NewProvider(ConnectDB, conn)
 
 	dbModule := core.NewModule(core.NewModuleOptions{
 		Global: true,
 		Providers: []core.Provider{func(module *core.DynamicModule) *core.DynamicProvider {
+			provider := core.NewProvider(module)
+			provider.Set(ConnectDB, conn)
+
 			return provider
 		}},
 	})

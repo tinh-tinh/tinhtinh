@@ -33,12 +33,11 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	}
 
 	// Providers
-	providers := make([]*DynamicProvider, 0)
+	providers := make([]Provider, 0)
 	for _, p := range opt.Providers {
-		provider := p(module)
-		providers = append(providers, provider)
+		p(module)
+		providers = append(providers, p)
 	}
-	module.setProviders(providers...)
 
 	// Imports
 	for _, m := range opt.Imports {
@@ -53,7 +52,7 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 		}
 
 		if module.global {
-			mod.setProviders(providers...)
+			mod.Providers(providers...)
 		}
 	}
 
@@ -65,9 +64,55 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	return module
 }
 
-func (m *DynamicModule) setProviders(providers ...*DynamicProvider) {
+func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
+	newMod := &DynamicModule{
+		mapperValue: m.mapperValue,
+		mux:         make(Mux),
+		global:      opt.Global,
+	}
+
+	// Providers
+	providers := make([]Provider, 0)
+	for _, p := range opt.Providers {
+		p(newMod)
+		providers = append(providers, p)
+	}
+
+	// Imports
+	for _, m := range opt.Imports {
+		mod := m(newMod)
+		fmt.Printf("Provider %s\n", mod.mapperValue)
+		fmt.Printf("Module name %v\n", mod)
+		for k, v := range mod.mux {
+			newMod.mux[k] = v
+		}
+		for k, v := range mod.mapperValue {
+			newMod.mapperValue[k] = v
+		}
+
+		if newMod.global {
+			mod.Providers(providers...)
+		}
+	}
+
+	// Controllers
+	for _, ct := range opt.Controllers {
+		ct(newMod)
+	}
+
+	return newMod
+}
+
+func (m *DynamicModule) Controllers(controllers ...Controller) *DynamicModule {
+	for _, v := range controllers {
+		v(m)
+	}
+	return m
+}
+
+func (m *DynamicModule) Providers(providers ...Provider) {
 	for _, v := range providers {
-		m.mapperValue[v.Name] = v.Value
+		v(m)
 	}
 }
 

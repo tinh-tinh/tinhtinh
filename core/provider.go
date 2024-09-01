@@ -2,13 +2,19 @@ package core
 
 type Provide string
 type DynamicProvider struct {
-	Name  Provide
-	Value interface{}
+	module *DynamicModule
 }
 
-func NewProvider(name Provide, value interface{}) *DynamicProvider {
+func NewProvider(module *DynamicModule) *DynamicProvider {
 	return &DynamicProvider{
-		Name:  name,
-		Value: value,
+		module: module,
 	}
+}
+
+func (p *DynamicProvider) Get(key Provide) interface{} {
+	return p.module.mapperValue[key]
+}
+
+func (p *DynamicProvider) Set(key Provide, value interface{}) {
+	p.module.mapperValue[key] = value
 }

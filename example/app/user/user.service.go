@@ -7,33 +7,18 @@ import (
 	"gorm.io/gorm"
 )
 
-const USER_SERVICE core.Provide = "UserService"
-
-type Service interface {
-	GetAll() []User
-	Create(dto.SignUpUser) error
-}
-
-func userService(module *core.DynamicModule) *core.DynamicProvider {
-	pd := core.NewProvider(USER_SERVICE, &ServiceImpl{
-		model: module.Ref(sql.ConnectDB).(*gorm.DB),
-	})
-
-	return pd
-}
-
-type ServiceImpl struct {
+type CrudService struct {
 	model *gorm.DB
 }
 
-func (s *ServiceImpl) GetAll() []User {
+func (s *CrudService) GetAll() []User {
 	var user []User
 	s.model.First(&user)
 
 	return user
 }
 
-func (s *ServiceImpl) Create(input dto.SignUpUser) error {
+func (s *CrudService) Create(input dto.SignUpUser) error {
 	newUser := User{
 		Name:     input.Name,
 		Email:    input.Email,
@@ -48,4 +33,16 @@ func (s *ServiceImpl) Create(input dto.SignUpUser) error {
 	}
 
 	return nil
+}
+
+const USER_SERVICE core.Provide = "UserService"
+
+func service(module *core.DynamicModule) *core.DynamicProvider {
+	userSv := core.NewProvider(module)
+
+	userSv.Set(USER_SERVICE, &CrudService{
+		model: module.Ref(sql.ConnectDB).(*gorm.DB),
+	})
+
+	return userSv
 }
