@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"sync"
+
+	"github.com/tinh-tinh/tinhtinh/swagger"
 )
 
 type App struct {
@@ -37,6 +39,8 @@ func (app *App) Listen(port int) {
 		log.Printf("[RoutesResolvers] %s\n", route.GetPath())
 		mux.Handle(route.GetPath(), v)
 	}
+
+	swagger.CreateDocument(mux)
 
 	server := http.Server{
 		Addr:    ":" + IntToString(port),
