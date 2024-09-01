@@ -35,6 +35,7 @@ const ConfigEnv core.Provide = "ConfigEnv"
 func ForRoot[E any](path ...string) core.Module {
 	return func(module *core.DynamicModule) *core.DynamicModule {
 		var lastValue *E
+		path = append([]string{".env"}, path...)
 		for _, v := range path {
 			env, err := Register[E](v)
 			if err != nil {
