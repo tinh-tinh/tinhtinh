@@ -40,7 +40,7 @@ const USER_SERVICE core.Provide = "UserService"
 func service(module *core.DynamicModule) *core.DynamicProvider {
 	userSv := core.NewProvider(module)
 
-	userSv.Set(USER_SERVICE, &CrudService{
+	userSv.Set(USER_SERVICE, CrudService{
 		model: module.Ref(sql.ConnectDB).(*gorm.DB),
 	})
 
