@@ -19,12 +19,6 @@ type Config struct {
 
 func init() {
 	config.Register[Config]("")
-
-	// cfg := config.Get[Config]()
-	// dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Shanghai", cfg.DBHost, cfg.DBUser, cfg.DBPass, cfg.DBName, cfg.DBPort)
-
-	// sql.ForFeature(&user.User{})
-	// sql.ForRoot(postgres.Open(dsn))
 }
 
 func main() {

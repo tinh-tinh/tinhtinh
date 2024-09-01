@@ -10,8 +10,6 @@ type App struct {
 	pool   sync.Pool
 	prefix string
 	module *DynamicModule
-	// mux          Mux
-	// globalMapper MapValue
 }
 
 type ModuleParam func() *DynamicModule

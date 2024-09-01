@@ -5,9 +5,11 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/tinh-tinh/tinhtinh/dto/transform"
 )
 
-func Scanner(val interface{}) error {
+func Scanner(val interface{}, trans bool) error {
 	var errMsg []string
 
 	ct := reflect.ValueOf(val).Elem()
@@ -54,22 +56,36 @@ func Scanner(val interface{}) error {
 			case "isObjectId":
 				if !IsObjectId(value.(string)) {
 					errMsg = append(errMsg, field.Name+" is not a valid ObjectID")
+				} else if trans {
+					ct.Field(i).Set(reflect.ValueOf(transform.StringToObjectID(value.(string))))
 				}
 			case "isInt":
 				if !IsInt(value.(string)) {
 					errMsg = append(errMsg, field.Name+" is not a valid int")
+				} else if trans {
+					ct.Field(i).Set(reflect.ValueOf(transform.StringToInt(value.(string))))
 				}
 			case "isFloat":
 				if !IsFloat(value.(string)) {
 					errMsg = append(errMsg, field.Name+" is not a valid float")
+				} else if trans {
+					ct.Field(i).Set(reflect.ValueOf(transform.StringToFloat(value.(string))))
 				}
 			case "isNumber":
 				if !IsNumber(value.(string)) {
 					errMsg = append(errMsg, field.Name+" is not a valid number")
+				} else if trans {
+					if IsInt(value.(string)) {
+						ct.Field(i).Set(reflect.ValueOf(transform.StringToInt(value.(string))))
+					} else {
+						ct.Field(i).Set(reflect.ValueOf(transform.StringToFloat(value.(string))))
+					}
 				}
 			case "isDateString":
 				if !IsDateString(value.(string)) {
 					errMsg = append(errMsg, field.Name+" is not a valid date time")
+				} else if trans {
+					ct.Field(i).Set(reflect.ValueOf(transform.StringToDate(value.(string))))
 				}
 			case "isBool":
 				if !IsBool(value.(string)) {
