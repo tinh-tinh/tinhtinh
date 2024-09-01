@@ -1,6 +1,8 @@
 package user
 
 import (
+	"os/user"
+
 	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/database/sql"
 )
@@ -16,11 +18,9 @@ import (
 
 func Module(module *core.DynamicModule) *core.DynamicModule {
 	userModule := core.NewModule(core.NewModuleOptions{
+		Imports:     []core.Module{sql.ForFeature(&user.User{})},
 		Controllers: []core.Controller{managerController, authController},
-		Providers: []core.Provider{
-			sql.RegistryModel[User](),
-			userService,
-		},
+		Providers:   []core.Provider{userService},
 	})
 
 	return userModule

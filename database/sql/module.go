@@ -43,6 +43,22 @@ func Registry(opt RegistryOptions) core.Module {
 	}
 }
 
+func GetModel[M any](name ...string) core.Provider {
+	var model M
+	var provide string
+
+	if len(name) == 0 {
+		provide = GetStructName(model)
+	} else {
+		provide = name[0]
+	}
+
+	return func(module *core.DynamicModule) *core.DynamicProvider {
+		conn := module.Ref(ConnectDB).(*gorm.DB)
+		return core.NewProvider(core.Provide(provide), conn.Model(&model))
+	}
+}
+
 func RegistryModel[M any](name ...string) core.Provider {
 	var model M
 	var provide string

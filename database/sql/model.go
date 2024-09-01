@@ -14,7 +14,7 @@ type Model struct {
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
 
-func GetModel[M any]() *gorm.DB {
-	var model M
-	return db.conn.Model(&model)
-}
+// func GetModel[M any]() *gorm.DB {
+// 	var model M
+// 	return db.conn.Model(&model)
+// }

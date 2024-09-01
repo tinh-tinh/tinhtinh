@@ -24,9 +24,8 @@ func NewModule() *core.DynamicModule {
 	appModule := core.NewModule(core.NewModuleOptions{
 		Global: true,
 		Imports: []core.Module{
-			sql.Registry(sql.RegistryOptions{
+			sql.ForRoot(sql.ConnectionOptions{
 				Dialect: postgres.Open(dsn),
-				Models:  []interface{}{&user.User{}},
 			}),
 			user.Module,
 		},
