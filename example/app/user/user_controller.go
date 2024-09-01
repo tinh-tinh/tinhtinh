@@ -31,7 +31,7 @@ func managerController(module *core.DynamicModule) *core.DynamicController {
 	ctrl.Pipe(
 		core.Query[dto.FindUser](),
 	).Get("/", func(ctx core.Ctx) {
-		userService := ctrl.Inject("USER").(Service)
+		userService := ctrl.Inject(USER_SERVICE).(Service)
 		data := userService.GetAll()
 		ctx.JSON(core.Map{"data": data})
 	})

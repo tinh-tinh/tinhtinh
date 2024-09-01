@@ -1,11 +1,12 @@
 package core
 
+type Provide string
 type DynamicProvider struct {
-	Name  string
+	Name  Provide
 	Value interface{}
 }
 
-func NewProvider(name string, value interface{}) *DynamicProvider {
+func NewProvider(name Provide, value interface{}) *DynamicProvider {
 	return &DynamicProvider{
 		Name:  name,
 		Value: value,

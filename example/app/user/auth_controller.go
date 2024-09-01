@@ -33,7 +33,7 @@ func authController(module *core.DynamicModule) *core.DynamicController {
 	authCtrl.Pipe(core.Body[dto.SignUpUser]()).Post("/", func(ctx core.Ctx) {
 		payload := ctx.Get(core.Input).(dto.SignUpUser)
 
-		userService := authCtrl.Inject("USER").(Service)
+		userService := authCtrl.Inject(USER_SERVICE).(Service)
 		err := userService.Create(payload)
 		if err != nil {
 			ctx.JSON(core.Map{

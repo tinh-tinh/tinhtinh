@@ -5,7 +5,7 @@ import (
 )
 
 type Mux map[string]http.Handler
-type MapValue map[string]interface{}
+type MapValue map[Provide]interface{}
 
 type DynamicModule struct {
 	global      bool
@@ -13,13 +13,12 @@ type DynamicModule struct {
 	mapperValue MapValue
 }
 
-type Module func(module *DynamicModule) *DynamicModule
 type Controller func(module *DynamicModule) *DynamicController
 type Provider func(module *DynamicModule) *DynamicProvider
 
 type NewModuleOptions struct {
 	Global      bool
-	Imports     []Module
+	Imports     []*DynamicModule
 	Controllers []Controller
 	Providers   []Provider
 }
@@ -40,8 +39,7 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	module.setProviders(providers...)
 
 	// Imports
-	for _, m := range opt.Imports {
-		mod := m(module)
+	for _, mod := range opt.Imports {
 		for k, v := range mod.mux {
 			module.mux[k] = v
 		}
@@ -65,6 +63,6 @@ func (m *DynamicModule) setProviders(providers ...*DynamicProvider) {
 	}
 }
 
-func (m *DynamicModule) Ref(name string) interface{} {
+func (m *DynamicModule) Ref(name Provide) interface{} {
 	return m.mapperValue[name]
 }

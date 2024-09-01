@@ -2,10 +2,11 @@ package user
 
 import (
 	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/database/sql"
 	"github.com/tinh-tinh/tinhtinh/example/app/user/dto"
 	"gorm.io/gorm"
 )
+
+const USER_SERVICE core.Provide = "UserService"
 
 type Service interface {
 	GetAll() []User
@@ -13,8 +14,8 @@ type Service interface {
 }
 
 func userService(module *core.DynamicModule) *core.DynamicProvider {
-	pd := core.NewProvider("USER", &ServiceImpl{
-		model: sql.GetModel[User](),
+	pd := core.NewProvider(USER_SERVICE, &ServiceImpl{
+		model: module.Ref("user").(*gorm.DB),
 	})
 
 	return pd

@@ -75,6 +75,6 @@ func (c *DynamicController) registry(method string, path string, handler http.Ha
 	c.module.mux[route.GetPath()] = mergeHandler
 }
 
-func (c *DynamicController) Inject(name string) interface{} {
+func (c *DynamicController) Inject(name Provide) interface{} {
 	return c.module.Ref(name)
 }

@@ -2,6 +2,7 @@ package user
 
 import (
 	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/database/sql"
 )
 
 // func Module() *api.Module {
@@ -13,10 +14,13 @@ import (
 // 	return userModule
 // }
 
-func Module(m *core.DynamicModule) *core.DynamicModule {
+func Module() *core.DynamicModule {
 	userModule := core.NewModule(core.NewModuleOptions{
 		Controllers: []core.Controller{managerController, authController},
-		Providers:   []core.Provider{userService},
+		Providers: []core.Provider{
+			sql.RegistryModel[User](),
+			userService,
+		},
 	})
 
 	return userModule
