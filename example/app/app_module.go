@@ -2,22 +2,38 @@ package app
 
 import (
 	"fmt"
-	"os"
 
+	"github.com/tinh-tinh/tinhtinh/config"
 	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/database/sql"
 	"github.com/tinh-tinh/tinhtinh/example/app/user"
 	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-func NewModule() *core.DynamicModule {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Asia/Shanghai", os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASS"), os.Getenv("DB_NAME"), os.Getenv("DB_PORT"))
+type Config struct {
+	Port    int    `mapstructure:"PORT"`
+	NodeEnv string `mapstructure:"NODE_ENV"`
 
+	DBHost string `mapstructure:"DB_HOST"`
+	DBPort int    `mapstructure:"DB_PORT"`
+	DBUser string `mapstructure:"DB_USER"`
+	DBPass string `mapstructure:"DB_PASS"`
+	DBName string `mapstructure:"DB_NAME"`
+}
+
+func NewModule() *core.DynamicModule {
 	appModule := core.NewModule(core.NewModuleOptions{
 		Global: true,
 		Imports: []core.Module{
+			config.ForRoot[Config](),
 			sql.ForRoot(sql.ConnectionOptions{
-				Dialect: postgres.Open(dsn),
+				Factory: func(module *core.DynamicModule) gorm.Dialector {
+					env := module.Ref(config.ConfigEnv).(Config)
+					dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Shanghai", env.DBHost, env.DBUser, env.DBPass, env.DBName, env.DBPort)
+
+					return postgres.Open(dsn)
+				},
 			}),
 			user.Module,
 		},

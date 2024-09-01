@@ -9,30 +9,30 @@ import (
 
 type ConnectionOptions struct {
 	Dialect gorm.Dialector
+	Factory func(module *core.DynamicModule) gorm.Dialector
 }
 
 const ConnectDB core.Provide = "ConnectDB"
 
 func ForRoot(opt ConnectionOptions) core.Module {
-	conn, err := gorm.Open(opt.Dialect, &gorm.Config{})
-	if err != nil {
-		panic(err)
-	}
-	conn.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
-	fmt.Println("connected to database")
-
-	dbModule := core.NewModule(core.NewModuleOptions{
-		Global: true,
-		Providers: []core.Provider{func(module *core.DynamicModule) *core.DynamicProvider {
-			provider := core.NewProvider(module)
-			provider.Set(ConnectDB, conn)
-
-			return provider
-		}},
-	})
-
 	return func(module *core.DynamicModule) *core.DynamicModule {
-		return dbModule
+		var dialector gorm.Dialector
+		if opt.Factory != nil {
+			dialector = opt.Factory(module)
+		} else {
+			dialector = opt.Dialect
+		}
+		conn, err := gorm.Open(dialector, &gorm.Config{})
+		if err != nil {
+			panic(err)
+		}
+		conn.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
+		fmt.Println("connected to database")
+
+		provider := core.NewProvider(module)
+		provider.Set(ConnectDB, conn)
+
+		return module
 	}
 }
 
