@@ -1,4 +1,4 @@
-package user
+package post
 
 import (
 	"github.com/tinh-tinh/tinhtinh/core"
@@ -6,11 +6,11 @@ import (
 )
 
 func Module(module *core.DynamicModule) *core.DynamicModule {
-	userModule := module.New(core.NewModuleOptions{
-		Imports:     []core.Module{sql.ForFeature(&User{})},
-		Controllers: []core.Controller{managerController, authController},
+	postModule := module.New(core.NewModuleOptions{
+		Imports:     []core.Module{sql.ForFeature(&Post{})},
+		Controllers: []core.Controller{controller},
 		Providers:   []core.Provider{service},
 	})
 
-	return userModule
+	return postModule
 }

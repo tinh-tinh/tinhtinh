@@ -6,6 +6,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/config"
 	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/database/sql"
+	"github.com/tinh-tinh/tinhtinh/example/app/post"
 	"github.com/tinh-tinh/tinhtinh/example/app/user"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -36,6 +37,7 @@ func NewModule() *core.DynamicModule {
 				},
 			}),
 			user.Module,
+			post.Module,
 		},
 	})
 
