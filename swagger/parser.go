@@ -23,7 +23,13 @@ func (spec *SpecBuilder) ParserPath(app *core.App) {
 	for k, v := range groupRoute {
 		itemObject := PathItemObject{}
 		for i := 0; i < len(v); i++ {
-			operation := &OperationObject{}
+			response := &ResponseObject{
+				Description: "Ok",
+			}
+			res := map[string]*ResponseObject{"200": response}
+			operation := &OperationObject{
+				Responses: res,
+			}
 			switch v[i] {
 			case "GET":
 				itemObject.Get = operation

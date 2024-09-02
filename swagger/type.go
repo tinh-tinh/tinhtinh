@@ -46,7 +46,7 @@ type OperationObject struct {
 	Schemes     []string
 	Deprecated  bool
 	Security    []SecuritySchemeObject
-	Responses   map[string]ResponseObject
+	Responses   map[string]*ResponseObject
 }
 
 // -------- Parameter Object --------
