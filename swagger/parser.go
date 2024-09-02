@@ -63,7 +63,7 @@ func recursiveParse(val interface{}) Mapper {
 		if field.Type.Kind() == reflect.Pointer {
 			mapper[key] = recursiveParse(ct.Field(i).Interface())
 		} else if field.Type.Kind() == reflect.Map {
-			for k, v := range ct.Field(i).Interface().(map[string]interface{}) {
+			for k, v := range ct.Field(i).Interface().(PathObject) {
 				mapper[key+"."+k] = recursiveParse(v)
 			}
 		} else {
