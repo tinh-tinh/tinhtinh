@@ -56,6 +56,7 @@ func recursiveParse(val interface{}) Mapper {
 	mapper := make(Mapper)
 
 	if reflect.TypeOf(val).Kind() == reflect.Map {
+		fmt.Print("val is map\n")
 		for k, v := range val.(map[string]interface{}) {
 			mapper[k] = recursiveParse(v)
 		}
