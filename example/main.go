@@ -12,7 +12,7 @@ func main() {
 	server := core.CreateFactory(app.NewModule)
 	server.SetGlobalPrefix("api")
 
-	document := swagger.NewSpecBuilder().SetTitle("Swagger UI").SetDescription("Swagger Description").Build()
+	document := swagger.NewSpecBuilder()
 	swagger.SetUp(server, document)
 
 	port := config.GetRaw("PORT")
