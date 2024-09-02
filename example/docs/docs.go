@@ -231,8 +231,8 @@ var temp = Any{
     "schemes": []string{"http", "https"},
     "swagger": "2.0",
     "info": Any{
-        "description": "{{escape .Description}}",
-        "title": "{{.Title}}",
+        "description": "This is a sample server Tinh tinh server.",
+        "title": "Swagger Example API for Tinh Tinh",
         "termsOfService": "http://swagger.io/terms/",
         "contact": Any{
             "name": "API Support",
@@ -243,10 +243,10 @@ var temp = Any{
             "name": "Apache 2.0",
             "url": "http://www.apache.org/licenses/LICENSE-2.0.html",
         },
-        "version": "{{.Version}}",
+        "version": "1.0",
     },
-    "host": "{{.Host}}",
-    "basePath": "{{.BasePath}}",
+    "host": "tinhtinh.swagger.io",
+    "basePath": "/v1",
     "paths": Any{
         "/pets": Any{
             "get": Any{
