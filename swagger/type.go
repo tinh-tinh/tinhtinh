@@ -22,7 +22,7 @@ type LicenseInfoObject struct {
 }
 
 // -------- Path Object --------
-type PathObject map[string]interface{}
+type PathObject map[string]*PathItemObject
 
 // -------- Path Item Object --------
 type PathItemObject struct {
@@ -46,7 +46,7 @@ type OperationObject struct {
 	Schemes     []string
 	Deprecated  bool
 	Security    []SecuritySchemeObject
-	Responses   map[string]interface{}
+	Responses   map[string]*ResponseObject
 }
 
 // -------- Parameter Object --------
