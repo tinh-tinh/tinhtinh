@@ -9,40 +9,40 @@ import (
 
 func NewSpecBuilder() *SpecBuilder {
 	return &SpecBuilder{
-		Info: InfoObject{
-			Version:       "1.0",
-			Title:         "Swagger Example API for Tinh Tinh",
-			Description:   "This is a sample server Tinh tinh server.",
-			TermOfService: "http://swagger.io/terms/",
-			Contact: ContactInfoObject{
-				Name:  "API Support",
-				Url:   "http://www.swagger.io/support",
-				Email: "support@swagger.io",
+		info: InfoObject{
+			version:        "1.0",
+			title:          "Swagger Example API for Tinh Tinh",
+			description:    "This is a sample server Tinh tinh server.",
+			termsOfService: "http://swagger.io/terms/",
+			contact: ContactInfoObject{
+				name:  "API Support",
+				url:   "http://www.swagger.io/support",
+				email: "support@swagger.io",
 			},
-			License: LicenseInfoObject{
-				Name: "Apache 2.0",
-				Url:  "http://www.apache.org/licenses/LICENSE-2.0.html",
+			license: LicenseInfoObject{
+				name: "Apache 2.0",
+				url:  "http://www.apache.org/licenses/LICENSE-2.0.html",
 			},
 		},
-		Swagger:  "2.0",
-		Schemes:  []string{"http", "https"},
+		swagger:  "2.0",
+		schemes:  []string{"http", "https"},
 		BasePath: "/v1",
 		Host:     "tinhtinh.swagger.io",
 	}
 }
 
 func (spec *SpecBuilder) SetTitle(title string) *SpecBuilder {
-	spec.Info.Title = title
+	spec.info.title = title
 	return spec
 }
 
 func (spec *SpecBuilder) SetDescription(description string) *SpecBuilder {
-	spec.Info.Description = description
+	spec.info.description = description
 	return spec
 }
 
 func (spec *SpecBuilder) SetVersion(version string) *SpecBuilder {
-	spec.Info.Version = version
+	spec.info.version = version
 	return spec
 }
 
@@ -55,12 +55,12 @@ func SetUp(app *core.App, spec *SpecBuilder) {
 
 	jsonBytes, _ := json.Marshal(*spec)
 	swaggerInfo := &swag.Spec{
-		Version:          spec.Info.Version,
+		Version:          spec.info.version,
 		Host:             spec.Host,
 		BasePath:         spec.BasePath,
-		Schemes:          spec.Schemes,
-		Title:            spec.Info.Title,
-		Description:      spec.Info.Description,
+		Schemes:          spec.schemes,
+		Title:            spec.info.title,
+		Description:      spec.info.description,
 		InfoInstanceName: "swagger",
 		SwaggerTemplate:  string(jsonBytes),
 		LeftDelim:        "{{",
