@@ -2,7 +2,7 @@
 package docs
 
 import (
-	"fmt"
+	"encoding/json"
 
 	"github.com/swaggo/swag"
 )
@@ -445,20 +445,19 @@ var temp = Any{
     },
 }
 
-// SwaggerInfo holds exported Swagger Info so clients can modify it
-var SwaggerInfo = &swag.Spec{
-	Version:          "1.0",
-	Host:             "tinhtinh.swagger.io",
-	BasePath:         "/v2",
-	Schemes:          []string{},
-	Title:            "Swagger Example API for Tinh Tinh",
-	Description:      "This is a sample server Tinh tinh server.",
-	InfoInstanceName: "swagger",
-	SwaggerTemplate:  fmt.Sprint(temp),
-	LeftDelim:        "{{",
-	RightDelim:       "}}",
-}
-
 func init() {
-	swag.Register(SwaggerInfo.InstanceName(), SwaggerInfo)
+    jsonBytes, _ := json.Marshal(temp)
+    swaggerInfo := &swag.Spec{
+        Version:          "1.0",
+        Host:             "tinhtinh.swagger.io",
+        BasePath:         "/v2",
+        Schemes:          []string{},
+        Title:            "Swagger Example API for Tinh Tinh",
+        Description:      "This is a sample server Tinh tinh server.",
+        InfoInstanceName: "swagger",
+        SwaggerTemplate:  string(jsonBytes),
+        LeftDelim:        "{{",
+        RightDelim:       "}}",
+    }
+	swag.Register(swaggerInfo.InstanceName(), swaggerInfo)
 }
