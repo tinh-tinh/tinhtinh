@@ -22,7 +22,7 @@ type LicenseInfoObject struct {
 }
 
 // -------- Path Object --------
-type PathObject map[string]PathItemObject
+type PathObject map[string]*PathItemObject
 
 // -------- Path Item Object --------
 type PathItemObject struct {

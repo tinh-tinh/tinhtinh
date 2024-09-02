@@ -21,7 +21,7 @@ func (spec *SpecBuilder) ParserPath(app *core.App) {
 
 	pathObject := make(PathObject)
 	for k, v := range groupRoute {
-		itemObject := PathItemObject{}
+		itemObject := &PathItemObject{}
 		for i := 0; i < len(v); i++ {
 			response := &ResponseObject{
 				Description: "Ok",
