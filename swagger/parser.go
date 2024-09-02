@@ -26,7 +26,7 @@ func (spec *SpecBuilder) ParserPath(app *core.App) {
 			response := &ResponseObject{
 				Description: "Ok",
 			}
-			res := map[string]*ResponseObject{"200": response}
+			res := map[string]interface{}{"200": response}
 			operation := &OperationObject{
 				Responses: res,
 			}
@@ -63,7 +63,7 @@ func recursiveParse(val interface{}) Mapper {
 		if field.Type.Kind() == reflect.Pointer {
 			mapper[key] = recursiveParse(ct.Field(i).Interface())
 		} else if field.Type.Kind() == reflect.Map {
-			for k, v := range ct.Field(i).Interface().(PathObject) {
+			for k, v := range ct.Field(i).Interface().(map[string]interface{}) {
 				mapper[key+"."+k] = recursiveParse(v)
 			}
 		} else {
