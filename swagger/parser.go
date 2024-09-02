@@ -46,7 +46,7 @@ func (spec *SpecBuilder) ParserPath(app *core.App) {
 		pathObject[k] = itemObject
 	}
 
-	spec.Paths = &pathObject
+	spec.Paths = pathObject
 }
 
 type Mapper map[string]interface{}

@@ -120,6 +120,6 @@ type SpecBuilder struct {
 	Consumes    []string
 	Host        string
 	BasePath    string
-	Paths       *PathObject
+	Paths       PathObject
 	Definitions map[string]DefinitionSwagger
 }
