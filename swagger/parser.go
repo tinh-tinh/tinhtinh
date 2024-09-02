@@ -23,7 +23,7 @@ func (spec *SpecBuilder) ParserPath(app *core.App) {
 	for k, v := range groupRoute {
 		itemObject := PathItemObject{}
 		for i := 0; i < len(v); i++ {
-			operation := OperationObject{}
+			operation := &OperationObject{}
 			switch v[i] {
 			case "GET":
 				itemObject.Get = operation
@@ -39,7 +39,7 @@ func (spec *SpecBuilder) ParserPath(app *core.App) {
 		pathObject[k] = itemObject
 	}
 
-	spec.Paths = pathObject
+	spec.Paths = &pathObject
 }
 
 type Mapper map[string]interface{}
@@ -51,6 +51,9 @@ func recursiveParse(val interface{}) Mapper {
 	for i := 0; i < ct.NumField(); i++ {
 		field := ct.Type().Field(i)
 		key := firstLetterToLower(field.Name)
+		if ct.Field(i).Interface() == nil {
+			continue
+		}
 		if field.Type.Kind() == reflect.Pointer {
 			mapper[key] = recursiveParse(ct.Field(i).Interface())
 		} else {

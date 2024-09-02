@@ -27,11 +27,11 @@ type PathObject map[string]PathItemObject
 // -------- Path Item Object --------
 type PathItemObject struct {
 	Ref        string
-	Post       OperationObject
-	Get        OperationObject
-	Put        OperationObject
-	Delete     OperationObject
-	Parameters []ParameterObject
+	Post       *OperationObject
+	Get        *OperationObject
+	Put        *OperationObject
+	Delete     *OperationObject
+	Parameters []*ParameterObject
 }
 
 // -------- Operation Object --------
@@ -120,6 +120,6 @@ type SpecBuilder struct {
 	Consumes    []string
 	Host        string
 	BasePath    string
-	Paths       PathObject
+	Paths       *PathObject
 	Definitions map[string]DefinitionSwagger
 }
