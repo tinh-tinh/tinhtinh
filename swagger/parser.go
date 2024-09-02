@@ -1,6 +1,7 @@
 package swagger
 
 import (
+	"fmt"
 	"reflect"
 	"unicode"
 
@@ -51,6 +52,7 @@ func (spec *SpecBuilder) ParserPath(app *core.App) {
 type Mapper map[string]interface{}
 
 func recursiveParse(val interface{}) Mapper {
+	fmt.Printf("val is %v\n", val)
 	mapper := make(Mapper)
 	ct := reflect.ValueOf(val).Elem()
 
