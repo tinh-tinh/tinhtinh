@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/tinh-tinh/tinhtinh/swagger"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type App struct {
@@ -40,7 +40,11 @@ func (app *App) Listen(port int) {
 		mux.Handle(route.GetPath(), v)
 	}
 
-	swagger.CreateDocument(mux)
+	// swagger.CreateDocument(mux, func(s *swagger.Spec) {
+	// 	s.URL = "http://localhost:" + IntToString(port)
+	// })
+
+	mux.Handle("GET /swagger/*", httpSwagger.Handler(httpSwagger.URL("http://localhost:"+IntToString(port)+"/swagger/doc.json")))
 
 	server := http.Server{
 		Addr:    ":" + IntToString(port),
