@@ -33,7 +33,7 @@ func (spec *SpecBuilder) Build() *SpecBuilder {
 func SetUp(app *core.App, spec *SpecBuilder) {
 	spec.ParserPath(app)
 
-	jsonBytes, _ := json.Marshal(spec)
+	jsonBytes, _ := json.Marshal(&spec)
 	swaggerInfo := &swag.Spec{
 		Version:         spec.Info.Version,
 		Host:            spec.Host,
