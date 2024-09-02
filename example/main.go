@@ -5,6 +5,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/dto/transform"
 	"github.com/tinh-tinh/tinhtinh/example/app"
+	_ "github.com/tinh-tinh/tinhtinh/example/docs"
 )
 
 // @title Swagger Example API
