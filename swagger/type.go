@@ -2,23 +2,23 @@ package swagger
 
 // -------- Info Object --------
 type InfoObject struct {
-	title          string
-	description    string
-	version        string
-	termsOfService string
-	contact        ContactInfoObject
-	license        LicenseInfoObject
+	Title          string
+	Description    string
+	Version        string
+	TermsOfService string
+	Contact        *ContactInfoObject
+	License        *LicenseInfoObject
 }
 
 type ContactInfoObject struct {
-	name  string
-	url   string
-	email string
+	Name  string
+	Url   string
+	Email string
 }
 
 type LicenseInfoObject struct {
-	name string
-	url  string
+	Name string
+	Url  string
 }
 
 // -------- Path Object --------
@@ -113,9 +113,9 @@ type HeaderObject struct {
 }
 
 type SpecBuilder struct {
-	swagger     string
-	info        InfoObject
-	schemes     []string
+	Swagger     string
+	Info        *InfoObject
+	Schemes     []string
 	Produces    []string
 	Consumes    []string
 	Host        string

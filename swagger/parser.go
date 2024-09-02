@@ -1,6 +1,11 @@
 package swagger
 
-import "github.com/tinh-tinh/tinhtinh/core"
+import (
+	"reflect"
+	"unicode"
+
+	"github.com/tinh-tinh/tinhtinh/core"
+)
 
 func (spec *SpecBuilder) ParserPath(app *core.App) {
 	mux := app.Module.Mux
@@ -35,4 +40,34 @@ func (spec *SpecBuilder) ParserPath(app *core.App) {
 	}
 
 	spec.Paths = pathObject
+}
+
+type Mapper map[string]interface{}
+
+func recursiveParse(val interface{}) Mapper {
+	mapper := make(Mapper)
+	ct := reflect.ValueOf(val).Elem()
+
+	for i := 0; i < ct.NumField(); i++ {
+		field := ct.Type().Field(i)
+		key := firstLetterToLower(field.Name)
+		if field.Type.Kind() == reflect.Pointer {
+			mapper[key] = recursiveParse(ct.Field(i).Interface())
+		} else {
+			mapper[key] = ct.Field(i).Interface()
+		}
+	}
+
+	return mapper
+}
+
+func firstLetterToLower(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+
+	r := []rune(s)
+	r[0] = unicode.ToLower(r[0])
+
+	return string(r)
 }
