@@ -11,7 +11,7 @@ import (
 type App struct {
 	pool   sync.Pool
 	prefix string
-	module *DynamicModule
+	Module *DynamicModule
 }
 
 type ModuleParam func() *DynamicModule
@@ -19,7 +19,7 @@ type ModuleParam func() *DynamicModule
 func CreateFactory(module ModuleParam) *App {
 	app := &App{
 		pool:   sync.Pool{},
-		module: module(),
+		Module: module(),
 	}
 
 	return app
@@ -32,7 +32,7 @@ func (app *App) SetGlobalPrefix(prefix string) {
 func (app *App) Listen(port int) {
 	mux := http.NewServeMux()
 
-	for k, v := range app.module.mux {
+	for k, v := range app.Module.Mux {
 		route := ParseRoute(k)
 		route.SetPrefix(app.prefix)
 

@@ -72,7 +72,7 @@ func (c *DynamicController) registry(method string, path string, handler http.Ha
 	}
 
 	c.middlewares = []Middleware{}
-	c.module.mux[route.GetPath()] = mergeHandler
+	c.module.Mux[route.GetPath()] = mergeHandler
 }
 
 func (c *DynamicController) Inject(name Provide) interface{} {

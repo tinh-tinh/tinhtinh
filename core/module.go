@@ -9,7 +9,7 @@ type MapValue map[Provide]interface{}
 
 type DynamicModule struct {
 	global      bool
-	mux         Mux
+	Mux         Mux
 	mapperValue MapValue
 }
 
@@ -26,7 +26,7 @@ type NewModuleOptions struct {
 
 func NewModule(opt NewModuleOptions) *DynamicModule {
 	module := &DynamicModule{
-		mux:         make(Mux),
+		Mux:         make(Mux),
 		mapperValue: make(MapValue),
 		global:      opt.Global,
 	}
@@ -41,8 +41,8 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	// Imports
 	for _, m := range opt.Imports {
 		mod := m(module)
-		for k, v := range mod.mux {
-			module.mux[k] = v
+		for k, v := range mod.Mux {
+			module.Mux[k] = v
 		}
 		for k, v := range mod.mapperValue {
 			module.mapperValue[k] = v
@@ -64,7 +64,7 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	newMod := &DynamicModule{
 		mapperValue: m.mapperValue,
-		mux:         make(Mux),
+		Mux:         make(Mux),
 		global:      opt.Global,
 	}
 
@@ -78,8 +78,8 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	// Imports
 	for _, m := range opt.Imports {
 		mod := m(newMod)
-		for k, v := range mod.mux {
-			newMod.mux[k] = v
+		for k, v := range mod.Mux {
+			newMod.Mux[k] = v
 		}
 		for k, v := range mod.mapperValue {
 			newMod.mapperValue[k] = v

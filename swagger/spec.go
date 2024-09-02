@@ -1,67 +1,50 @@
 package swagger
 
-import "github.com/swaggo/swag"
+import (
+	"encoding/json"
 
-type SpecBuilder struct {
-	Title       string
-	Description string
-	Version     string
-}
+	"github.com/swaggo/swag"
+	"github.com/tinh-tinh/tinhtinh/core"
+)
 
-func NewSpec() *SpecBuilder {
+func NewSpecBuilder() *SpecBuilder {
 	return &SpecBuilder{}
 }
 
-func (s *SpecBuilder) SetTitle(title string) *SpecBuilder {
-	s.Title = title
-	return s
+func (spec *SpecBuilder) SetTitle(title string) *SpecBuilder {
+	spec.Info.Title = title
+	return spec
 }
 
-func (s *SpecBuilder) SetDescription(description string) *SpecBuilder {
-	s.Description = description
-	return s
+func (spec *SpecBuilder) SetDescription(description string) *SpecBuilder {
+	spec.Info.Description = description
+	return spec
 }
 
-func (s *SpecBuilder) SetVersion(version string) *SpecBuilder {
-	s.Version = version
-	return s
+func (spec *SpecBuilder) SetVersion(version string) *SpecBuilder {
+	spec.Info.Version = version
+	return spec
 }
 
-func (s *SpecBuilder) Build() {
+func (spec *SpecBuilder) Build() *SpecBuilder {
+	return spec
+}
+
+func SetUp(app *core.App, spec *SpecBuilder) {
+	spec.ParserPath(app)
+
+	jsonBytes, _ := json.Marshal(spec)
 	swaggerInfo := &swag.Spec{
-		Title:            s.Title,
-		Description:      s.Description,
-		Version:          s.Version,
-		Schemes:          []string{"http", "https"},
-		Host:             "",
-		BasePath:         "",
-		InfoInstanceName: "swagger",
-		SwaggerTemplate:  docTemplate,
-		LeftDelim:        "{{",
-		RightDelim:       "}}",
+		Version:         spec.Info.Version,
+		Host:            spec.Host,
+		BasePath:        spec.BasePath,
+		Schemes:         spec.Schemes,
+		Title:           spec.Info.Title,
+		Description:     spec.Info.Description,
+		SwaggerTemplate: string(jsonBytes),
+		LeftDelim:       "{{",
+		RightDelim:      "}}",
 	}
+
 	swag.Register(swaggerInfo.InstanceName(), swaggerInfo)
 }
-
-const docTemplate = `{
-    "schemes": {{ marshal .Schemes }},
-    "swagger": "2.0",
-    "info": {
-        "description": "{{escape .Description}}",
-        "title": "{{.Title}}",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
-        },
-        "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
-        "version": "{{.Version}}"
-    },
-    "host": "{{.Host}}",
-    "basePath": "{{.BasePath}}",
-    "paths": {}
-}`
