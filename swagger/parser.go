@@ -54,8 +54,16 @@ type Mapper map[string]interface{}
 func recursiveParse(val interface{}) Mapper {
 	fmt.Printf("val is %v\n", val)
 	mapper := make(Mapper)
-	ct := reflect.ValueOf(val).Elem()
 
+	if reflect.TypeOf(val).Kind() == reflect.Map {
+		for k, v := range val.(map[string]interface{}) {
+			mapper[k] = recursiveParse(v)
+		}
+
+		return mapper
+	}
+
+	ct := reflect.ValueOf(val).Elem()
 	for i := 0; i < ct.NumField(); i++ {
 		field := ct.Type().Field(i)
 		key := firstLetterToLower(field.Name)
@@ -64,10 +72,6 @@ func recursiveParse(val interface{}) Mapper {
 		}
 		if field.Type.Kind() == reflect.Pointer {
 			mapper[key] = recursiveParse(ct.Field(i).Interface())
-		} else if field.Type.Kind() == reflect.Map {
-			for k, v := range ct.Field(i).Interface().(map[string]interface{}) {
-				mapper[key+"."+k] = recursiveParse(v)
-			}
 		} else {
 			mapper[key] = ct.Field(i).Interface()
 		}
