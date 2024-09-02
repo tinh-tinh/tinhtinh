@@ -51,7 +51,7 @@ func (spec *SpecBuilder) Build() *SpecBuilder {
 }
 
 func SetUp(app *core.App, spec *SpecBuilder) {
-	// spec.ParserPath(app)
+	spec.ParserPath(app)
 	mapper := recursiveParse(spec)
 	jsonBytes, _ := json.Marshal(mapper)
 	swaggerInfo := &swag.Spec{
