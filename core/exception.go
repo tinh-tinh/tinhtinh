@@ -12,7 +12,10 @@ func Exception(w http.ResponseWriter, err error, statusCode int) {
 	response := Map{
 		"error": err.Error(),
 	}
-	json.NewEncoder(w).Encode(response)
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func BadRequestException(w http.ResponseWriter, err string) {

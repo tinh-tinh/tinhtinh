@@ -13,8 +13,12 @@ type Config struct {
 }
 
 func Test_Scan(t *testing.T) {
-	Register[Config](".env")
+
 	t.Run("test case", func(t *testing.T) {
+		_, err := Register[Config](".env")
+		if err != nil {
+			t.Errorf("error is %v", err)
+		}
 		var cfg Config
 		Scan(&cfg)
 		fmt.Printf("Config is %v", cfg)
