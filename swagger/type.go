@@ -65,7 +65,7 @@ type ParameterObject struct {
 type DefinitionSwagger struct {
 	Type       string
 	Required   []string
-	Properties map[string]SchemaObject
+	Properties map[string]*SchemaObject
 }
 
 // -------- Schema Object --------
@@ -121,5 +121,5 @@ type SpecBuilder struct {
 	Host        string
 	BasePath    string
 	Paths       PathObject
-	Definitions map[string]DefinitionSwagger
+	Definitions map[string]*DefinitionSwagger
 }

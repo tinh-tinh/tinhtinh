@@ -2,7 +2,6 @@ package swagger
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/swaggo/swag"
 	"github.com/tinh-tinh/tinhtinh/core"
@@ -56,7 +55,6 @@ func SetUp(app *core.App, spec *SpecBuilder) {
 	mapper := recursiveParse(spec)
 	jsonBytes, _ := json.Marshal(mapper)
 
-	fmt.Println(string(jsonBytes))
 	swaggerInfo := &swag.Spec{
 		Version:          spec.Info.Version,
 		Host:             spec.Host,

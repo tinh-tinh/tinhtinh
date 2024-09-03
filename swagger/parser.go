@@ -1,7 +1,6 @@
 package swagger
 
 import (
-	"fmt"
 	"reflect"
 	"unicode"
 
@@ -54,6 +53,9 @@ type Mapper map[string]interface{}
 func recursiveParse(val interface{}) Mapper {
 	mapper := make(Mapper)
 
+	if reflect.ValueOf(val).IsNil() {
+		return nil
+	}
 	ct := reflect.ValueOf(val).Elem()
 	for i := 0; i < ct.NumField(); i++ {
 		field := ct.Type().Field(i)
@@ -62,15 +64,30 @@ func recursiveParse(val interface{}) Mapper {
 			continue
 		}
 		if field.Type.Kind() == reflect.Pointer {
-			mapper[key] = recursiveParse(ct.Field(i).Interface())
+			ptrVal := recursiveParse(ct.Field(i).Interface())
+			if len(ptrVal) == 0 {
+				continue
+			}
+			mapper[key] = ptrVal
 		} else if field.Type.Kind() == reflect.Map {
 			val := ct.Field(i).Interface()
-			mapType := reflect.TypeOf(val)
-			structType := mapType.Elem()
-			fmt.Printf("Struct map type: %v\n", structType)
+			mapVal := reflect.ValueOf(val)
+			subMapper := make(Mapper)
+			for _, v := range mapVal.MapKeys() {
+				subVal := recursiveParse(mapVal.MapIndex(v).Interface())
+				if len(subVal) == 0 {
+					continue
+				}
+				subMapper[v.String()] = subVal
+			}
+			mapper[key] = subMapper
 		} else {
 			mapper[key] = ct.Field(i).Interface()
 		}
+	}
+
+	if len(mapper) == 0 {
+		return nil
 	}
 
 	return mapper
