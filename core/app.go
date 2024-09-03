@@ -32,12 +32,13 @@ func (app *App) SetGlobalPrefix(prefix string) {
 func (app *App) Listen(port int) {
 	mux := http.NewServeMux()
 
-	for k, v := range app.Module.Mux {
-		route := ParseRoute(k)
-		route.SetPrefix(app.prefix)
-
-		log.Printf("[RoutesResolvers] %s\n", route.GetPath())
-		mux.Handle(route.GetPath(), v)
+	for _, mx := range app.Module.MapMux {
+		for k, v := range mx {
+			route := ParseRoute(k)
+			route.SetPrefix(app.prefix)
+			log.Printf("[RoutesResolvers] %s\n", route.GetPath())
+			mux.Handle(route.GetPath(), v)
+		}
 	}
 
 	// swagger.CreateDocument(mux, func(s *swagger.Spec) {

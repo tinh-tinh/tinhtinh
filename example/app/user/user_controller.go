@@ -6,7 +6,7 @@ import (
 )
 
 func managerController(module *core.DynamicModule) *core.DynamicController {
-	ctrl := core.NewController("users", module)
+	ctrl := core.NewController("Users", module)
 
 	ctrl.Pipe(
 		core.Query[dto.FindUser](),

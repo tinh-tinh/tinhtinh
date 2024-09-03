@@ -1,36 +1,44 @@
 package swagger
 
 import (
+	"fmt"
 	"reflect"
+	"strings"
 	"unicode"
 
 	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func (spec *SpecBuilder) ParserPath(app *core.App) {
-	mux := app.Module.Mux
+	mux := app.Module.MapMux
 
 	groupRoute := make(map[string][]string)
-	for k := range mux {
-		router := core.ParseRoute(k)
-		if groupRoute[router.Path] == nil {
-			groupRoute[router.Path] = make([]string, 0)
+	for tag, mx := range mux {
+		for k := range mx {
+			router := core.ParseRoute(k)
+			if groupRoute[router.Path] == nil {
+				groupRoute[router.Path] = make([]string, 0)
+			}
+			path := fmt.Sprintf("%s_%s", tag, router.Method)
+			groupRoute[router.Path] = append(groupRoute[router.Path], path)
 		}
-		groupRoute[router.Path] = append(groupRoute[router.Path], router.Method)
 	}
+	fmt.Println(groupRoute)
 
 	pathObject := make(PathObject)
 	for k, v := range groupRoute {
 		itemObject := &PathItemObject{}
 		for i := 0; i < len(v); i++ {
+			route := strings.Split(v[i], "_")
 			response := &ResponseObject{
 				Description: "Ok",
 			}
 			res := map[string]*ResponseObject{"200": response}
 			operation := &OperationObject{
+				Tags:      []string{route[0]},
 				Responses: res,
 			}
-			switch v[i] {
+			switch route[1] {
 			case "GET":
 				itemObject.Get = operation
 			case "POST":

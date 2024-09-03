@@ -6,7 +6,7 @@ import (
 )
 
 func authController(module *core.DynamicModule) *core.DynamicController {
-	authCtrl := core.NewController("auth", module)
+	authCtrl := core.NewController("Auth", module)
 
 	authCtrl.Pipe(core.Body[dto.SignUpUser]()).Post("/", func(ctx core.Ctx) {
 		payload := ctx.Get(core.Input).(dto.SignUpUser)

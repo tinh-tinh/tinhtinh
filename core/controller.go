@@ -1,11 +1,15 @@
 package core
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 type Handler func(ctx Ctx)
 
 type DynamicController struct {
 	name              string
+	tag               string
 	middlewares       []Middleware
 	globalMiddlewares []Middleware
 	module            *DynamicModule
@@ -13,10 +17,15 @@ type DynamicController struct {
 
 func NewController(name string, module *DynamicModule) *DynamicController {
 	return &DynamicController{
-		name:        name,
+		name:        strings.ToLower(name),
+		tag:         name,
 		middlewares: []Middleware{},
 		module:      module,
 	}
+}
+
+func (c *DynamicController) Tag(tag string) {
+	c.tag = tag
 }
 
 func (c *DynamicController) Use(middleware ...Middleware) *DynamicController {
@@ -72,7 +81,12 @@ func (c *DynamicController) registry(method string, path string, handler http.Ha
 	}
 
 	c.middlewares = []Middleware{}
-	c.module.Mux[route.GetPath()] = mergeHandler
+	if c.module.MapMux[c.tag] == nil {
+		c.module.MapMux[c.tag] = make(Mux)
+	}
+	mux := c.module.MapMux[c.tag]
+	mux[route.GetPath()] = mergeHandler
+	c.module.MapMux[c.tag] = mux
 }
 
 func (c *DynamicController) Inject(name Provide) interface{} {
