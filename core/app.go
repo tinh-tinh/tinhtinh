@@ -4,52 +4,40 @@ import (
 	"log"
 	"net/http"
 	"sync"
-
-	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type App struct {
 	pool   sync.Pool
-	prefix string
+	Prefix string
+	Mux    *http.ServeMux
 	Module *DynamicModule
 }
 
 type ModuleParam func() *DynamicModule
 
-func CreateFactory(module ModuleParam) *App {
+func CreateFactory(module ModuleParam, prefix string) *App {
 	app := &App{
 		pool:   sync.Pool{},
 		Module: module(),
+		Prefix: prefix,
+		Mux:    http.NewServeMux(),
 	}
-
-	return app
-}
-
-func (app *App) SetGlobalPrefix(prefix string) {
-	app.prefix = prefix
-}
-
-func (app *App) Listen(port int) {
-	mux := http.NewServeMux()
 
 	for _, mx := range app.Module.MapMux {
 		for k, v := range mx {
 			route := ParseRoute(k)
-			route.SetPrefix(app.prefix)
+			route.SetPrefix(app.Prefix)
 			log.Printf("[RoutesResolvers] %s\n", route.GetPath())
-			mux.Handle(route.GetPath(), v)
+			app.Mux.Handle(route.GetPath(), v)
 		}
 	}
+	return app
+}
 
-	// swagger.CreateDocument(mux, func(s *swagger.Spec) {
-	// 	s.URL = "http://localhost:" + IntToString(port)
-	// })
-
-	mux.Handle("GET /swagger/*", httpSwagger.Handler(httpSwagger.URL("http://localhost:"+IntToString(port)+"/swagger/doc.json")))
-
+func (app *App) Listen(port int) {
 	server := http.Server{
 		Addr:    ":" + IntToString(port),
-		Handler: mux,
+		Handler: app.Mux,
 	}
 	log.Printf("Server running on http://localhost:%d\n", port)
 	err := server.ListenAndServe()

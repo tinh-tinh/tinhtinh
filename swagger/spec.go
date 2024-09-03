@@ -2,7 +2,9 @@ package swagger
 
 import (
 	"encoding/json"
+	"fmt"
 
+	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/swaggo/swag"
 	"github.com/tinh-tinh/tinhtinh/core"
 )
@@ -11,8 +13,8 @@ func NewSpecBuilder() *SpecBuilder {
 	return &SpecBuilder{
 		Info: &InfoObject{
 			Version:        "1.0",
-			Title:          "Swagger Example API for Tinh Tinh",
-			Description:    "This is a sample server Tinh tinh server.",
+			Title:          "Swagger UI",
+			Description:    "This is a sample server.",
 			TermsOfService: "http://swagger.io/terms/",
 			Contact: &ContactInfoObject{
 				Name:  "API Support",
@@ -24,10 +26,8 @@ func NewSpecBuilder() *SpecBuilder {
 				Url:  "http://www.apache.org/licenses/LICENSE-2.0.html",
 			},
 		},
-		Swagger:  "2.0",
-		Schemes:  []string{"http", "https"},
-		BasePath: "/v1",
-		Host:     "tinhtinh.swagger.io",
+		Swagger: "2.0",
+		Schemes: []string{"http", "https"},
 	}
 }
 
@@ -46,11 +46,21 @@ func (spec *SpecBuilder) SetVersion(version string) *SpecBuilder {
 	return spec
 }
 
+func (spec *SpecBuilder) SetHost(host string) *SpecBuilder {
+	spec.Host = host
+	return spec
+}
+
+func (spec *SpecBuilder) SetBasePath(basePath string) *SpecBuilder {
+	spec.BasePath = basePath
+	return spec
+}
+
 func (spec *SpecBuilder) Build() *SpecBuilder {
 	return spec
 }
 
-func SetUp(app *core.App, spec *SpecBuilder) {
+func SetUp(path string, app *core.App, spec *SpecBuilder) {
 	spec.ParserPath(app)
 	mapper := recursiveParse(spec)
 	jsonBytes, _ := json.Marshal(mapper)
@@ -68,5 +78,10 @@ func SetUp(app *core.App, spec *SpecBuilder) {
 		RightDelim:       "}}",
 	}
 
+	route := fmt.Sprintf("%s%s", core.IfSlashPrefixString(app.Prefix), core.IfSlashPrefixString(path))
+
 	swag.Register(swaggerInfo.InstanceName(), swaggerInfo)
+	app.Mux.Handle("GET "+route+"/*", httpSwagger.Handler(
+		httpSwagger.URL(spec.Host+route+"/doc.json"),
+	))
 }
