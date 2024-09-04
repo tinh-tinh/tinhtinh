@@ -6,10 +6,12 @@ import (
 )
 
 func authController(module *core.DynamicModule) *core.DynamicController {
-	authCtrl := core.NewController("Auth", module)
+	authCtrl := core.NewController("Auth", module).Tag("Global")
 
-	authCtrl.Pipe(core.Body[dto.SignUpUser]()).Post("/", func(ctx core.Ctx) {
-		payload := ctx.Get(core.Input).(dto.SignUpUser)
+	authCtrl.Pipe(
+		core.Body(&dto.SignUpUser{}),
+	).Post("/", func(ctx core.Ctx) {
+		payload := ctx.Get(core.InBody).(dto.SignUpUser)
 
 		userService := authCtrl.Inject(USER_SERVICE).(CrudService)
 		err := userService.Create(payload)

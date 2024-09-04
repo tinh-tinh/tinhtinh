@@ -7,5 +7,5 @@ type SignUpUser struct {
 }
 
 type FindUser struct {
-	Name string `validate:"isAlpha" query:"name"`
+	Name int `validate:"isAlpha" query:"name"`
 }

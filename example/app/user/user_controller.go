@@ -9,7 +9,7 @@ func managerController(module *core.DynamicModule) *core.DynamicController {
 	ctrl := core.NewController("Users", module)
 
 	ctrl.Pipe(
-		core.Query[dto.FindUser](),
+		core.Query(&dto.FindUser{}),
 	).Get("/", func(ctx core.Ctx) {
 		userService := ctrl.Inject(USER_SERVICE).(CrudService)
 		data := userService.GetAll()
@@ -17,7 +17,7 @@ func managerController(module *core.DynamicModule) *core.DynamicController {
 	})
 
 	ctrl.Pipe(
-		core.Body[dto.SignUpUser](),
+		core.Body(&dto.SignUpUser{}),
 	).Post("/", func(ctx core.Ctx) {
 		ctx.JSON(core.Map{"data": "ok"})
 	})

@@ -10,12 +10,11 @@ import (
 
 func main() {
 	server := core.CreateFactory(app.NewModule, "api")
+	port := config.GetRaw("PORT")
 
 	document := swagger.NewSpecBuilder()
-	document.SetHost("http://localhost:" + config.GetRaw("PORT")).SetBasePath("/")
+	document.SetHost("http://localhost:" + port).SetBasePath("/")
 
 	swagger.SetUp("docs", server, document)
-
-	port := config.GetRaw("PORT")
 	server.Listen(transform.StringToInt(port))
 }
