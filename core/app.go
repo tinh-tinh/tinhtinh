@@ -35,12 +35,14 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 			utils.Yellow(" [RoutesResolver] "),
 			utils.Green(route.GetPath()+"\n"),
 		)
+		app.Module.mux = nil
 		app.Mux.Handle(route.GetPath(), v)
 	}
 	return app
 }
 
 func (app *App) Listen(port int) {
+	app.Module.MapperDoc = nil
 	server := http.Server{
 		Addr:    ":" + IntToString(port),
 		Handler: app.Mux,
