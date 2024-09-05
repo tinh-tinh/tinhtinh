@@ -65,7 +65,6 @@ func SetUp(path string, app *core.App, spec *SpecBuilder) {
 	mapper := recursiveParsePath(spec)
 	jsonBytes, _ := json.Marshal(mapper)
 
-	fmt.Println(string(jsonBytes))
 	swaggerInfo := &swag.Spec{
 		Version:          spec.Info.Version,
 		Host:             spec.Host,

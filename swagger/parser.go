@@ -137,10 +137,8 @@ func IsNil(val interface{}) bool {
 	case []*ParameterObject:
 		return len(v) == 0
 	default:
-		fmt.Printf("special type: %v\n", v)
+		return val == nil
 	}
-
-	return val == nil
 }
 
 func parseDto(dto interface{}) *DefinitionObject {

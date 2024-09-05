@@ -52,3 +52,15 @@ func IntToString(a int) string {
 	s := strconv.Itoa(a)
 	return s
 }
+
+const (
+	Red     = "\x1b[31m"
+	Green   = "\x1b[32m"
+	Yellow  = "\x1b[33m"
+	Blue    = "\x1b[34m"
+	Magenta = "\x1b[35m"
+	Cyan    = "\x1b[36m"
+	Reset   = "\x1b[0m"
+	Gray    = "\033[37m"
+	White   = "\033[97m"
+)

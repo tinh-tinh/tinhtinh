@@ -4,6 +4,9 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
+
+	"github.com/tinh-tinh/tinhtinh/utils"
 )
 
 type App struct {
@@ -26,7 +29,12 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 	for k, v := range app.Module.mux {
 		route := ParseRoute(k)
 		route.SetPrefix(app.Prefix)
-		log.Printf("[RoutesResolvers] %s\n", route.GetPath())
+		utils.Log(
+			utils.Green("[TT] "),
+			utils.White(time.Now().Format("2006-01-02 15:04:05")),
+			utils.Yellow(" [RoutesResolver] "),
+			utils.Green(route.GetPath()+"\n"),
+		)
 		app.Mux.Handle(route.GetPath(), v)
 	}
 	return app
