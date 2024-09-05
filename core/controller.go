@@ -45,6 +45,14 @@ func (c *DynamicController) Guard(guards ...Guard) *DynamicController {
 	return c
 }
 
+func (c *DynamicController) GuardWithCtrl(guards ...GuardWithCtrl) *DynamicController {
+	for _, v := range guards {
+		mid := ParseGuardCtrl(c, v)
+		c.middlewares = append(c.middlewares, mid)
+	}
+	return c
+}
+
 func (c *DynamicController) Pipe(dtos ...Pipe) *DynamicController {
 	c.Dtos = append(c.Dtos, dtos...)
 	middleware := PipeMiddleware(dtos...)

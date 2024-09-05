@@ -12,6 +12,10 @@ type Ctx struct {
 	w http.ResponseWriter
 }
 
+func (ctx *Ctx) Headers(key string) string {
+	return ctx.r.Header.Get(key)
+}
+
 func (ctx *Ctx) BodyParser(payload interface{}) error {
 	err := json.NewDecoder(ctx.r.Body).Decode(payload)
 	if err != nil {
