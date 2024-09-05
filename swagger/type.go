@@ -42,10 +42,10 @@ type OperationObject struct {
 	OperationID string
 	Consumes    []string
 	Produces    []string
-	Parameters  []ParameterObject
+	Parameters  []*ParameterObject
 	Schemes     []string
 	Deprecated  bool
-	Security    []SecuritySchemeObject
+	Security    []*SecuritySchemeObject
 	Responses   map[string]*ResponseObject
 }
 
@@ -62,7 +62,7 @@ type ParameterObject struct {
 }
 
 // -------- Definition Object --------
-type DefinitionSwagger struct {
+type DefinitionObject struct {
 	Type       string
 	Required   []string
 	Properties map[string]*SchemaObject
@@ -72,16 +72,17 @@ type DefinitionSwagger struct {
 type SchemaObject struct {
 	Type     string
 	Ref      string
+	Example  string
 	Format   string
 	Required string
 	Enum     []string
-	Items    ItemsObject
+	Items    *ItemsObject
 }
 
 // -------- Response Object --------
 type ResponseObject struct {
 	Description string
-	Schema      SchemaObject
+	Schema      *SchemaObject
 }
 
 // -------- Items Object --------
@@ -121,5 +122,5 @@ type SpecBuilder struct {
 	Host        string
 	BasePath    string
 	Paths       PathObject
-	Definitions map[string]*DefinitionSwagger
+	Definitions map[string]*DefinitionObject
 }

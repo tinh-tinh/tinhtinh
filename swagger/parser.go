@@ -10,20 +10,23 @@ import (
 )
 
 func (spec *SpecBuilder) ParserPath(app *core.App) {
-	mux := app.Module.MapMux
+	mapperDoc := app.Module.MapperDoc
 
 	groupRoute := make(map[string][]string)
-	for tag, mx := range mux {
-		for k := range mx {
+	definitions := make(map[string]*DefinitionObject)
+	for tag, mx := range mapperDoc {
+		for k, v := range mx {
 			router := core.ParseRoute(k)
 			if groupRoute[router.Path] == nil {
 				groupRoute[router.Path] = make([]string, 0)
 			}
 			path := fmt.Sprintf("%s_%s", tag, router.Method)
 			groupRoute[router.Path] = append(groupRoute[router.Path], path)
+			for _, p := range v {
+				definitions[getNameStruct(p.Dto)] = parseDto(p.Dto)
+			}
 		}
 	}
-	fmt.Println(groupRoute)
 
 	pathObject := make(PathObject)
 	for k, v := range groupRoute {
@@ -54,11 +57,12 @@ func (spec *SpecBuilder) ParserPath(app *core.App) {
 	}
 
 	spec.Paths = pathObject
+	spec.Definitions = definitions
 }
 
 type Mapper map[string]interface{}
 
-func recursiveParse(val interface{}) Mapper {
+func recursiveParsePath(val interface{}) Mapper {
 	mapper := make(Mapper)
 
 	if reflect.ValueOf(val).IsNil() {
@@ -72,7 +76,7 @@ func recursiveParse(val interface{}) Mapper {
 			continue
 		}
 		if field.Type.Kind() == reflect.Pointer {
-			ptrVal := recursiveParse(ct.Field(i).Interface())
+			ptrVal := recursiveParsePath(ct.Field(i).Interface())
 			if len(ptrVal) == 0 {
 				continue
 			}
@@ -82,7 +86,7 @@ func recursiveParse(val interface{}) Mapper {
 			mapVal := reflect.ValueOf(val)
 			subMapper := make(Mapper)
 			for _, v := range mapVal.MapKeys() {
-				subVal := recursiveParse(mapVal.MapIndex(v).Interface())
+				subVal := recursiveParsePath(mapVal.MapIndex(v).Interface())
 				if len(subVal) == 0 {
 					continue
 				}
@@ -90,6 +94,10 @@ func recursiveParse(val interface{}) Mapper {
 			}
 			mapper[key] = subMapper
 		} else {
+			val := ct.Field(i).Interface()
+			if IsNil(val) {
+				continue
+			}
 			mapper[key] = ct.Field(i).Interface()
 		}
 	}
@@ -110,4 +118,53 @@ func firstLetterToLower(s string) string {
 	r[0] = unicode.ToLower(r[0])
 
 	return string(r)
+}
+
+func IsNil(val interface{}) bool {
+	switch v := val.(type) {
+	case string:
+		return len(v) == 0
+	case []string:
+		return len(v) == 0
+	case []*interface{}:
+		return len(v) == 0
+	case []interface{}:
+		return len(v) == 0
+	case map[string]interface{}:
+		return len(v) == 0
+	case []*SecuritySchemeObject:
+		return len(v) == 0
+	case []*ParameterObject:
+		return len(v) == 0
+	default:
+		fmt.Printf("special type: %v\n", v)
+	}
+
+	return val == nil
+}
+
+func parseDto(dto interface{}) *DefinitionObject {
+	properties := make(map[string]*SchemaObject)
+	ct := reflect.ValueOf(dto).Elem()
+	for i := 0; i < ct.NumField(); i++ {
+		schema := &SchemaObject{
+			Type:     ct.Field(i).Kind().String(),
+			Required: "true",
+			Example:  "abc",
+		}
+		properties[ct.Type().Field(i).Name] = schema
+	}
+
+	return &DefinitionObject{
+		Type:       "object",
+		Properties: properties,
+	}
+}
+
+func getNameStruct(str interface{}) string {
+	if t := reflect.TypeOf(str); t.Kind() == reflect.Ptr {
+		return t.Elem().Name()
+	} else {
+		return t.Name()
+	}
 }

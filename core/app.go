@@ -23,13 +23,11 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 		Mux:    http.NewServeMux(),
 	}
 
-	for _, mx := range app.Module.MapMux {
-		for k, v := range mx {
-			route := ParseRoute(k)
-			route.SetPrefix(app.Prefix)
-			log.Printf("[RoutesResolvers] %s\n", route.GetPath())
-			app.Mux.Handle(route.GetPath(), v)
-		}
+	for k, v := range app.Module.mux {
+		route := ParseRoute(k)
+		route.SetPrefix(app.Prefix)
+		log.Printf("[RoutesResolvers] %s\n", route.GetPath())
+		app.Mux.Handle(route.GetPath(), v)
 	}
 	return app
 }

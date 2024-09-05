@@ -62,6 +62,11 @@ func (ctx *Ctx) JSON(data Map) {
 	}
 }
 
+func (ctx *Ctx) Input() interface{} {
+	val := ctx.Get(Input)
+	return val
+}
+
 func (ctx *Ctx) Get(key any) interface{} {
 	val := ctx.r.Context().Value(key)
 	return val

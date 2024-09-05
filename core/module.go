@@ -7,9 +7,13 @@ import (
 type Mux map[string]http.Handler
 type MapValue map[Provide]interface{}
 
+type MappingRoute map[string][]Pipe
+type MappingDoc map[string]MappingRoute
+
 type DynamicModule struct {
 	global      bool
-	MapMux      map[string]Mux
+	mux         Mux
+	MapperDoc   MappingDoc
 	mapperValue MapValue
 }
 
@@ -26,7 +30,8 @@ type NewModuleOptions struct {
 
 func NewModule(opt NewModuleOptions) *DynamicModule {
 	module := &DynamicModule{
-		MapMux:      make(map[string]Mux),
+		mux:         make(Mux),
+		MapperDoc:   make(MappingDoc),
 		mapperValue: make(MapValue),
 		global:      opt.Global,
 	}
@@ -41,11 +46,14 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	// Imports
 	for _, m := range opt.Imports {
 		mod := m(module)
-		for k, v := range mod.MapMux {
-			module.MapMux[k] = v
+		for k, v := range mod.mux {
+			module.mux[k] = v
 		}
 		for k, v := range mod.mapperValue {
 			module.mapperValue[k] = v
+		}
+		for k, v := range mod.MapperDoc {
+			module.MapperDoc[k] = v
 		}
 
 		if module.global {
@@ -64,7 +72,8 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	newMod := &DynamicModule{
 		mapperValue: m.mapperValue,
-		MapMux:      make(map[string]Mux),
+		mux:         make(Mux),
+		MapperDoc:   make(MappingDoc),
 		global:      opt.Global,
 	}
 
@@ -78,11 +87,14 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	// Imports
 	for _, m := range opt.Imports {
 		mod := m(newMod)
-		for k, v := range mod.MapMux {
-			newMod.MapMux[k] = v
+		for k, v := range mod.mux {
+			newMod.mux[k] = v
 		}
 		for k, v := range mod.mapperValue {
 			newMod.mapperValue[k] = v
+		}
+		for k, v := range mod.MapperDoc {
+			newMod.MapperDoc[k] = v
 		}
 
 		if newMod.global {

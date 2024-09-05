@@ -10,6 +10,7 @@ type Handler func(ctx Ctx)
 type DynamicController struct {
 	name              string
 	tag               string
+	Dtos              []Pipe
 	middlewares       []Middleware
 	globalMiddlewares []Middleware
 	module            *DynamicModule
@@ -20,12 +21,14 @@ func NewController(name string, module *DynamicModule) *DynamicController {
 		name:        strings.ToLower(name),
 		tag:         name,
 		middlewares: []Middleware{},
+		Dtos:        []Pipe{},
 		module:      module,
 	}
 }
 
-func (c *DynamicController) Tag(tag string) {
+func (c *DynamicController) Tag(tag string) *DynamicController {
 	c.tag = tag
+	return c
 }
 
 func (c *DynamicController) Use(middleware ...Middleware) *DynamicController {
@@ -42,8 +45,10 @@ func (c *DynamicController) Guard(guards ...Guard) *DynamicController {
 	return c
 }
 
-func (c *DynamicController) Pipe(pipe ...Middleware) *DynamicController {
-	c.middlewares = append(c.middlewares, pipe...)
+func (c *DynamicController) Pipe(dtos ...Pipe) *DynamicController {
+	c.Dtos = append(c.Dtos, dtos...)
+	middleware := PipeMiddleware(dtos...)
+	c.middlewares = append(c.middlewares, middleware)
 	return c
 }
 
@@ -81,12 +86,14 @@ func (c *DynamicController) registry(method string, path string, handler http.Ha
 	}
 
 	c.middlewares = []Middleware{}
-	if c.module.MapMux[c.tag] == nil {
-		c.module.MapMux[c.tag] = make(Mux)
+
+	c.module.mux[route.GetPath()] = mergeHandler
+	if c.module.MapperDoc[c.tag] == nil {
+		c.module.MapperDoc[c.tag] = make(map[string][]Pipe)
 	}
-	mux := c.module.MapMux[c.tag]
-	mux[route.GetPath()] = mergeHandler
-	c.module.MapMux[c.tag] = mux
+
+	ct := c.module.MapperDoc[c.tag]
+	ct[route.GetPath()] = c.Dtos
 }
 
 func (c *DynamicController) Inject(name Provide) interface{} {

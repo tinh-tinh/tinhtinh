@@ -11,7 +11,7 @@ func Test_Recursive(t *testing.T) {
 
 	t.Run("test case", func(t *testing.T) {
 		doc := NewSpecBuilder()
-		mapper := recursiveParse(doc)
+		mapper := recursiveParsePath(doc)
 		jsonBytes, _ := json.Marshal(mapper)
 		fmt.Println(string(jsonBytes))
 	})
