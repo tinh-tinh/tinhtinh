@@ -1,47 +1,56 @@
 package swagger
 
 import (
-	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"unicode"
 
 	"github.com/tinh-tinh/tinhtinh/core"
 )
 
-func (spec *SpecBuilder) ParserPath(app *core.App) {
+func (spec *SpecBuilder) ParsePaths(app *core.App) {
 	mapperDoc := app.Module.MapperDoc
 
-	groupRoute := make(map[string][]string)
-	definitions := make(map[string]*DefinitionObject)
-	for tag, mx := range mapperDoc {
-		for k, v := range mx {
-			router := core.ParseRoute(k)
-			if groupRoute[router.Path] == nil {
-				groupRoute[router.Path] = make([]string, 0)
-			}
-			path := fmt.Sprintf("%s_%s", tag, router.Method)
-			groupRoute[router.Path] = append(groupRoute[router.Path], path)
-			for _, p := range v {
-				definitions[getNameStruct(p.Dto)] = parseDto(p.Dto)
-			}
-		}
-	}
-
 	pathObject := make(PathObject)
-	for k, v := range groupRoute {
-		itemObject := &PathItemObject{}
-		for i := 0; i < len(v); i++ {
-			route := strings.Split(v[i], "_")
+	definitions := make(map[string]*DefinitionObject)
+
+	for tag, mx := range mapperDoc {
+		for path, dtos := range mx {
+			router := core.ParseRoute(path)
+			parametes := []*ParameterObject{}
+			for _, p := range dtos {
+				switch p.In {
+				case core.InBody:
+					definitions[getNameStruct(p.Dto)] = ParseDefinition(p.Dto)
+					parametes = append(parametes, &ParameterObject{
+						Name: getNameStruct(p.Dto),
+						In:   string(p.In),
+						Schema: &SchemaObject{
+							Ref: "#/definitions/" + getNameStruct(p.Dto),
+						},
+					})
+				case core.InQuery:
+					parametes = append(parametes, ScanQuery(p.Dto, p.In)...)
+				case core.InPath:
+					parametes = append(parametes, ScanQuery(p.Dto, p.In)...)
+				}
+			}
+
+			if pathObject[router.Path] == nil {
+				pathObject[router.Path] = &PathItemObject{}
+			}
+			itemObject := pathObject[router.Path]
 			response := &ResponseObject{
 				Description: "Ok",
 			}
 			res := map[string]*ResponseObject{"200": response}
 			operation := &OperationObject{
-				Tags:      []string{route[0]},
-				Responses: res,
+				Tags:       []string{tag},
+				Responses:  res,
+				Parameters: parametes,
 			}
-			switch route[1] {
+			switch router.Method {
 			case "GET":
 				itemObject.Get = operation
 			case "POST":
@@ -52,17 +61,15 @@ func (spec *SpecBuilder) ParserPath(app *core.App) {
 				itemObject.Delete = operation
 			}
 		}
-
-		pathObject[k] = itemObject
 	}
 
-	spec.Paths = pathObject
 	spec.Definitions = definitions
+	spec.Paths = pathObject
 }
 
 type Mapper map[string]interface{}
 
-func recursiveParsePath(val interface{}) Mapper {
+func recursiveParseStandardSwagger(val interface{}) Mapper {
 	mapper := make(Mapper)
 
 	if reflect.ValueOf(val).IsNil() {
@@ -72,11 +79,14 @@ func recursiveParsePath(val interface{}) Mapper {
 	for i := 0; i < ct.NumField(); i++ {
 		field := ct.Type().Field(i)
 		key := firstLetterToLower(field.Name)
+		if key == "ref" {
+			key = "$ref"
+		}
 		if ct.Field(i).Interface() == nil {
 			continue
 		}
 		if field.Type.Kind() == reflect.Pointer {
-			ptrVal := recursiveParsePath(ct.Field(i).Interface())
+			ptrVal := recursiveParseStandardSwagger(ct.Field(i).Interface())
 			if len(ptrVal) == 0 {
 				continue
 			}
@@ -86,13 +96,31 @@ func recursiveParsePath(val interface{}) Mapper {
 			mapVal := reflect.ValueOf(val)
 			subMapper := make(Mapper)
 			for _, v := range mapVal.MapKeys() {
-				subVal := recursiveParsePath(mapVal.MapIndex(v).Interface())
-				if len(subVal) == 0 {
+				subVal := recursiveParseStandardSwagger(mapVal.MapIndex(v).Interface())
+				if IsNil(subVal) {
 					continue
 				}
-				subMapper[v.String()] = subVal
+				subKey := firstLetterToLower(v.String())
+				subMapper[subKey] = subVal
 			}
 			mapper[key] = subMapper
+		} else if field.Type.Kind() == reflect.Slice {
+			arrVal := reflect.ValueOf(ct.Field(i).Interface())
+			if arrVal.IsValid() {
+				arr := []interface{}{}
+				for i := 0; i < arrVal.Len(); i++ {
+					item := arrVal.Index(i)
+					if item.Kind() == reflect.Pointer {
+						arr = append(arr, recursiveParseStandardSwagger(item.Interface()))
+					} else {
+						arr = append(arr, item.Interface())
+					}
+				}
+				if IsNil(arr) {
+					continue
+				}
+				mapper[key] = arr
+			}
 		} else {
 			val := ct.Field(i).Interface()
 			if IsNil(val) {
@@ -141,15 +169,27 @@ func IsNil(val interface{}) bool {
 	}
 }
 
-func parseDto(dto interface{}) *DefinitionObject {
+func ParseDefinition(dto interface{}) *DefinitionObject {
 	properties := make(map[string]*SchemaObject)
 	ct := reflect.ValueOf(dto).Elem()
 	for i := 0; i < ct.NumField(); i++ {
 		schema := &SchemaObject{
-			Type:     ct.Field(i).Kind().String(),
-			Required: "true",
-			Example:  "abc",
+			Type: ct.Field(i).Kind().String(),
 		}
+
+		field := ct.Type().Field(i)
+		validator := field.Tag.Get("validate")
+		isRequired := slices.IndexFunc(strings.Split(validator, ","), func(v string) bool { return v == "required" })
+		if isRequired == -1 {
+			schema.Required = false
+		} else {
+			schema.Required = true
+		}
+		example := field.Tag.Get("example")
+		if example != "" {
+			schema.Example = example
+		}
+
 		properties[ct.Type().Field(i).Name] = schema
 	}
 
@@ -160,9 +200,42 @@ func parseDto(dto interface{}) *DefinitionObject {
 }
 
 func getNameStruct(str interface{}) string {
+	name := ""
 	if t := reflect.TypeOf(str); t.Kind() == reflect.Ptr {
-		return t.Elem().Name()
+		name = t.Elem().Name()
 	} else {
-		return t.Name()
+		name = t.Name()
 	}
+
+	return firstLetterToLower(name)
+}
+
+func ScanQuery(val interface{}, in core.InDto) []*ParameterObject {
+	ct := reflect.ValueOf(val).Elem()
+
+	params := []*ParameterObject{}
+	for i := 0; i < ct.NumField(); i++ {
+		field := ct.Type().Field(i)
+
+		param := &ParameterObject{
+			Name: field.Name,
+			Type: field.Type.Name(),
+			In:   string(in),
+		}
+		validator := field.Tag.Get("validate")
+		isRequired := slices.IndexFunc(strings.Split(validator, ","), func(v string) bool { return v == "required" })
+		if isRequired == -1 {
+			param.Required = false
+		} else {
+			param.Required = true
+		}
+		example := field.Tag.Get("example")
+		if example != "" {
+			param.Default = example
+		}
+
+		params = append(params, param)
+	}
+
+	return params
 }

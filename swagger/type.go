@@ -26,12 +26,11 @@ type PathObject map[string]*PathItemObject
 
 // -------- Path Item Object --------
 type PathItemObject struct {
-	Ref        string
-	Post       *OperationObject
-	Get        *OperationObject
-	Put        *OperationObject
-	Delete     *OperationObject
-	Parameters []*ParameterObject
+	Ref    string
+	Post   *OperationObject
+	Get    *OperationObject
+	Put    *OperationObject
+	Delete *OperationObject
 }
 
 // -------- Operation Object --------
@@ -51,14 +50,15 @@ type OperationObject struct {
 
 // -------- Parameter Object --------
 type ParameterObject struct {
-	Name             string
-	In               string
-	Description      string
-	Required         bool
-	Type             string
-	Items            map[string]string
-	Format           string
-	CollectionFormat string
+	Name        string
+	In          string
+	Description string
+	Default     string
+	Required    bool
+	Type        string
+	Items       map[string]string
+	Format      string
+	Schema      *SchemaObject
 }
 
 // -------- Definition Object --------
@@ -74,7 +74,7 @@ type SchemaObject struct {
 	Ref      string
 	Example  string
 	Format   string
-	Required string
+	Required bool
 	Enum     []string
 	Items    *ItemsObject
 }
