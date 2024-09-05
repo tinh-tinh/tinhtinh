@@ -82,6 +82,6 @@ func SetUp(path string, app *core.App, spec *SpecBuilder) {
 
 	swag.Register(swaggerInfo.InstanceName(), swaggerInfo)
 	app.Mux.Handle("GET "+route+"/*", httpSwagger.Handler(
-		httpSwagger.URL(spec.Host+route+"/doc.json"),
+		httpSwagger.URL("http://"+spec.Host+route+"/doc.json"),
 	))
 }

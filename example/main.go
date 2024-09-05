@@ -13,7 +13,7 @@ func main() {
 	port := config.GetRaw("PORT")
 
 	document := swagger.NewSpecBuilder()
-	document.SetHost("http://localhost:" + port).SetBasePath("/")
+	document.SetHost("localhost:" + port).SetBasePath("/api")
 
 	swagger.SetUp("docs", server, document)
 	server.Listen(transform.StringToInt(port))

@@ -217,8 +217,14 @@ func ScanQuery(val interface{}, in core.InDto) []*ParameterObject {
 	for i := 0; i < ct.NumField(); i++ {
 		field := ct.Type().Field(i)
 
+		name := ""
+		if in == core.InQuery {
+			name = field.Tag.Get("query")
+		} else {
+			name = field.Tag.Get("path")
+		}
 		param := &ParameterObject{
-			Name: field.Name,
+			Name: name,
 			Type: field.Type.Name(),
 			In:   string(in),
 		}
