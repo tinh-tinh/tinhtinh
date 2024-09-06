@@ -7,7 +7,11 @@ import (
 type Mux map[string]http.Handler
 type MapValue map[Provide]interface{}
 
-type MappingRoute map[string][]Pipe
+type DocRoute struct {
+	Dto      []Pipe
+	Security []string
+}
+type MappingRoute map[string]DocRoute
 type MappingDoc map[string]MappingRoute
 
 type DynamicModule struct {

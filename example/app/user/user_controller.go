@@ -3,13 +3,13 @@ package user
 import (
 	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/example/app/user/dto"
-	"github.com/tinh-tinh/tinhtinh/jwt"
+	"github.com/tinh-tinh/tinhtinh/token"
 )
 
 func managerController(module *core.DynamicModule) *core.DynamicController {
 	ctrl := core.NewController("Users", module)
 
-	ctrl.GuardWithCtrl(jwt.Guard).Pipe(
+	ctrl.GuardWithCtrl(token.Guard).AddSecurity("authorization").Pipe(
 		core.Query(&dto.FindUser{}),
 	).Get("/", func(ctx core.Ctx) {
 		userService := ctrl.Inject(USER_SERVICE).(CrudService)

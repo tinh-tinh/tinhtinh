@@ -16,9 +16,10 @@ func (spec *SpecBuilder) ParsePaths(app *core.App) {
 	definitions := make(map[string]*DefinitionObject)
 
 	for tag, mx := range mapperDoc {
-		for path, dtos := range mx {
+		for path, docRoute := range mx {
 			router := core.ParseRoute(path)
 			parametes := []*ParameterObject{}
+			dtos := docRoute.Dto
 			for _, p := range dtos {
 				switch p.In {
 				case core.InBody:
@@ -45,10 +46,19 @@ func (spec *SpecBuilder) ParsePaths(app *core.App) {
 				Description: "Ok",
 			}
 			res := map[string]*ResponseObject{"200": response}
+
 			operation := &OperationObject{
 				Tags:       []string{tag},
 				Responses:  res,
 				Parameters: parametes,
+				Security:   []map[string][]string{},
+			}
+			if len(docRoute.Security) > 0 {
+				security := map[string][]string{}
+				for _, s := range docRoute.Security {
+					security[s] = []string{}
+				}
+				operation.Security = append(operation.Security, security)
 			}
 			switch router.Method {
 			case "GET":

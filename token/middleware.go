@@ -1,4 +1,4 @@
-package jwt
+package token
 
 import (
 	"strings"
@@ -6,17 +6,17 @@ import (
 	"github.com/tinh-tinh/tinhtinh/core"
 )
 
-const USER core.Provide = "USER"
+const USER core.CtxKey = "USER"
 
 func Guard(ctrl *core.DynamicController, ctx core.Ctx) bool {
-	jwtService := ctrl.Inject(JWT).(Service)
+	tokenService := ctrl.Inject(TOKEN).(Provider)
 	header := ctx.Headers("Authorization")
 	if header == "" {
 		return false
 	}
 	token := strings.Split(header, " ")[1]
 
-	payload, err := jwtService.VerifyToken(token)
+	payload, err := tokenService.Verify(token)
 	if err != nil {
 		return false
 	}

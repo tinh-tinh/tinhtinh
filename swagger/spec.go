@@ -56,6 +56,16 @@ func (spec *SpecBuilder) SetBasePath(basePath string) *SpecBuilder {
 	return spec
 }
 
+func (spec *SpecBuilder) AddSecurity(security ...*SecuritySchemeObject) *SpecBuilder {
+	if spec.SecurityDefinitions == nil {
+		spec.SecurityDefinitions = make(map[string]*SecuritySchemeObject)
+	}
+	for _, v := range security {
+		spec.SecurityDefinitions[v.Name] = v
+	}
+	return spec
+}
+
 func (spec *SpecBuilder) Build() *SpecBuilder {
 	return spec
 }

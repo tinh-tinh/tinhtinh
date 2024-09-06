@@ -44,7 +44,7 @@ type OperationObject struct {
 	Parameters  []*ParameterObject
 	Schemes     []string
 	Deprecated  bool
-	Security    []*SecuritySchemeObject
+	Security    []map[string][]string
 	Responses   map[string]*ResponseObject
 }
 
@@ -114,13 +114,14 @@ type HeaderObject struct {
 }
 
 type SpecBuilder struct {
-	Swagger     string
-	Info        *InfoObject
-	Schemes     []string
-	Produces    []string
-	Consumes    []string
-	Host        string
-	BasePath    string
-	Paths       PathObject
-	Definitions map[string]*DefinitionObject
+	Swagger             string
+	Info                *InfoObject
+	Schemes             []string
+	Produces            []string
+	Consumes            []string
+	Host                string
+	BasePath            string
+	Paths               PathObject
+	Definitions         map[string]*DefinitionObject
+	SecurityDefinitions map[string]*SecuritySchemeObject
 }

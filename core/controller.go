@@ -11,6 +11,7 @@ type DynamicController struct {
 	name              string
 	tag               string
 	Dtos              []Pipe
+	Security          []string
 	middlewares       []Middleware
 	globalMiddlewares []Middleware
 	module            *DynamicModule
@@ -22,6 +23,7 @@ func NewController(name string, module *DynamicModule) *DynamicController {
 		tag:         name,
 		middlewares: []Middleware{},
 		Dtos:        []Pipe{},
+		Security:    []string{},
 		module:      module,
 	}
 }
@@ -57,6 +59,11 @@ func (c *DynamicController) Pipe(dtos ...Pipe) *DynamicController {
 	c.Dtos = append(c.Dtos, dtos...)
 	middleware := PipeMiddleware(dtos...)
 	c.middlewares = append(c.middlewares, middleware)
+	return c
+}
+
+func (c *DynamicController) AddSecurity(security ...string) *DynamicController {
+	c.Security = append(c.Security, security...)
 	return c
 }
 
@@ -97,11 +104,17 @@ func (c *DynamicController) registry(method string, path string, handler http.Ha
 
 	c.module.mux[route.GetPath()] = mergeHandler
 	if c.module.MapperDoc[c.tag] == nil {
-		c.module.MapperDoc[c.tag] = make(map[string][]Pipe)
+		c.module.MapperDoc[c.tag] = make(map[string]DocRoute)
 	}
 
 	ct := c.module.MapperDoc[c.tag]
-	ct[route.GetPath()] = c.Dtos
+	docRoute := DocRoute{
+		Dto:      c.Dtos,
+		Security: c.Security,
+	}
+	ct[route.GetPath()] = docRoute
+	c.Dtos = nil
+	c.Security = nil
 }
 
 func (c *DynamicController) Inject(name Provide) interface{} {

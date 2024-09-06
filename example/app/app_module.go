@@ -2,12 +2,15 @@ package app
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/tinh-tinh/tinhtinh/config"
 	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/database/sql"
 	"github.com/tinh-tinh/tinhtinh/example/app/post"
 	"github.com/tinh-tinh/tinhtinh/example/app/user"
+	"github.com/tinh-tinh/tinhtinh/token"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -35,6 +38,11 @@ func NewModule() *core.DynamicModule {
 
 					return postgres.Open(dsn)
 				},
+			}),
+			token.Register(token.Options{
+				Alg:    jwt.SigningMethodHS256,
+				Secret: "1234567890krj3k4brub45uybf874847g2f345uy",
+				Exp:    time.Hour,
 			}),
 			user.Module,
 			post.Module,

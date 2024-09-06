@@ -13,7 +13,11 @@ func main() {
 	port := config.GetRaw("PORT")
 
 	document := swagger.NewSpecBuilder()
-	document.SetHost("localhost:" + port).SetBasePath("/api")
+	document.SetHost("localhost:" + port).SetBasePath("/api").AddSecurity(&swagger.SecuritySchemeObject{
+		Type: "apiKey",
+		In:   "header",
+		Name: "Authorization",
+	})
 
 	swagger.SetUp("docs", server, document)
 	server.Listen(transform.StringToInt(port))

@@ -1,4 +1,4 @@
-package jwt
+package token
 
 import (
 	"encoding/base64"
@@ -6,37 +6,51 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/tinh-tinh/tinhtinh/core"
 )
 
-type Service struct {
+type Provider interface {
+	Generate(payload jwt.MapClaims) (string, error)
+	Verify(token string) (interface{}, error)
+}
+
+type Options struct {
 	Alg        jwt.SigningMethod
-	Secret     *string
+	Secret     string
 	PrivateKey *string
 	PublicKey  *string
 	Exp        time.Duration
 	IgnoreExp  bool
 }
 
-const JWT core.Provide = "JWT"
-
-func Register(opt Service) core.Module {
-	return func(module *core.DynamicModule) *core.DynamicModule {
-		provider := core.NewProvider(module)
-		provider.Set(JWT, module)
-
-		return module
+func NewProvider(opt Options) Provider {
+	return &ProviderImpl{
+		Alg:        opt.Alg,
+		Secret:     opt.Secret,
+		PrivateKey: opt.PrivateKey,
+		PublicKey:  opt.PublicKey,
+		Exp:        opt.Exp,
+		IgnoreExp:  opt.IgnoreExp,
 	}
 }
-func (j *Service) GenerateToken(payload jwt.MapClaims) (string, error) {
-	payload["iat"] = time.Now().Unix()
-	payload["exp"] = time.Now().Add(j.Exp).Unix()
 
-	claims := jwt.NewWithClaims(j.Alg, payload)
+type ProviderImpl struct {
+	Alg        jwt.SigningMethod
+	Secret     string
+	PrivateKey *string
+	PublicKey  *string
+	Exp        time.Duration
+	IgnoreExp  bool
+}
+
+func (p *ProviderImpl) Generate(payload jwt.MapClaims) (string, error) {
+	payload["iat"] = time.Now().Unix()
+	payload["exp"] = time.Now().Add(p.Exp).Unix()
+
+	claims := jwt.NewWithClaims(p.Alg, payload)
 
 	var key interface{}
-	if j.Alg == jwt.SigningMethodRS256 {
-		decodedPrivateKey, err := base64.StdEncoding.DecodeString(*j.PrivateKey)
+	if p.Alg == jwt.SigningMethodRS256 {
+		decodedPrivateKey, err := base64.StdEncoding.DecodeString(*p.PrivateKey)
 		if err != nil {
 			return "", fmt.Errorf("could not decode key: %w", err)
 		}
@@ -45,7 +59,7 @@ func (j *Service) GenerateToken(payload jwt.MapClaims) (string, error) {
 			return "", fmt.Errorf("could not parse key: %w", err)
 		}
 	} else {
-		key = j.Secret
+		key = p.Secret
 	}
 	token, err := claims.SignedString(key)
 	if err != nil {
@@ -55,10 +69,10 @@ func (j *Service) GenerateToken(payload jwt.MapClaims) (string, error) {
 	return token, nil
 }
 
-func (j *Service) VerifyToken(token string) (interface{}, error) {
+func (p *ProviderImpl) Verify(token string) (interface{}, error) {
 	var key interface{}
-	if j.Alg == jwt.SigningMethodRS256 {
-		decodedPublicKey, err := base64.StdEncoding.DecodeString(*j.PublicKey)
+	if p.Alg == jwt.SigningMethodRS256 {
+		decodedPublicKey, err := base64.StdEncoding.DecodeString(*p.PublicKey)
 		if err != nil {
 			return nil, fmt.Errorf("could not decode: %w", err)
 		}
@@ -67,7 +81,7 @@ func (j *Service) VerifyToken(token string) (interface{}, error) {
 			return "", fmt.Errorf("validate: parse key: %w", err)
 		}
 	} else {
-		key = j.Secret
+		key = p.Secret
 	}
 	parsedToken, err := jwt.Parse(token, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
@@ -86,7 +100,7 @@ func (j *Service) VerifyToken(token string) (interface{}, error) {
 
 	exp := claims["exp"].(time.Time)
 
-	if !j.IgnoreExp && time.Now().After(exp) {
+	if !p.IgnoreExp && time.Now().After(exp) {
 		return nil, fmt.Errorf("validate: token expired")
 	}
 	return claims, nil
