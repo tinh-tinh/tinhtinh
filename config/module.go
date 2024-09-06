@@ -30,7 +30,7 @@ func GetRaw(key string) string {
 	return os.Getenv(key)
 }
 
-const ConfigEnv core.Provide = "ConfigEnv"
+const ENV core.Provide = "ConfigEnv"
 
 func ForRoot[E any](path ...string) core.Module {
 	return func(module *core.DynamicModule) *core.DynamicModule {
@@ -48,8 +48,12 @@ func ForRoot[E any](path ...string) core.Module {
 			panic("env not found")
 		}
 
-		provider := core.NewProvider(module)
-		provider.Set(ConfigEnv, *lastValue)
+		configModule := module.New(core.NewModuleOptions{})
+
+		provider := core.NewProvider(configModule)
+		provider.Set(ENV, *lastValue)
+		provider.Export(ENV)
+
 		return module
 	}
 }

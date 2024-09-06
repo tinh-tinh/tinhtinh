@@ -33,7 +33,7 @@ func NewModule() *core.DynamicModule {
 			config.ForRoot[Config](),
 			sql.ForRoot(sql.ConnectionOptions{
 				Factory: func(module *core.DynamicModule) gorm.Dialector {
-					env := module.Ref(config.ConfigEnv).(Config)
+					env := module.Ref(config.ENV).(Config)
 					dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=disable TimeZone=Asia/Shanghai", env.DBHost, env.DBUser, env.DBPass, env.DBName, env.DBPort)
 
 					return postgres.Open(dsn)
