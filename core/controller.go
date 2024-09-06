@@ -18,7 +18,7 @@ type DynamicController struct {
 	module            *DynamicModule
 }
 
-func NewController(name string, module *DynamicModule) *DynamicController {
+func (module *DynamicModule) NewController(name string) *DynamicController {
 	return &DynamicController{
 		name:        strings.ToLower(name),
 		tag:         name,

@@ -3,7 +3,7 @@ package post
 import "github.com/tinh-tinh/tinhtinh/core"
 
 func controller(module *core.DynamicModule) *core.DynamicController {
-	ctrl := core.NewController("Posts", module)
+	ctrl := module.NewController("Posts")
 
 	ctrl.Post("/", func(ctx core.Ctx) {
 		ctx.JSON(core.Map{"data": "ok"})

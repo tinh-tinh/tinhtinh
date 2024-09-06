@@ -7,7 +7,7 @@ type DynamicProvider struct {
 	module *DynamicModule
 }
 
-func NewProvider(module *DynamicModule) *DynamicProvider {
+func (module *DynamicModule) NewProvider() *DynamicProvider {
 	return &DynamicProvider{
 		module: module,
 	}

@@ -38,7 +38,7 @@ func (s *CrudService) Create(input dto.SignUpUser) error {
 const USER_SERVICE core.Provide = "UserService"
 
 func service(module *core.DynamicModule) *core.DynamicProvider {
-	userSv := core.NewProvider(module)
+	userSv := module.NewProvider()
 
 	userSv.Set(USER_SERVICE, CrudService{
 		model: module.Ref(sql.ConnectDB).(*gorm.DB),

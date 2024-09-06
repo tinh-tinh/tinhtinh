@@ -31,7 +31,7 @@ func ForRoot(opt ConnectionOptions) core.Module {
 
 		sqlModule := module.New(core.NewModuleOptions{})
 
-		provider := core.NewProvider(sqlModule)
+		provider := sqlModule.NewProvider()
 		provider.Set(ConnectDB, conn)
 		provider.Export(ConnectDB)
 

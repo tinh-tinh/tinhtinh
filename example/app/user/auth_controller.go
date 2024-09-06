@@ -6,7 +6,7 @@ import (
 )
 
 func authController(module *core.DynamicModule) *core.DynamicController {
-	authCtrl := core.NewController("Auth", module).Tag("Global")
+	authCtrl := module.NewController("Auth").Tag("Global")
 
 	authCtrl.Pipe(
 		core.Body(&dto.SignUpUser{}),
