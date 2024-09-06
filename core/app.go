@@ -12,6 +12,7 @@ import (
 type App struct {
 	pool   sync.Pool
 	Prefix string
+	log    bool
 	Mux    *http.ServeMux
 	Module *DynamicModule
 }
@@ -41,12 +42,23 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 	return app
 }
 
+func (app *App) Log() *App {
+	app.log = true
+	return app
+}
+
 func (app *App) Listen(port int) {
 	app.Module.MapperDoc = nil
+
 	server := http.Server{
 		Addr:    ":" + IntToString(port),
 		Handler: app.Mux,
 	}
+	if app.log {
+		loggedRouter := logRequests(app.Mux)
+		server.Handler = loggedRouter
+	}
+
 	log.Printf("Server running on http://localhost:%d\n", port)
 	err := server.ListenAndServe()
 	if err != nil {

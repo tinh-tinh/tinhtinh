@@ -54,6 +54,6 @@ func ForRoot[E any](path ...string) core.Module {
 		provider.Set(ENV, *lastValue)
 		provider.Export(ENV)
 
-		return module
+		return configModule
 	}
 }

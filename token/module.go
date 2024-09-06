@@ -12,6 +12,6 @@ func Register(opt Options) core.Module {
 		provider.Set(TOKEN, NewProvider(opt))
 		provider.Export(TOKEN)
 
-		return module
+		return tokenModule
 	}
 }

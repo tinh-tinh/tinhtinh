@@ -20,5 +20,5 @@ func main() {
 	})
 
 	swagger.SetUp("docs", server, document)
-	server.Listen(transform.StringToInt(port))
+	server.Log().Listen(transform.StringToInt(port))
 }
