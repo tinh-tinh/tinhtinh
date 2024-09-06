@@ -5,21 +5,6 @@ import (
 	"time"
 )
 
-// type CacheType string
-
-// const (
-// 	InMemory CacheType = "memory"
-// 	Redis    CacheType = "redis"
-// )
-
-// type ModuleOptions struct {
-// 	Type CacheType
-// }
-
-// type Module struct {
-// 	memory *Memory
-// }
-
 var pool sync.Pool
 
 func Register() {

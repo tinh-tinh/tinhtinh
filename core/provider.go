@@ -12,9 +12,13 @@ func NewProvider(module *DynamicModule) *DynamicProvider {
 }
 
 func (p *DynamicProvider) Get(key Provide) interface{} {
-	return p.module.mapperValue[key]
+	return p.module.providers[key]
 }
 
 func (p *DynamicProvider) Set(key Provide, value interface{}) {
-	p.module.mapperValue[key] = value
+	p.module.providers[key] = value
+}
+
+func (p *DynamicProvider) Export(key Provide, value interface{}) {
+	p.module.Exports[key] = value
 }

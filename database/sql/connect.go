@@ -29,10 +29,13 @@ func ForRoot(opt ConnectionOptions) core.Module {
 		conn.Exec("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
 		fmt.Println("connected to database")
 
-		provider := core.NewProvider(module)
-		provider.Set(ConnectDB, conn)
+		sqlModule := module.New(core.NewModuleOptions{})
 
-		return module
+		provider := core.NewProvider(sqlModule)
+		provider.Set(ConnectDB, conn)
+		provider.Export(ConnectDB, conn)
+
+		return sqlModule
 	}
 }
 

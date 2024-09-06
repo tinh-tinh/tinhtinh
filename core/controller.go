@@ -2,6 +2,7 @@ package core
 
 import (
 	"net/http"
+	"runtime"
 	"strings"
 )
 
@@ -100,8 +101,6 @@ func (c *DynamicController) registry(method string, path string, handler http.Ha
 		mergeHandler = v(mergeHandler)
 	}
 
-	c.middlewares = []Middleware{}
-
 	c.module.mux[route.GetPath()] = mergeHandler
 	if c.module.MapperDoc[c.tag] == nil {
 		c.module.MapperDoc[c.tag] = make(map[string]DocRoute)
@@ -113,8 +112,11 @@ func (c *DynamicController) registry(method string, path string, handler http.Ha
 		Security: c.Security,
 	}
 	ct[route.GetPath()] = docRoute
+
+	c.middlewares = []Middleware{}
 	c.Dtos = nil
 	c.Security = nil
+	runtime.GC()
 }
 
 func (c *DynamicController) Inject(name Provide) interface{} {
