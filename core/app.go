@@ -41,7 +41,10 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 		app.Mux.Handle(route.GetPath(), v)
 	}
 	app.Mux.Handle(IfSlashPrefixString(app.Prefix), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		io.WriteString(w, "API is running")
+		_, err := io.WriteString(w, "API is running")
+		if err != nil {
+			log.Fatalf("error when running server %v", err)
+		}
 	}))
 	return app
 }
