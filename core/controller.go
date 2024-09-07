@@ -22,11 +22,25 @@ func (module *DynamicModule) NewController(name string) *DynamicController {
 	return &DynamicController{
 		name:        strings.ToLower(name),
 		tag:         name,
-		middlewares: []Middleware{},
+		middlewares: module.Middlewares,
 		Dtos:        []Pipe{},
 		Security:    []string{},
 		module:      module,
 	}
+}
+
+func (module *DynamicModule) Use(middleware ...Middleware) *DynamicModule {
+	module.Middlewares = append(module.Middlewares, middleware...)
+
+	return module
+}
+
+func (module *DynamicModule) Guard(guards ...Guard) *DynamicModule {
+	for _, v := range guards {
+		mid := ParseGuard(v)
+		module.Middlewares = append(module.Middlewares, mid)
+	}
+	return module
 }
 
 func (c *DynamicController) Tag(tag string) *DynamicController {
@@ -35,7 +49,7 @@ func (c *DynamicController) Tag(tag string) *DynamicController {
 }
 
 func (c *DynamicController) Use(middleware ...Middleware) *DynamicController {
-	c.globalMiddlewares = append(c.globalMiddlewares, middleware...)
+	c.middlewares = append(c.middlewares, middleware...)
 	return c
 }
 

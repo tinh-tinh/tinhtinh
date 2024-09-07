@@ -15,11 +15,12 @@ type MappingRoute map[string]DocRoute
 type MappingDoc map[string]MappingRoute
 
 type DynamicModule struct {
-	global    bool
-	mux       Mux
-	MapperDoc MappingDoc
-	providers MapValue
-	Exports   MapValue
+	global      bool
+	mux         Mux
+	Middlewares []Middleware
+	MapperDoc   MappingDoc
+	providers   MapValue
+	Exports     MapValue
 }
 
 type Module func(module *DynamicModule) *DynamicModule

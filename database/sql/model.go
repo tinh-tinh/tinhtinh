@@ -13,8 +13,3 @@ type Model struct {
 	UpdatedAt *time.Time     `gorm:"not null;default:now()"`
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 }
-
-// func GetModel[M any]() *gorm.DB {
-// 	var model M
-// 	return db.conn.Model(&model)
-// }
