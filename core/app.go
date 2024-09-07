@@ -1,6 +1,7 @@
 package core
 
 import (
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -39,6 +40,9 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 		app.Module.mux = nil
 		app.Mux.Handle(route.GetPath(), v)
 	}
+	app.Mux.Handle(IfSlashPrefixString(app.Prefix), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, "API is running")
+	}))
 	return app
 }
 
@@ -59,7 +63,7 @@ func (app *App) Listen(port int) {
 		server.Handler = loggedRouter
 	}
 
-	log.Printf("Server running on http://localhost:%d\n", port)
+	log.Printf("Server running on http://localhost:%d/%s\n", port, app.Prefix)
 	err := server.ListenAndServe()
 	if err != nil {
 		log.Fatalf("error when running server %v", err)
