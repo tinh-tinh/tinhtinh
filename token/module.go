@@ -7,10 +7,8 @@ const TOKEN core.Provide = "TOKEN"
 func Register(opt Options) core.Module {
 	return func(module *core.DynamicModule) *core.DynamicModule {
 		tokenModule := module.New(core.NewModuleOptions{})
-
-		provider := tokenModule.NewProvider()
-		provider.Set(TOKEN, NewProvider(opt))
-		provider.Export(TOKEN)
+		tokenModule.NewProvider(NewJwt(opt), TOKEN)
+		tokenModule.Export(TOKEN)
 
 		return tokenModule
 	}

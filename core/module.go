@@ -1,7 +1,10 @@
 package core
 
 import (
+	"errors"
 	"net/http"
+	"runtime"
+	"slices"
 )
 
 type Mux map[string]http.Handler
@@ -19,8 +22,8 @@ type DynamicModule struct {
 	mux         Mux
 	Middlewares []Middleware
 	MapperDoc   MappingDoc
-	providers   MapValue
-	Exports     MapValue
+	providers   []*DynamicProvider
+	Exports     []*DynamicProvider
 }
 
 type Module func(module *DynamicModule) *DynamicModule
@@ -39,16 +42,14 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	module := &DynamicModule{
 		mux:       make(Mux),
 		MapperDoc: make(MappingDoc),
-		providers: make(MapValue),
-		Exports:   make(MapValue),
+		providers: []*DynamicProvider{},
+		Exports:   []*DynamicProvider{},
 		global:    opt.Global,
 	}
 
 	// Providers
-	providers := make([]Provider, 0)
 	for _, p := range opt.Providers {
 		p(module)
-		providers = append(providers, p)
 	}
 
 	// Imports
@@ -57,15 +58,10 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 		for k, v := range mod.mux {
 			module.mux[k] = v
 		}
-		for k, v := range mod.Exports {
-			module.providers[k] = v
-		}
+		module.providers = append(module.providers, mod.Exports...)
+		module.Exports = append(module.providers, mod.Exports...)
 		for k, v := range mod.MapperDoc {
 			module.MapperDoc[k] = v
-		}
-
-		if module.global {
-			mod.Providers(providers...)
 		}
 	}
 
@@ -79,17 +75,14 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 
 func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	newMod := &DynamicModule{
-		providers: make(MapValue),
-		Exports:   make(MapValue),
+		providers: []*DynamicProvider{},
+		Exports:   []*DynamicProvider{},
 		mux:       make(Mux),
 		MapperDoc: make(MappingDoc),
 		global:    opt.Global,
 	}
 
-	for k, v := range m.providers {
-		newMod.providers[k] = v
-	}
-
+	newMod.providers = append(newMod.providers, m.Exports...)
 	// Providers
 	providers := make([]Provider, 0)
 	for _, p := range opt.Providers {
@@ -103,9 +96,8 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 		for k, v := range mod.mux {
 			newMod.mux[k] = v
 		}
-		for k, v := range mod.Exports {
-			newMod.providers[k] = v
-		}
+		newMod.providers = append(newMod.providers, mod.Exports...)
+		newMod.Exports = append(newMod.providers, mod.Exports...)
 		for k, v := range mod.MapperDoc {
 			newMod.MapperDoc[k] = v
 		}
@@ -120,6 +112,7 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 		ct(newMod)
 	}
 
+	runtime.GC()
 	return newMod
 }
 
@@ -137,5 +130,18 @@ func (m *DynamicModule) Providers(providers ...Provider) {
 }
 
 func (m *DynamicModule) Ref(name Provide) interface{} {
-	return m.providers[name]
+	idx := slices.IndexFunc(m.providers, func(e *DynamicProvider) bool {
+		return e.Name == name
+	})
+	return m.providers[idx].Value
+}
+
+func (m *DynamicModule) Export(key Provide) {
+	idx := slices.IndexFunc(m.providers, func(e *DynamicProvider) bool {
+		return e.Name == key
+	})
+	if idx == -1 {
+		panic(errors.New("key of provider not found"))
+	}
+	m.Exports = append(m.Exports, m.providers[idx])
 }

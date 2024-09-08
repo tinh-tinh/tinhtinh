@@ -8,7 +8,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type Provider interface {
+type Jwt interface {
 	Generate(payload jwt.MapClaims) (string, error)
 	Verify(token string) (interface{}, error)
 }
@@ -22,8 +22,8 @@ type Options struct {
 	IgnoreExp  bool
 }
 
-func NewProvider(opt Options) Provider {
-	return &ProviderImpl{
+func NewJwt(opt Options) Jwt {
+	return &JwtImp{
 		Alg:        opt.Alg,
 		Secret:     opt.Secret,
 		PrivateKey: opt.PrivateKey,
@@ -33,7 +33,7 @@ func NewProvider(opt Options) Provider {
 	}
 }
 
-type ProviderImpl struct {
+type JwtImp struct {
 	Alg        jwt.SigningMethod
 	Secret     string
 	PrivateKey *string
@@ -42,7 +42,7 @@ type ProviderImpl struct {
 	IgnoreExp  bool
 }
 
-func (p *ProviderImpl) Generate(payload jwt.MapClaims) (string, error) {
+func (p *JwtImp) Generate(payload jwt.MapClaims) (string, error) {
 	payload["iat"] = time.Now().Unix()
 	payload["exp"] = time.Now().Add(p.Exp).Unix()
 
@@ -69,7 +69,7 @@ func (p *ProviderImpl) Generate(payload jwt.MapClaims) (string, error) {
 	return token, nil
 }
 
-func (p *ProviderImpl) Verify(token string) (interface{}, error) {
+func (p *JwtImp) Verify(token string) (interface{}, error) {
 	var key interface{}
 	if p.Alg == jwt.SigningMethodRS256 {
 		decodedPublicKey, err := base64.StdEncoding.DecodeString(*p.PublicKey)

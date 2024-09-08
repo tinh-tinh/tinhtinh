@@ -49,10 +49,8 @@ func ForRoot[E any](path ...string) core.Module {
 		}
 
 		configModule := module.New(core.NewModuleOptions{})
-
-		provider := configModule.NewProvider()
-		provider.Set(ENV, *lastValue)
-		provider.Export(ENV)
+		configModule.NewProvider(*lastValue, ENV)
+		configModule.Export(ENV)
 
 		return configModule
 	}

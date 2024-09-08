@@ -9,7 +9,7 @@ import (
 const USER core.CtxKey = "USER"
 
 func Guard(ctrl *core.DynamicController, ctx core.Ctx) bool {
-	tokenService := ctrl.Inject(TOKEN).(Provider)
+	tokenService := ctrl.Inject(TOKEN).(Jwt)
 	header := ctx.Headers("Authorization")
 	if header == "" {
 		return false

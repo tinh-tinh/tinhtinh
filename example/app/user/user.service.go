@@ -11,6 +11,16 @@ type CrudService struct {
 	model *gorm.DB
 }
 
+const USER_SERVICE core.Provide = "UserService"
+
+func service(module *core.DynamicModule) *core.DynamicProvider {
+	userSv := module.NewProvider(&CrudService{
+		model: module.Ref(sql.ConnectDB).(*gorm.DB),
+	}, USER_SERVICE)
+
+	return userSv
+}
+
 func (s *CrudService) GetAll() []User {
 	var user []User
 	s.model.First(&user)
@@ -33,16 +43,4 @@ func (s *CrudService) Create(input dto.SignUpUser) error {
 	}
 
 	return nil
-}
-
-const USER_SERVICE core.Provide = "UserService"
-
-func service(module *core.DynamicModule) *core.DynamicProvider {
-	userSv := module.NewProvider()
-
-	userSv.Set(USER_SERVICE, CrudService{
-		model: module.Ref(sql.ConnectDB).(*gorm.DB),
-	})
-
-	return userSv
 }

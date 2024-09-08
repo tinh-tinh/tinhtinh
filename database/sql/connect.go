@@ -30,10 +30,8 @@ func ForRoot(opt ConnectionOptions) core.Module {
 		fmt.Println("connected to database")
 
 		sqlModule := module.New(core.NewModuleOptions{})
-
-		provider := sqlModule.NewProvider()
-		provider.Set(ConnectDB, conn)
-		provider.Export(ConnectDB)
+		sqlModule.NewProvider(conn, ConnectDB)
+		sqlModule.Export(ConnectDB)
 
 		return sqlModule
 	}
