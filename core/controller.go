@@ -115,18 +115,18 @@ func (c *DynamicController) registry(method string, path string, handler http.Ha
 		mergeHandler = v(mergeHandler)
 	}
 
-	c.module.mux[route.GetPath()] = mergeHandler
-	if c.module.MapperDoc[c.tag] == nil {
-		c.module.MapperDoc[c.tag] = make(map[string]DocRoute)
-	}
-
-	ct := c.module.MapperDoc[c.tag]
-	docRoute := DocRoute{
-		Dto:      c.Dtos,
+	router := &Router{
+		Tag:      c.tag,
+		Path:     route.GetPath(),
+		Handler:  mergeHandler,
+		Dtos:     c.Dtos,
 		Security: c.Security,
 	}
-	ct[route.GetPath()] = docRoute
+	c.module.Routers = append(c.module.Routers, router)
+	c.free()
+}
 
+func (c *DynamicController) free() {
 	c.middlewares = []Middleware{}
 	c.Dtos = nil
 	c.Security = nil

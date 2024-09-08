@@ -10,68 +10,125 @@ import (
 )
 
 func (spec *SpecBuilder) ParsePaths(app *core.App) {
-	mapperDoc := app.Module.MapperDoc
+	// mapperDoc := app.Module.MapperDoc
+	routes := app.Module.Routers
 
 	pathObject := make(PathObject)
 	definitions := make(map[string]*DefinitionObject)
 
-	for tag, mx := range mapperDoc {
-		for path, docRoute := range mx {
-			router := core.ParseRoute(path)
-			parametes := []*ParameterObject{}
-			dtos := docRoute.Dto
-			for _, p := range dtos {
-				switch p.In {
-				case core.InBody:
-					definitions[getNameStruct(p.Dto)] = ParseDefinition(p.Dto)
-					parametes = append(parametes, &ParameterObject{
-						Name: getNameStruct(p.Dto),
-						In:   string(p.In),
-						Schema: &SchemaObject{
-							Ref: "#/definitions/" + getNameStruct(p.Dto),
-						},
-					})
-				case core.InQuery:
-					parametes = append(parametes, ScanQuery(p.Dto, p.In)...)
-				case core.InPath:
-					parametes = append(parametes, ScanQuery(p.Dto, p.In)...)
-				}
-			}
-
-			if pathObject[router.Path] == nil {
-				pathObject[router.Path] = &PathItemObject{}
-			}
-			itemObject := pathObject[router.Path]
-			response := &ResponseObject{
-				Description: "Ok",
-			}
-			res := map[string]*ResponseObject{"200": response}
-
-			operation := &OperationObject{
-				Tags:       []string{tag},
-				Responses:  res,
-				Parameters: parametes,
-				Security:   []map[string][]string{},
-			}
-			if len(docRoute.Security) > 0 {
-				security := map[string][]string{}
-				for _, s := range docRoute.Security {
-					security[s] = []string{}
-				}
-				operation.Security = append(operation.Security, security)
-			}
-			switch router.Method {
-			case "GET":
-				itemObject.Get = operation
-			case "POST":
-				itemObject.Post = operation
-			case "PUT":
-				itemObject.Put = operation
-			case "DELETE":
-				itemObject.Delete = operation
+	for _, route := range routes {
+		parseRoute := core.ParseRoute(route.Path)
+		parametes := []*ParameterObject{}
+		dtos := route.Dtos
+		for _, dto := range dtos {
+			switch dto.In {
+			case core.InBody:
+				definitions[getNameStruct(dto.Dto)] = ParseDefinition(dto.Dto)
+				parametes = append(parametes, &ParameterObject{
+					Name: getNameStruct(dto.Dto),
+					In:   string(dto.In),
+					Schema: &SchemaObject{
+						Ref: "#/definitions/" + getNameStruct(dto.Dto),
+					},
+				})
+			case core.InQuery:
+				parametes = append(parametes, ScanQuery(dto.Dto, dto.In)...)
+			case core.InPath:
+				parametes = append(parametes, ScanQuery(dto.Dto, dto.In)...)
 			}
 		}
+
+		if pathObject[parseRoute.Path] == nil {
+			pathObject[parseRoute.Path] = &PathItemObject{}
+		}
+		itemObject := pathObject[parseRoute.Path]
+		response := &ResponseObject{
+			Description: "Ok",
+		}
+		res := map[string]*ResponseObject{"200": response}
+		operation := &OperationObject{
+			Tags:       []string{route.Tag},
+			Parameters: parametes,
+			Responses:  res,
+			Security:   []map[string][]string{},
+		}
+
+		if len(route.Security) > 0 {
+			security := map[string][]string{}
+			for _, s := range route.Security {
+				security[s] = []string{}
+			}
+			operation.Security = append(operation.Security, security)
+		}
+		switch parseRoute.Method {
+		case "GET":
+			itemObject.Get = operation
+		case "POST":
+			itemObject.Post = operation
+		case "PUT":
+			itemObject.Put = operation
+		case "DELETE":
+			itemObject.Delete = operation
+		}
 	}
+
+	// for tag, mx := range mapperDoc {
+	// 	for path, docRoute := range mx {
+	// 		router := core.ParseRoute(path)
+	// 		parametes := []*ParameterObject{}
+	// 		dtos := docRoute.Dto
+	// 		for _, p := range dtos {
+	// 			switch p.In {
+	// 			case core.InBody:
+	// 				definitions[getNameStruct(p.Dto)] = ParseDefinition(p.Dto)
+	// 				parametes = append(parametes, &ParameterObject{
+	// 					Name: getNameStruct(p.Dto),
+	// 					In:   string(p.In),
+	// 					Schema: &SchemaObject{
+	// 						Ref: "#/definitions/" + getNameStruct(p.Dto),
+	// 					},
+	// 				})
+	// 			case core.InQuery:
+	// 				parametes = append(parametes, ScanQuery(p.Dto, p.In)...)
+	// 			case core.InPath:
+	// 				parametes = append(parametes, ScanQuery(p.Dto, p.In)...)
+	// 			}
+	// 		}
+
+	// 		if pathObject[router.Path] == nil {
+	// 			pathObject[router.Path] = &PathItemObject{}
+	// 		}
+	// 		itemObject := pathObject[router.Path]
+	// 		response := &ResponseObject{
+	// 			Description: "Ok",
+	// 		}
+	// 		res := map[string]*ResponseObject{"200": response}
+
+	// 		operation := &OperationObject{
+	// 			Tags:       []string{tag},
+	// 			Responses:  res,
+	// 			Parameters: parametes,
+	// 			Security:   []map[string][]string{},
+	// 		}
+	// 		if len(docRoute.Security) > 0 {
+	// 			security := map[string][]string{}
+	// 			for _, s := range docRoute.Security {
+	// 				security[s] = []string{}
+	// 			}
+	// 			operation.Security = append(operation.Security, security)
+	// 		}
+	// 		switch router.Method {
+	// 		case "GET":
+	// 			itemObject.Get = operation
+	// 		case "POST":
+	// 			itemObject.Post = operation
+	// 		case "PUT":
+	// 			itemObject.Put = operation
+	// 		case "DELETE":
+	// 			itemObject.Delete = operation
+	// 		}
+	// 	}
+	// }
 
 	spec.Definitions = definitions
 	spec.Paths = pathObject

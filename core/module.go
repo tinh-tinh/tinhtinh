@@ -2,26 +2,19 @@ package core
 
 import (
 	"errors"
-	"net/http"
 	"runtime"
 	"slices"
 )
-
-type Mux map[string]http.Handler
-type MapValue map[Provide]interface{}
 
 type DocRoute struct {
 	Dto      []Pipe
 	Security []string
 }
-type MappingRoute map[string]DocRoute
-type MappingDoc map[string]MappingRoute
 
 type DynamicModule struct {
 	global      bool
-	mux         Mux
+	Routers     []*Router
 	Middlewares []Middleware
-	MapperDoc   MappingDoc
 	providers   []*DynamicProvider
 	Exports     []*DynamicProvider
 }
@@ -40,11 +33,7 @@ type NewModuleOptions struct {
 
 func NewModule(opt NewModuleOptions) *DynamicModule {
 	module := &DynamicModule{
-		mux:       make(Mux),
-		MapperDoc: make(MappingDoc),
-		providers: []*DynamicProvider{},
-		Exports:   []*DynamicProvider{},
-		global:    opt.Global,
+		global: opt.Global,
 	}
 
 	// Providers
@@ -55,14 +44,9 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	// Imports
 	for _, m := range opt.Imports {
 		mod := m(module)
-		for k, v := range mod.mux {
-			module.mux[k] = v
-		}
+		module.Routers = append(module.Routers, mod.Routers...)
 		module.providers = append(module.providers, mod.Exports...)
 		module.Exports = append(module.providers, mod.Exports...)
-		for k, v := range mod.MapperDoc {
-			module.MapperDoc[k] = v
-		}
 	}
 
 	// Controllers
@@ -75,11 +59,7 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 
 func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	newMod := &DynamicModule{
-		providers: []*DynamicProvider{},
-		Exports:   []*DynamicProvider{},
-		mux:       make(Mux),
-		MapperDoc: make(MappingDoc),
-		global:    opt.Global,
+		global: opt.Global,
 	}
 
 	newMod.providers = append(newMod.providers, m.Exports...)
@@ -93,14 +73,9 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	// Imports
 	for _, mFnc := range opt.Imports {
 		mod := mFnc(newMod)
-		for k, v := range mod.mux {
-			newMod.mux[k] = v
-		}
+		newMod.Routers = append(newMod.Routers, mod.Routers...)
 		newMod.providers = append(newMod.providers, mod.Exports...)
 		newMod.Exports = append(newMod.providers, mod.Exports...)
-		for k, v := range mod.MapperDoc {
-			newMod.MapperDoc[k] = v
-		}
 
 		if newMod.global {
 			mod.Providers(providers...)

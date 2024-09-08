@@ -28,8 +28,8 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 		Mux:    http.NewServeMux(),
 	}
 
-	for k, v := range app.Module.mux {
-		route := ParseRoute(k)
+	for _, r := range app.Module.Routers {
+		route := ParseRoute(r.Path)
 		route.SetPrefix(app.Prefix)
 		utils.Log(
 			utils.Green("[TT] "),
@@ -37,9 +37,21 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 			utils.Yellow(" [RoutesResolver] "),
 			utils.Green(route.GetPath()+"\n"),
 		)
-		app.Module.mux = nil
-		app.Mux.Handle(route.GetPath(), v)
+		app.Mux.Handle(route.GetPath(), r.Handler)
 	}
+
+	// for k, v := range app.Module.mux {
+	// 	route := ParseRoute(k)
+	// 	route.SetPrefix(app.Prefix)
+	// 	utils.Log(
+	// 		utils.Green("[TT] "),
+	// 		utils.White(time.Now().Format("2006-01-02 15:04:05")),
+	// 		utils.Yellow(" [RoutesResolver] "),
+	// 		utils.Green(route.GetPath()+"\n"),
+	// 	)
+	// 	app.Module.mux = nil
+	// 	app.Mux.Handle(route.GetPath(), v)
+	// }
 	app.Mux.Handle(IfSlashPrefixString(app.Prefix), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := io.WriteString(w, "API is running")
 		if err != nil {
@@ -55,7 +67,7 @@ func (app *App) Log() *App {
 }
 
 func (app *App) Listen(port int) {
-	app.Module.MapperDoc = nil
+	// app.Module.MapperDoc = nil
 
 	server := http.Server{
 		Addr:    ":" + IntToString(port),
