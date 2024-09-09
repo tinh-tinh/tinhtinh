@@ -99,5 +99,10 @@ func Scanner(val interface{}, trans bool) error {
 		return nil
 	}
 
-	return errors.New(strings.Join(errMsg, "\n"))
+	err := errors.New(errMsg[0])
+	for i := 1; i < len(errMsg); i++ {
+		err = errors.Join(err, errors.New(errMsg[i]))
+	}
+
+	return err
 }

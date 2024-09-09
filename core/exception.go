@@ -4,13 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 )
 
 func Exception(w http.ResponseWriter, err error, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	response := Map{
-		"error": err.Error(),
+	errMsg := err.Error()
+	response := Map{}
+	if strings.IndexFunc(errMsg, func(r rune) bool { return r == '\n' }) == -1 {
+		response["error"] = errMsg
+	} else {
+		response["error"] = strings.Split(errMsg, "\n")
 	}
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
