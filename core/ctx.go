@@ -24,7 +24,19 @@ func (ctx *Ctx) BodyParser(payload interface{}) error {
 	return nil
 }
 
-func (ctx *Ctx) Params(key string) string {
+func (ctx *Ctx) Body() interface{} {
+	return ctx.Get(InBody)
+}
+
+func (ctx *Ctx) Params() interface{} {
+	return ctx.Get(InPath)
+}
+
+func (ctx *Ctx) Queries() interface{} {
+	return ctx.Get(InQuery)
+}
+
+func (ctx *Ctx) Param(key string) string {
 	val := ctx.r.PathValue(key)
 	return val
 }
@@ -64,11 +76,6 @@ func (ctx *Ctx) JSON(data Map) {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func (ctx *Ctx) Input() interface{} {
-	val := ctx.Get(Input)
-	return val
 }
 
 func (ctx *Ctx) Get(key any) interface{} {

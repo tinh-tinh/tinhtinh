@@ -11,7 +11,7 @@ func authController(module *core.DynamicModule) *core.DynamicController {
 	authCtrl.Pipe(
 		core.Body(&dto.SignUpUser{}),
 	).Post("/", func(ctx core.Ctx) {
-		payload := ctx.Get(core.InBody).(*dto.SignUpUser)
+		payload := ctx.Body().(*dto.SignUpUser)
 
 		userService := authCtrl.Inject(USER_SERVICE).(CrudService)
 		err := userService.Create(*payload)

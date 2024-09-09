@@ -27,10 +27,6 @@ type Pipe struct {
 	In        InDto
 }
 
-const (
-	Input CtxKey = "input"
-)
-
 func PipeMiddleware(pipes ...Pipe) Middleware {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

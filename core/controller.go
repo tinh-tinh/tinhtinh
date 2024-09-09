@@ -37,7 +37,7 @@ func (module *DynamicModule) Use(middleware ...Middleware) *DynamicModule {
 
 func (module *DynamicModule) Guard(guards ...Guard) *DynamicModule {
 	for _, v := range guards {
-		mid := ParseGuard(v)
+		mid := module.ParseGuard(v)
 		module.Middlewares = append(module.Middlewares, mid)
 	}
 	return module
@@ -53,18 +53,9 @@ func (c *DynamicController) Use(middleware ...Middleware) *DynamicController {
 	return c
 }
 
-func (c *DynamicController) Guard(guards ...Guard) *DynamicController {
+func (c *DynamicController) Guard(guards ...GuardWithCtrl) *DynamicController {
 	for _, v := range guards {
-		mid := ParseGuard(v)
-		c.middlewares = append(c.middlewares, mid)
-	}
-
-	return c
-}
-
-func (c *DynamicController) GuardWithCtrl(guards ...GuardWithCtrl) *DynamicController {
-	for _, v := range guards {
-		mid := ParseGuardCtrl(c, v)
+		mid := c.ParseGuardCtrl(v)
 		c.middlewares = append(c.middlewares, mid)
 	}
 	return c

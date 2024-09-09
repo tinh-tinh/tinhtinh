@@ -9,7 +9,7 @@ import (
 func managerController(module *core.DynamicModule) *core.DynamicController {
 	ctrl := module.NewController("Users")
 
-	ctrl.GuardWithCtrl(token.Guard).AddSecurity("authorization").Pipe(
+	ctrl.Guard(token.Guard).AddSecurity("authorization").Pipe(
 		core.Query(&dto.FindUser{}),
 	).Get("/", func(ctx core.Ctx) {
 		userService := ctrl.Inject(USER_SERVICE).(CrudService)
