@@ -13,5 +13,5 @@ go get -u github.com/tinh-tinh/tinhtinh
 ## Usage
 
 ```
-go install github.com/tinh-tinh/tinhtinh-cli
+go install github.com/tinh-tinh/tinhtinh-cli@latest
 ```
