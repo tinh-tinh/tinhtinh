@@ -7,7 +7,7 @@ import (
 )
 
 func managerController(module *core.DynamicModule) *core.DynamicController {
-	ctrl := module.NewController("Users")
+	ctrl := module.NewController("Users").Version("1").Guard()
 
 	ctrl.Guard(token.Guard).AddSecurity("authorization").Pipe(
 		core.Query(&dto.FindUser{}),

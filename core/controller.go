@@ -11,6 +11,7 @@ type Handler func(ctx Ctx)
 type DynamicController struct {
 	name              string
 	tag               string
+	version           string
 	Dtos              []Pipe
 	Security          []string
 	middlewares       []Middleware
@@ -26,6 +27,7 @@ func (module *DynamicModule) NewController(name string) *DynamicController {
 		Dtos:        []Pipe{},
 		Security:    []string{},
 		module:      module,
+		version:     "",
 	}
 }
 
@@ -45,6 +47,11 @@ func (module *DynamicModule) Guard(guards ...Guard) *DynamicModule {
 
 func (c *DynamicController) Tag(tag string) *DynamicController {
 	c.tag = tag
+	return c
+}
+
+func (c *DynamicController) Version(version string) *DynamicController {
+	c.version = version
 	return c
 }
 
@@ -73,6 +80,13 @@ func (c *DynamicController) AddSecurity(security ...string) *DynamicController {
 	return c
 }
 
+func (c *DynamicController) Registry() *DynamicController {
+	c.globalMiddlewares = append(c.globalMiddlewares, c.middlewares...)
+	c.middlewares = []Middleware{}
+
+	return c
+}
+
 func (c *DynamicController) Get(path string, handler Handler) {
 	c.registry("GET", path, ParseCtx(handler))
 }
@@ -95,6 +109,9 @@ func (c *DynamicController) Delete(path string, handler Handler) {
 
 func (c *DynamicController) registry(method string, path string, handler http.Handler) {
 	route := ParseRoute(method + " " + path)
+	if c.version != "" {
+		route.SetPrefix("v" + c.version)
+	}
 	route.SetPrefix(c.name)
 
 	mergeHandler := handler
