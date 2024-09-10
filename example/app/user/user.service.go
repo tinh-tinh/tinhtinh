@@ -15,7 +15,7 @@ const USER_SERVICE core.Provide = "UserService"
 
 func service(module *core.DynamicModule) *core.DynamicProvider {
 	userSv := module.NewProvider(CrudService{
-		model: module.Ref(sql.ConnectDB).(*gorm.DB),
+		model: sql.InjectGorm(module),
 	}, USER_SERVICE)
 
 	return userSv

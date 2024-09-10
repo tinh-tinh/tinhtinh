@@ -49,3 +49,7 @@ func ForFeature(models ...interface{}) core.Module {
 		return module
 	}
 }
+
+func InjectGorm(module *core.DynamicModule) *gorm.DB {
+	return module.Ref(ConnectDB).(*gorm.DB)
+}

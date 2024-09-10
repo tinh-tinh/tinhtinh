@@ -1,32 +1,43 @@
 package cache
 
 import (
+	"fmt"
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/tinh-tinh/tinhtinh/utils"
 )
 
-type item struct {
-	v any
+type item[V any] struct {
+	v V
 	e uint32
 }
 
-type Memory struct {
-	data map[string]item
+type Memory[K string, V any] struct {
+	max  int
+	ttl  time.Duration
+	data map[K]item[V]
 	sync.RWMutex
 }
 
-func NewInMemory() *Memory {
-	store := &Memory{
-		data: make(map[string]item),
+type MemoryOptions struct {
+	Max int
+	Ttl time.Duration
+}
+
+func NewInMemory[K string, V interface{}](opt MemoryOptions) Store[K, V] {
+	store := &Memory[K, V]{
+		data: make(map[K]item[V]),
+		ttl:  opt.Ttl,
+		max:  opt.Max,
 	}
 	utils.StartTimeStampUpdater()
 	go store.gc(1 * time.Second)
 	return store
 }
 
-func (m *Memory) Get(key string) interface{} {
+func (m *Memory[K, V]) Get(key K) *V {
 	m.RLock()
 	v, ok := m.data[key]
 	m.RUnlock()
@@ -34,37 +45,72 @@ func (m *Memory) Get(key string) interface{} {
 	if !ok || v.e != 0 && v.e <= utils.Timestamp() {
 		return nil
 	}
-	return v.v
+	return &v.v
 }
 
-func (m *Memory) Set(key string, val interface{}, ttl time.Duration) {
+func (m *Memory[K, V]) Set(key K, val V, ttl ...time.Duration) {
 	var exp uint32
-	if ttl > 0 {
-		exp = uint32(ttl.Seconds()) + utils.Timestamp()
+	if len(ttl) > 0 {
+		exp = uint32(ttl[0].Seconds()) + utils.Timestamp()
+	} else {
+		exp = uint32(m.ttl.Seconds()) + utils.Timestamp()
 	}
-	i := item{e: exp, v: val}
+	i := item[V]{e: exp, v: val}
+	fmt.Println(m.Count(), key, val, exp)
+	for m.Count()+1 >= m.max {
+		m.removeOldEle()
+	}
 	m.Lock()
 	m.data[key] = i
 	m.Unlock()
 }
 
-func (m *Memory) Delete(key string) {
+func (m *Memory[K, V]) Keys() []K {
+	keys := make([]K, 0, len(m.data))
+	for k := range m.data {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+func (m *Memory[K, V]) Count() int {
+	return len(m.Keys())
+}
+
+func (m *Memory[K, V]) removeOldEle() {
+	smallest := ^uint32(0)
+	var key K
+	for k, v := range m.data {
+		if v.e < smallest {
+			smallest = v.e
+			key = k
+		}
+	}
+
+	m.Delete(key)
+}
+
+func (m *Memory[K, V]) Has(key K) bool {
+	return slices.Contains(m.Keys(), key)
+}
+
+func (m *Memory[K, V]) Delete(key K) {
 	m.Lock()
 	delete(m.data, key)
 	m.Unlock()
 }
 
-func (m *Memory) Reset() {
-	md := make(map[string]item)
+func (m *Memory[K, V]) Clear() {
+	md := make(map[K]item[V])
 	m.Lock()
 	m.data = md
 	m.Unlock()
 }
 
-func (m *Memory) gc(sleep time.Duration) {
+func (m *Memory[K, V]) gc(sleep time.Duration) {
 	ticker := time.NewTimer(sleep)
 	defer ticker.Stop()
-	var expired []string
+	var expired []K
 
 	for range ticker.C {
 		ts := utils.Timestamp()
