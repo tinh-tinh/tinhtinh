@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"fmt"
 	"slices"
 	"sync"
 	"time"
@@ -56,7 +55,6 @@ func (m *Memory[K, V]) Set(key K, val V, ttl ...time.Duration) {
 		exp = uint32(m.ttl.Seconds()) + utils.Timestamp()
 	}
 	i := item[V]{e: exp, v: val}
-	fmt.Println(m.Count(), key, val, exp)
 	for m.Count()+1 >= m.max {
 		m.removeOldEle()
 	}

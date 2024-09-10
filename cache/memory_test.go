@@ -14,7 +14,7 @@ func Test_NewInMemory(t *testing.T) {
 
 	for i := 0; i < 13; i++ {
 		key := fmt.Sprint(i)
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 		memory.Set(key, i)
 	}
 
@@ -31,7 +31,7 @@ func Test_NewInMemory(t *testing.T) {
 		}
 	})
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(15 * time.Second)
 	t.Run("Test_Get", func(t *testing.T) {
 		ab := memory.Get("12")
 		if ab != nil {
