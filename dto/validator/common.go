@@ -11,11 +11,11 @@ import (
 )
 
 func IsAlpha(str string) bool {
-	return IsRegexMatch(`[a-zA-Z]+`, str)
+	return IsRegexMatch(`^[a-zA-Z]+$`, str)
 }
 
 func IsAlphanumeric(str string) bool {
-	return IsRegexMatch(`[a-zA-Z0-9]+`, str)
+	return IsRegexMatch(`^[a-zA-Z0-9]+$`, str)
 }
 
 func IsEmail(str string) bool {

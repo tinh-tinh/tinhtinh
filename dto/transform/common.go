@@ -26,6 +26,11 @@ func StringToInt(str string) int {
 	return val
 }
 
+func StringToInt64(str string) int64 {
+	val, _ := strconv.ParseInt(str, 10, 64)
+	return val
+}
+
 func StringToFloat(str string) float64 {
 	val, _ := strconv.ParseFloat(str, 64)
 	return val
@@ -34,4 +39,9 @@ func StringToFloat(str string) float64 {
 func StringToDate(str string) time.Time {
 	date, _ := time.Parse("2006-01-02", str)
 	return date
+}
+
+func StringToTimeDuration(str string) time.Duration {
+	val, _ := time.ParseDuration(str)
+	return val
 }

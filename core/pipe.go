@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/tinh-tinh/tinhtinh/dto/transform"
 	"github.com/tinh-tinh/tinhtinh/dto/validator"
-	"github.com/tinh-tinh/tinhtinh/utils"
 )
 
 type CtxKey string
@@ -94,54 +94,6 @@ func Param(dto interface{}, transform ...bool) Pipe {
 	}
 }
 
-// func Body[M any](transform ...bool) Middleware {
-// 	trans := false
-// 	if len(transform) > 0 {
-// 		trans = transform[0]
-// 	}
-// 	return func(h http.Handler) http.Handler {
-// 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 			var payload M
-// 			err := json.NewDecoder(r.Body).Decode(&payload)
-// 			if err != nil {
-// 				BadRequestException(w, err.Error())
-// 				return
-// 			}
-
-// 			err = validator.Scanner(&payload, trans)
-// 			if err != nil {
-// 				BadRequestException(w, err.Error())
-// 				return
-// 			}
-// 			ctx := context.WithValue(r.Context(), Input, payload)
-// 			r = r.WithContext(ctx)
-// 			h.ServeHTTP(w, r)
-// 		})
-// 	}
-// }
-
-// func Query[M any](transform ...bool) Middleware {
-// 	trans := false
-// 	if len(transform) > 0 {
-// 		trans = transform[0]
-// 	}
-// 	return func(h http.Handler) http.Handler {
-// 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 			var query M
-// 			scanQuery(r, &query)
-
-// 			fmt.Print(query)
-// 			err := validator.Scanner(&query, trans)
-// 			if err != nil {
-// 				BadRequestException(w, err.Error())
-// 				return
-// 			}
-
-// 			h.ServeHTTP(w, r)
-// 		})
-// 	}
-// }
-
 func scanParam(r *http.Request, payload interface{}) {
 	ct := reflect.ValueOf(payload).Elem()
 	for i := 0; i < ct.NumField(); i++ {
@@ -156,9 +108,9 @@ func scanParam(r *http.Request, payload interface{}) {
 			case "string":
 				ct.Field(i).SetString(val)
 			case "int":
-				ct.Field(i).SetInt(int64(utils.StringToInt(val)))
+				ct.Field(i).SetInt(transform.StringToInt64(val))
 			case "bool":
-				ct.Field(i).SetBool(utils.StringToBool(val))
+				ct.Field(i).SetBool(transform.StringToBool(val))
 			default:
 				fmt.Println(field.Type.Name())
 			}
@@ -180,9 +132,9 @@ func scanQuery(r *http.Request, payload interface{}) {
 			case "string":
 				ct.Field(i).SetString(val)
 			case "int":
-				ct.Field(i).SetInt(int64(utils.StringToInt(val)))
+				ct.Field(i).SetInt(transform.StringToInt64(val))
 			case "bool":
-				ct.Field(i).SetBool(utils.StringToBool(val))
+				ct.Field(i).SetBool(transform.StringToBool(val))
 			default:
 				fmt.Println(field.Type.Name())
 			}

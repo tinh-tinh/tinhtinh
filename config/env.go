@@ -5,7 +5,7 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/tinh-tinh/tinhtinh/utils"
+	"github.com/tinh-tinh/tinhtinh/dto/transform"
 )
 
 func Scan(env interface{}) {
@@ -22,11 +22,11 @@ func Scan(env interface{}) {
 			case "string":
 				ct.Field(i).SetString(val)
 			case "int":
-				ct.Field(i).SetInt(int64(utils.StringToInt(val)))
+				ct.Field(i).SetInt(transform.StringToInt64(val))
 			case "bool":
-				ct.Field(i).SetBool(utils.StringToBool(val))
+				ct.Field(i).SetBool(transform.StringToBool(val))
 			case "Duration":
-				ct.Field(i).Set(reflect.ValueOf(utils.StringToTimeDuration(val)))
+				ct.Field(i).Set(reflect.ValueOf(transform.StringToTimeDuration(val)))
 			default:
 				fmt.Println(field.Type.Name())
 			}
