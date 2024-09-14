@@ -12,8 +12,35 @@ type Ctx struct {
 	w http.ResponseWriter
 }
 
+func (ctx *Ctx) Req() *http.Request {
+	return ctx.r
+}
+
+func (ctx *Ctx) Res() http.ResponseWriter {
+	return ctx.w
+}
+
 func (ctx *Ctx) Headers(key string) string {
 	return ctx.r.Header.Get(key)
+}
+
+func (ctx *Ctx) Cookies(key string) *http.Cookie {
+	cookie, err := ctx.r.Cookie(key)
+	if err != nil {
+		return nil
+	}
+	return cookie
+}
+
+func (ctx *Ctx) SetCookie(key string, value string, maxAge int) {
+	http.SetCookie(ctx.w, &http.Cookie{
+		Name:     key,
+		Value:    value,
+		MaxAge:   maxAge,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
 }
 
 func (ctx *Ctx) BodyParser(payload interface{}) error {
