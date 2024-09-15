@@ -6,8 +6,9 @@ import (
 
 type Provide string
 type DynamicProvider struct {
-	Name  Provide
-	Value interface{}
+	Name    Provide
+	Value   interface{}
+	Factory ReqProvider
 }
 
 func (module *DynamicModule) NewProvider(val interface{}, name ...Provide) *DynamicProvider {
@@ -23,6 +24,18 @@ func (module *DynamicModule) NewProvider(val interface{}, name ...Provide) *Dyna
 	provider := &DynamicProvider{
 		Value: val,
 		Name:  providerName,
+	}
+
+	module.providers = append(module.providers, provider)
+	return provider
+}
+
+type ReqProvider func(ctx Ctx) interface{}
+
+func (module *DynamicModule) NewReqProvider(name string, reqFnc ReqProvider) *DynamicProvider {
+	provider := &DynamicProvider{
+		Name:    Provide(name),
+		Factory: reqFnc,
 	}
 
 	module.providers = append(module.providers, provider)

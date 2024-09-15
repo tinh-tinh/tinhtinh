@@ -111,6 +111,13 @@ func (m *DynamicModule) Ref(name Provide) interface{} {
 	return m.providers[idx].Value
 }
 
+func (m *DynamicModule) RefFactory(name Provide, ctx Ctx) interface{} {
+	idx := slices.IndexFunc(m.providers, func(e *DynamicProvider) bool {
+		return e.Name == name
+	})
+	return m.providers[idx].Factory(ctx)
+}
+
 func (m *DynamicModule) Export(key Provide) {
 	idx := slices.IndexFunc(m.providers, func(e *DynamicProvider) bool {
 		return e.Name == key

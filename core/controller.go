@@ -88,23 +88,23 @@ func (c *DynamicController) Registry() *DynamicController {
 }
 
 func (c *DynamicController) Get(path string, handler Handler) {
-	c.registry("GET", path, c.ParseCtx(handler))
+	c.registry("GET", path, ParseCtx(handler))
 }
 
 func (c *DynamicController) Post(path string, handler Handler) {
-	c.registry("POST", path, c.ParseCtx(handler))
+	c.registry("POST", path, ParseCtx(handler))
 }
 
 func (c *DynamicController) Patch(path string, handler Handler) {
-	c.registry("PATCH", path, c.ParseCtx(handler))
+	c.registry("PATCH", path, ParseCtx(handler))
 }
 
 func (c *DynamicController) Put(path string, handler Handler) {
-	c.registry("PUT", path, c.ParseCtx(handler))
+	c.registry("PUT", path, ParseCtx(handler))
 }
 
 func (c *DynamicController) Delete(path string, handler Handler) {
-	c.registry("DELETE", path, c.ParseCtx(handler))
+	c.registry("DELETE", path, ParseCtx(handler))
 }
 
 func (c *DynamicController) registry(method string, path string, handler http.Handler) {
@@ -143,4 +143,8 @@ func (c *DynamicController) free() {
 
 func (c *DynamicController) Inject(name Provide) interface{} {
 	return c.module.Ref(name)
+}
+
+func (c *DynamicController) InjectFactory(name Provide, ctx Ctx) interface{} {
+	return c.module.RefFactory(name, ctx)
 }
