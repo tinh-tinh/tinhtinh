@@ -8,8 +8,9 @@ import (
 )
 
 type Ctx struct {
-	r *http.Request
-	w http.ResponseWriter
+	r    *http.Request
+	w    http.ResponseWriter
+	ctrl *DynamicController
 }
 
 func (ctx *Ctx) Req() *http.Request {
@@ -114,6 +115,12 @@ func (ctx *Ctx) Set(key interface{}, val interface{}) {
 	ctx.r = ctx.r.WithContext(context.WithValue(ctx.r.Context(), key, val))
 }
 
+type InjectFnc func(req *http.Request) interface{}
+
+func (ctx *Ctx) Inject(injFnc InjectFnc) interface{} {
+	return injFnc(ctx.r)
+}
+
 func NewCtx(w http.ResponseWriter, r *http.Request) Ctx {
 	return Ctx{
 		w: w,
@@ -121,7 +128,7 @@ func NewCtx(w http.ResponseWriter, r *http.Request) Ctx {
 	}
 }
 
-func ParseCtx(ctxFnc func(ctx Ctx)) http.Handler {
+func (ctrl *DynamicController) ParseCtx(ctxFnc func(ctx Ctx)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := NewCtx(w, r)
 		ctxFnc(ctx)
