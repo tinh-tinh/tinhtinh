@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"time"
@@ -10,20 +11,36 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-func IsAlpha(str string) bool {
+func typeof(v interface{}) string {
+	return fmt.Sprintf("%T", v)
+}
+
+func IsAlpha(str interface{}) bool {
+	if typeof(str) != "string" {
+		return false
+	}
 	return IsRegexMatch(`^[a-zA-Z]+$`, str)
 }
 
-func IsAlphanumeric(str string) bool {
+func IsAlphanumeric(str interface{}) bool {
+	if typeof(str) != "string" {
+		return false
+	}
 	return IsRegexMatch(`^[a-zA-Z0-9]+$`, str)
 }
 
-func IsEmail(str string) bool {
+func IsEmail(str interface{}) bool {
+	if typeof(str) != "string" {
+		return false
+	}
 	return IsRegexMatch(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`, str)
 }
 
-func IsStrongPassword(str string) bool {
-	if len(str) < 8 {
+func IsStrongPassword(str interface{}) bool {
+	if typeof(str) != "string" {
+		return false
+	}
+	if len(str.(string)) < 8 {
 		return false
 	}
 
@@ -34,7 +51,7 @@ func IsStrongPassword(str string) bool {
 		hasSpecial = false
 	)
 
-	for _, char := range str {
+	for _, char := range str.(string) {
 		switch {
 		case unicode.IsUpper(char):
 			hasUpper = true
@@ -50,52 +67,103 @@ func IsStrongPassword(str string) bool {
 	return hasUpper && hasLower && hasNumber && hasSpecial
 }
 
-func IsUUID(str string) bool {
-	_, err := uuid.Parse(str)
+func IsUUID(str interface{}) bool {
+	if typeof(str) != "string" {
+		return false
+	}
+	_, err := uuid.Parse(str.(string))
 
 	return err == nil
 }
 
-func IsObjectId(str string) bool {
-	_, err := primitive.ObjectIDFromHex(str)
+func IsObjectId(str interface{}) bool {
+	if typeof(str) != "string" {
+		return false
+	}
+	_, err := primitive.ObjectIDFromHex(str.(string))
 
 	return err == nil
 }
 
-func IsRegexMatch(pattern string, str string) bool {
+func IsRegexMatch(pattern string, str interface{}) bool {
+	if typeof(str) != "string" {
+		return false
+	}
 	regex := regexp.MustCompile(pattern)
-	match := regex.MatchString(str)
+	match := regex.MatchString(str.(string))
 
 	return match
 }
 
 // Numeric
-func IsInt(str string) bool {
-	_, err := strconv.Atoi(str)
-
-	return err == nil
+func IsInt(str interface{}) bool {
+	switch v := str.(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return true
+	case string:
+		_, err := strconv.Atoi(str.(string))
+		return err == nil
+	default:
+		fmt.Println(v)
+		return false
+	}
 }
 
-func IsFloat(str string) bool {
-	_, err := strconv.ParseFloat(str, 64)
+func IsFloat(str interface{}) bool {
+	switch v := str.(type) {
+	case float32, float64:
+		return true
+	case string:
+		_, err := strconv.ParseFloat(str.(string), 64)
 
-	return err == nil
+		return err == nil
+	default:
+		fmt.Println(v)
+		return false
+	}
 }
 
-func IsNumber(str string) bool {
+func IsNumber(str interface{}) bool {
 	return IsInt(str) || IsFloat(str)
 }
 
 // Date time
-func IsDateString(str string) bool {
-	_, err := time.Parse("2006-01-02", str)
+func IsDateString(str interface{}) bool {
+	if typeof(str) != "string" {
+		return false
+	}
+	_, err := time.Parse("2006-01-02", str.(string))
 
 	return err == nil
 }
 
 // Boolean
-func IsBool(str string) bool {
-	_, err := strconv.ParseBool(str)
+func IsBool(str interface{}) bool {
+	switch typeof(str) {
+	case "bool":
+		return str.(bool)
+	case "string":
+		_, err := strconv.ParseBool(str.(string))
 
-	return err == nil
+		return err == nil
+	default:
+		return false
+	}
+}
+
+func IsNil(val interface{}) bool {
+	switch v := val.(type) {
+	case string:
+		return len(v) == 0
+	case []string:
+		return len(v) == 0
+	case []*interface{}:
+		return len(v) == 0
+	case []interface{}:
+		return len(v) == 0
+	case map[string]interface{}:
+		return len(v) == 0
+	default:
+		return val == nil
+	}
 }

@@ -1,38 +1,100 @@
 package validator
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-type User struct {
+type UserDetail struct {
 	Name     string `validate:"required,isAlpha"`
 	Email    string `validate:"required,isEmail"`
 	Password string `validate:"isStrongPassword"`
 }
 
+type User struct {
+	ID     int         `validate:"required,isInt"`
+	Detail *UserDetail `validate:"nested"`
+	Banner string      `validate:"isBool"`
+}
+
+type UserList struct {
+	Users []*User `validate:"nested"`
+}
+
+type Post struct {
+	Author *User  `validate:"nested"`
+	Title  string `validate:"required"`
+}
+
 func Test_Scanner(t *testing.T) {
-	testcases := []struct {
-		input User
-		want  string
-	}{
-		{input: User{
-			Email:    "tinh@gmail.com",
-			Password: "12345678@Tc",
-		}, want: "Name is not a valid alpha"},
-		{input: User{
-			Name:     "Baba",
-			Email:    "babaddok@gmail.com",
-			Password: "12345678@Tc",
-		}, want: ""},
+	t.Parallel()
+
+	userDetails1 := &UserDetail{
+		Email:    "tinh@gmail.com",
+		Password: "12345678@Tc",
+	}
+	user1 := &User{
+		ID:     1,
+		Detail: userDetails1,
+		Banner: "true",
 	}
 
-	for _, tc := range testcases {
-		t.Run("test case", func(t *testing.T) {
-			errMsg := Scanner(&tc.input, true)
+	err1 := Scanner(user1, false)
+	require.NotNil(t, err1)
+	require.Equal(t, "Name is required\nName is not a valid alpha", err1.Error())
 
-			if errMsg != nil && errMsg.Error() != tc.want {
-				t.Errorf("expect %s, but got %s", tc.want, errMsg.Error())
+	userDetails2 := &UserDetail{
+		Name:     "haha",
+		Email:    "babaddok@gmail.com",
+		Password: "12345678@Tc",
+	}
+	user2 := &User{
+		ID:     2,
+		Detail: userDetails2,
+	}
+
+	err2 := Scanner(user2, false)
+	require.Nil(t, err2)
+
+	userList := &UserList{
+		Users: []*User{user1, user2},
+	}
+	err3 := Scanner(userList, false)
+	require.NotNil(t, err3)
+	require.Equal(t, "Name is required\nName is not a valid alpha", err3.Error())
+
+	post := &Post{
+		Author: user2,
+		Title:  "",
+	}
+	err4 := Scanner(post, false)
+	require.NotNil(t, err4)
+	require.Equal(t, "Title is required", err4.Error())
+}
+
+func Benchmark_Scanner(b *testing.B) {
+	b.Run("test_validator", func(b *testing.B) {
+		var userList []*User
+		count := b.N
+		fmt.Printf("No of test case %d\n", count)
+		for n := 0; n < count; n++ {
+			userDetail := &UserDetail{
+				Name:     "Haha",
+				Email:    fmt.Sprintf("abc%d@gmail.com", n),
+				Password: fmt.Sprintf("1234567%d@Abc", n),
 			}
-		})
-	}
+			user := &User{
+				ID:     n,
+				Detail: userDetail,
+			}
+			require.Nil(b, Scanner(user, true))
+			userList = append(userList, user)
+		}
+
+		require.Nil(b, Scanner(&UserList{
+			Users: userList,
+		}, true))
+	})
 }
