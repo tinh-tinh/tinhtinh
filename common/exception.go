@@ -1,4 +1,4 @@
-package core
+package common
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ func Exception(w http.ResponseWriter, err error, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	errMsg := err.Error()
-	response := Map{}
+	response := map[string]interface{}{}
 	if strings.IndexFunc(errMsg, func(r rune) bool { return r == '\n' }) == -1 {
 		response["error"] = errMsg
 	} else {
@@ -37,6 +37,10 @@ func ForbiddenException(w http.ResponseWriter, err string) {
 
 func NotFoundException(w http.ResponseWriter, err string) {
 	Exception(w, errors.New(err), http.StatusNotFound)
+}
+
+func NotAllowedException(w http.ResponseWriter, err string) {
+	Exception(w, errors.New(err), http.StatusMethodNotAllowed)
 }
 
 func ConflictException(w http.ResponseWriter, err string) {

@@ -1,6 +1,10 @@
 package core
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tinh-tinh/tinhtinh/middleware"
+)
 
 func AppReqService(module *DynamicModule) *DynamicProvider {
 	provider := module.NewReqProvider("test", func(ctx Ctx) interface{} {
@@ -37,6 +41,6 @@ func AppModule() *DynamicModule {
 }
 
 func Test_App(t *testing.T) {
-	app := CreateFactory(AppModule, "/api")
+	app := CreateFactory(AppModule, "/api").EnableCors(middleware.CorsOptions{})
 	app.Listen(3000)
 }

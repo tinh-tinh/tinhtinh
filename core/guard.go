@@ -2,6 +2,8 @@ package core
 
 import (
 	"net/http"
+
+	"github.com/tinh-tinh/tinhtinh/common"
 )
 
 // Guard func
@@ -12,7 +14,7 @@ func (module *DynamicModule) ParseGuard(guard Guard) Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			isAccess := guard(module, NewCtx(w, r))
 			if !isAccess {
-				ForbiddenException(w, "you can not access")
+				common.ForbiddenException(w, "you can not access")
 				return
 			}
 
@@ -28,7 +30,7 @@ func (ctrl *DynamicController) ParseGuardCtrl(guard GuardWithCtrl) Middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			isAccess := guard(ctrl, NewCtx(w, r))
 			if !isAccess {
-				ForbiddenException(w, "you can not access")
+				common.ForbiddenException(w, "you can not access")
 				return
 			}
 
