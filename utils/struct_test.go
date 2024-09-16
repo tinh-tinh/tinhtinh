@@ -1,27 +1,19 @@
 package utils
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
 
 type User struct{}
 type Post struct{}
 type TinhTinh struct{}
 
 func Test_GetNameStruct(t *testing.T) {
-	var testcases = []struct {
-		input interface{}
-		want  string
-	}{
-		{input: &User{}, want: "User"},
-		{input: &Post{}, want: "Post"},
-		{input: &TinhTinh{}, want: "TinhTinh"},
-	}
+	t.Parallel()
 
-	for _, tc := range testcases {
-		t.Run("test case", func(t *testing.T) {
-			got := GetNameStruct(tc.input)
-			if got != tc.want {
-				t.Errorf("expect %s, but got %s", tc.want, got)
-			}
-		})
-	}
+	require.Equal(t, "User", GetNameStruct(&User{}))
+	require.Equal(t, "Post", GetNameStruct(&Post{}))
+	require.Equal(t, "TinhTinh", GetNameStruct(&TinhTinh{}))
 }

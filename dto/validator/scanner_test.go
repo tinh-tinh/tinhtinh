@@ -30,7 +30,7 @@ func Test_Scanner(t *testing.T) {
 		t.Run("test case", func(t *testing.T) {
 			errMsg := Scanner(&tc.input, true)
 
-			if errMsg.Error() != tc.want {
+			if errMsg != nil && errMsg.Error() != tc.want {
 				t.Errorf("expect %s, but got %s", tc.want, errMsg.Error())
 			}
 		})

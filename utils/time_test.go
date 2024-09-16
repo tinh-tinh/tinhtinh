@@ -3,13 +3,12 @@ package utils
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func checkTimestamp(tb testing.TB, expectedCurrent, actualCurrent uint32) {
-	isRight := actualCurrent >= expectedCurrent-1 || actualCurrent <= expectedCurrent+1
-	if !isRight {
-		tb.Errorf("testing error\n Expect value: %d\nActual value: %d", expectedCurrent, actualCurrent)
-	}
+	require.True(tb, actualCurrent >= expectedCurrent-1 || actualCurrent <= expectedCurrent+1)
 }
 
 func Test_TimestampUpdater(t *testing.T) {
