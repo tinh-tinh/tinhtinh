@@ -2,6 +2,7 @@ package validator
 
 import (
 	"errors"
+	"log"
 	"reflect"
 	"slices"
 	"strings"
@@ -11,6 +12,10 @@ import (
 
 func Scanner(val interface{}, trans bool) error {
 	var errMsg []string
+	if reflect.TypeOf(val).Kind() == reflect.Struct {
+		log.Fatalf("%v should be a value not struct", val)
+		return nil
+	}
 
 	ct := reflect.ValueOf(val).Elem()
 	for i := 0; i < ct.NumField(); i++ {
@@ -30,55 +35,55 @@ func Scanner(val interface{}, trans bool) error {
 		for _, validate := range validators {
 			switch validate {
 			case "required":
-				if value == nil {
+				if IsNil(value) {
 					errMsg = append(errMsg, field.Name+" is required")
 				}
 			case "isAlpha":
-				if !IsAlpha(value.(string)) {
+				if !IsAlpha(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid alpha")
 				}
 			case "isAlphaNumeric":
-				if !IsAlphanumeric(value.(string)) {
+				if !IsAlphanumeric(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid alpha numeric")
 				}
 			case "isEmail":
-				if !IsEmail(value.(string)) {
+				if !IsEmail(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid email")
 				}
 			case "isStrongPassword":
-				if !IsStrongPassword(value.(string)) {
+				if !IsStrongPassword(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid strong password")
 				}
 			case "isUUID":
-				if !IsUUID(value.(string)) {
+				if !IsUUID(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid UUID")
 				}
 			case "isObjectId":
-				if !IsObjectId(value.(string)) {
+				if !IsObjectId(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid ObjectID")
 				} else if trans {
 					ct.Field(i).Set(reflect.ValueOf(transform.StringToObjectID(value.(string))))
 				}
 			case "isInt":
-				if !IsInt(value.(string)) {
+				if !IsInt(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid int")
 				} else if trans {
-					ct.Field(i).Set(reflect.ValueOf(transform.StringToInt(value.(string))))
+					ct.Field(i).Set(reflect.ValueOf(transform.ToInt(value)))
 				}
 			case "isFloat":
-				if !IsFloat(value.(string)) {
+				if !IsFloat(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid float")
 				} else if trans {
-					ct.Field(i).Set(reflect.ValueOf(transform.StringToFloat(value.(string))))
+					ct.Field(i).Set(reflect.ValueOf(transform.ToFloat(value)))
 				}
 			case "isNumber":
-				if !IsNumber(value.(string)) {
+				if !IsNumber(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid number")
 				} else if trans {
-					if IsInt(value.(string)) {
-						ct.Field(i).Set(reflect.ValueOf(transform.StringToInt(value.(string))))
+					if IsInt(value) {
+						ct.Field(i).Set(reflect.ValueOf(transform.ToInt(value)))
 					} else {
-						ct.Field(i).Set(reflect.ValueOf(transform.StringToFloat(value.(string))))
+						ct.Field(i).Set(reflect.ValueOf(transform.ToFloat(value)))
 					}
 				}
 			case "isDateString":
@@ -90,6 +95,26 @@ func Scanner(val interface{}, trans bool) error {
 			case "isBool":
 				if !IsBool(value.(string)) {
 					errMsg = append(errMsg, field.Name+" is not a valid bool")
+				} else if trans {
+					ct.Field(i).Set(reflect.ValueOf(transform.ToBool(value)))
+				}
+			case "nested":
+				if field.Type.Kind() == reflect.Pointer {
+					err := Scanner(ct.Field(i).Interface(), trans)
+					if err != nil {
+						errMsg = append(errMsg, err.Error())
+					}
+				} else if field.Type.Kind() == reflect.Slice {
+					arrVal := reflect.ValueOf(ct.Field(i).Interface())
+					if arrVal.IsValid() {
+						for i := 0; i < arrVal.Len(); i++ {
+							item := arrVal.Index(i)
+							err := Scanner(item.Interface(), trans)
+							if err != nil {
+								errMsg = append(errMsg, err.Error())
+							}
+						}
+					}
 				}
 			}
 		}
