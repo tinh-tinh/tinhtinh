@@ -15,7 +15,7 @@ type Config struct {
 func Test_Scan(t *testing.T) {
 
 	t.Run("test case", func(t *testing.T) {
-		_, err := Register[Config](".env")
+		_, err := Register[Config](".env.example")
 		if err != nil {
 			t.Errorf("error is %v", err)
 		}
