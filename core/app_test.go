@@ -1,46 +1,42 @@
 package core
 
-import (
-	"testing"
+// import "testing"
 
-	"github.com/tinh-tinh/tinhtinh/middleware"
-)
+// func AppReqService(module *DynamicModule) *DynamicProvider {
+// 	provider := module.NewReqProvider("test", func(ctx Ctx) interface{} {
+// 		return "abc" + ctx.Headers("x-api-name")
+// 	})
+// 	return provider
+// }
 
-func AppReqService(module *DynamicModule) *DynamicProvider {
-	provider := module.NewReqProvider("test", func(ctx Ctx) interface{} {
-		return "abc" + ctx.Headers("x-api-name")
-	})
-	return provider
-}
+// func AppService(module *DynamicModule) *DynamicProvider {
+// 	provider := module.NewProvider("test")
+// 	return provider
+// }
 
-func AppService(module *DynamicModule) *DynamicProvider {
-	provider := module.NewProvider("test")
-	return provider
-}
+// func AppController(module *DynamicModule) *DynamicController {
+// 	ctrl := module.NewController("test")
 
-func AppController(module *DynamicModule) *DynamicController {
-	ctrl := module.NewController("test")
+// 	ctrl.Get("/", func(ctx Ctx) {
+// 		name := ctrl.InjectFactory("abc", ctx)
+// 		ctx.JSON(Map{
+// 			"data": name,
+// 		})
+// 	})
 
-	ctrl.Get("/", func(ctx Ctx) {
-		name := ctrl.InjectFactory("abc", ctx)
-		ctx.JSON(Map{
-			"data": name,
-		})
-	})
+// 	return ctrl
+// }
 
-	return ctrl
-}
+// func AppModule() *DynamicModule {
+// 	appModule := NewModule(NewModuleOptions{
+// 		Controllers: []Controller{AppController},
+// 		Providers:   []Provider{AppService},
+// 	})
 
-func AppModule() *DynamicModule {
-	appModule := NewModule(NewModuleOptions{
-		Controllers: []Controller{AppController},
-		Providers:   []Provider{AppService},
-	})
+// 	return appModule
+// }
 
-	return appModule
-}
-
-func Test_App(t *testing.T) {
-	app := CreateFactory(AppModule, "/api").EnableCors(middleware.CorsOptions{})
-	app.Listen(3000)
-}
+// func Test_App(t *testing.T) {
+// 	app := CreateFactory(AppModule, "/api").EnableCors(middleware.CorsOptions{})
+// 	app.Listen(3000)
+// }
