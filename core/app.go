@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/tinh-tinh/tinhtinh/middleware"
 	"github.com/tinh-tinh/tinhtinh/utils"
 )
 
@@ -16,6 +17,7 @@ type App struct {
 	log    bool
 	Mux    *http.ServeMux
 	Module *DynamicModule
+	cors   *middleware.Cors
 }
 
 type ModuleParam func() *DynamicModule
@@ -54,16 +56,24 @@ func (app *App) Log() *App {
 	return app
 }
 
+func (app *App) EnableCors(opt middleware.CorsOptions) *App {
+	app.cors = middleware.NewCors(opt)
+	return app
+}
+
 func (app *App) Listen(port int) {
 	// app.Module.MapperDoc = nil
-
 	server := http.Server{
 		Addr:    ":" + IntToString(port),
 		Handler: app.Mux,
 	}
 	if app.log {
-		loggedRouter := logRequests(app.Mux)
+		loggedRouter := logRequests(server.Handler)
 		server.Handler = loggedRouter
+	}
+	if app.cors != nil {
+		corsHandler := app.cors.Handler(app.Mux)
+		server.Handler = corsHandler
 	}
 
 	log.Printf("Server running on http://localhost:%d/%s\n", port, app.Prefix)

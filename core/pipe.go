@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/tinh-tinh/tinhtinh/common"
 	"github.com/tinh-tinh/tinhtinh/dto/transform"
 	"github.com/tinh-tinh/tinhtinh/dto/validator"
 )
@@ -36,7 +37,7 @@ func PipeMiddleware(pipes ...Pipe) Middleware {
 				case InBody:
 					err := json.NewDecoder(r.Body).Decode(dto)
 					if err != nil {
-						BadRequestException(w, err.Error())
+						common.BadRequestException(w, err.Error())
 						return
 					}
 				case InQuery:
@@ -47,7 +48,7 @@ func PipeMiddleware(pipes ...Pipe) Middleware {
 
 				err := validator.Scanner(dto, pipe.Transform)
 				if err != nil {
-					BadRequestException(w, err.Error())
+					common.BadRequestException(w, err.Error())
 					return
 				}
 				ctx := context.WithValue(r.Context(), pipe.In, dto)

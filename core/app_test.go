@@ -37,6 +37,6 @@ package core
 // }
 
 // func Test_App(t *testing.T) {
-// 	app := CreateFactory(AppModule, "/api")
+// 	app := CreateFactory(AppModule, "/api").EnableCors(middleware.CorsOptions{})
 // 	app.Listen(3000)
 // }
