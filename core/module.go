@@ -1,7 +1,6 @@
 package core
 
 import (
-	"errors"
 	"runtime"
 	"slices"
 )
@@ -12,11 +11,10 @@ type DocRoute struct {
 }
 
 type DynamicModule struct {
-	global      bool
-	Routers     []*Router
-	Middlewares []Middleware
-	providers   []*DynamicProvider
-	Exports     []*DynamicProvider
+	global        bool
+	Routers       []*Router
+	Middlewares   []Middleware
+	DataProviders []*DynamicProvider
 }
 
 type Module func(module *DynamicModule) *DynamicModule
@@ -45,13 +43,18 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	for _, m := range opt.Imports {
 		mod := m(module)
 		module.Routers = append(module.Routers, mod.Routers...)
-		module.providers = append(module.providers, mod.Exports...)
-		module.Exports = append(module.providers, mod.Exports...)
+		module.DataProviders = append(module.DataProviders, mod.getExports()...)
 	}
 
 	// Controllers
 	for _, ct := range opt.Controllers {
 		ct(module)
+	}
+
+	// Exports
+	for _, e := range opt.Exports {
+		provider := e(module)
+		provider.Status = PUBLIC
 	}
 
 	return module
@@ -62,7 +65,7 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 		global: opt.Global,
 	}
 
-	newMod.providers = append(newMod.providers, m.Exports...)
+	newMod.DataProviders = append(newMod.DataProviders, m.getExports()...)
 	// Providers
 	providers := make([]Provider, 0)
 	for _, p := range opt.Providers {
@@ -74,8 +77,7 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	for _, mFnc := range opt.Imports {
 		mod := mFnc(newMod)
 		newMod.Routers = append(newMod.Routers, mod.Routers...)
-		newMod.providers = append(newMod.providers, mod.Exports...)
-		newMod.Exports = append(newMod.providers, mod.Exports...)
+		newMod.DataProviders = append(newMod.DataProviders, mod.getExports()...)
 
 		if newMod.global {
 			mod.Providers(providers...)
@@ -105,25 +107,16 @@ func (m *DynamicModule) Providers(providers ...Provider) {
 }
 
 func (m *DynamicModule) Ref(name Provide) interface{} {
-	idx := slices.IndexFunc(m.providers, func(e *DynamicProvider) bool {
+	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
 		return e.Name == name
 	})
-	return m.providers[idx].Value
+	return m.DataProviders[idx].Value
 }
 
-func (m *DynamicModule) RefFactory(name Provide, ctx Ctx) interface{} {
-	idx := slices.IndexFunc(m.providers, func(e *DynamicProvider) bool {
+func (m *DynamicModule) Export(name Provide) *DynamicProvider {
+	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
 		return e.Name == name
 	})
-	return m.providers[idx].Factory(ctx)
-}
-
-func (m *DynamicModule) Export(key Provide) {
-	idx := slices.IndexFunc(m.providers, func(e *DynamicProvider) bool {
-		return e.Name == key
-	})
-	if idx == -1 {
-		panic(errors.New("key of provider not found"))
-	}
-	m.Exports = append(m.Exports, m.providers[idx])
+	m.DataProviders[idx].Status = PUBLIC
+	return m.DataProviders[idx]
 }

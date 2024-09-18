@@ -144,7 +144,3 @@ func (c *DynamicController) free() {
 func (c *DynamicController) Inject(name Provide) interface{} {
 	return c.module.Ref(name)
 }
-
-func (c *DynamicController) InjectFactory(name Provide, ctx Ctx) interface{} {
-	return c.module.RefFactory(name, ctx)
-}
