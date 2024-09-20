@@ -4,6 +4,9 @@ import (
 	"errors"
 	"runtime"
 	"slices"
+	"time"
+
+	"github.com/tinh-tinh/tinhtinh/utils"
 )
 
 type DocRoute struct {
@@ -17,6 +20,7 @@ type DynamicModule struct {
 	Middlewares []Middleware
 	providers   []*DynamicProvider
 	Exports     []*DynamicProvider
+	hooks       []HookModule
 }
 
 type Module func(module *DynamicModule) *DynamicModule
@@ -44,6 +48,14 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	// Imports
 	for _, m := range opt.Imports {
 		mod := m(module)
+		utils.Log(
+			utils.Green("[TT] "),
+			utils.White(time.Now().Format("2006-01-02 15:04:05")),
+			utils.Yellow(" [Module Initializer] "),
+			utils.Green(utils.GetFunctionName(m)+"\n"),
+		)
+
+		mod.init()
 		module.Routers = append(module.Routers, mod.Routers...)
 		module.providers = append(module.providers, mod.Exports...)
 		module.Exports = append(module.providers, mod.Exports...)
@@ -73,6 +85,14 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	// Imports
 	for _, mFnc := range opt.Imports {
 		mod := mFnc(newMod)
+		utils.Log(
+			utils.Green("[TT] "),
+			utils.White(time.Now().Format("2006-01-02 15:04:05")),
+			utils.Yellow(" [Module Initializer] "),
+			utils.Green(utils.GetFunctionName(m)+"\n"),
+		)
+
+		mod.init()
 		newMod.Routers = append(newMod.Routers, mod.Routers...)
 		newMod.providers = append(newMod.providers, mod.Exports...)
 		newMod.Exports = append(newMod.providers, mod.Exports...)

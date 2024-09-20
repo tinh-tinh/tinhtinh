@@ -1,6 +1,9 @@
 package utils
 
-import "reflect"
+import (
+	"reflect"
+	"runtime"
+)
 
 func GetNameStruct(str interface{}) string {
 	name := ""
@@ -11,4 +14,8 @@ func GetNameStruct(str interface{}) string {
 	}
 
 	return name
+}
+
+func GetFunctionName(i interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
