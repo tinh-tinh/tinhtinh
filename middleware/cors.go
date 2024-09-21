@@ -83,18 +83,20 @@ func (cors Cors) Handler(h http.Handler) http.Handler {
 				w.WriteHeader(http.StatusOK)
 			}
 		} else {
-			cors.handleActualReq(w, r)
-			h.ServeHTTP(w, r)
+			pass := cors.handleActualReq(w, r)
+			if pass {
+				h.ServeHTTP(w, r)
+			}
 		}
 	})
 }
 
-func (cors *Cors) handleActualReq(w http.ResponseWriter, r *http.Request) {
+func (cors *Cors) handleActualReq(w http.ResponseWriter, r *http.Request) bool {
 	headers := w.Header()
 	// Validate and set origin
 	if !cors.isOriginAllowed(r) {
 		common.UnauthorizedException(w, "Origin not allowed")
-		return
+		return false
 	}
 	if cors.allowedOriginsAll {
 		headers["Access-Control-Allow-Origin"] = []string{"*"}
@@ -104,12 +106,14 @@ func (cors *Cors) handleActualReq(w http.ResponseWriter, r *http.Request) {
 
 	if !cors.isMethodAllowed(r.Method) {
 		common.NotAllowedException(w, "Method not allowed")
-		return
+		return false
 	}
 
 	if cors.credential {
 		headers["Access-Control-Allow-Credentials"] = []string{"true"}
 	}
+
+	return true
 }
 
 func (cors *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
