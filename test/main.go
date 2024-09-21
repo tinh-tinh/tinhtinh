@@ -7,12 +7,37 @@ import (
 	"github.com/tinh-tinh/tinhtinh/middleware"
 )
 
-func UserModule(module *core.DynamicModule) *core.DynamicModule {
-	userModule := module.New(core.NewModuleOptions{})
-
-	userModule.OnInit(func(module *core.DynamicModule) {
-		fmt.Println("ON Init")
+func UserProvider(module *core.DynamicModule) *core.DynamicProvider {
+	provider := module.NewFactoryProvider(core.FactoryOptions{
+		Name: "user",
+		Factory: func(param ...interface{}) interface{} {
+			return fmt.Sprintf("%vUser", param[0])
+		},
+		Inject: []core.Provide{"root"},
 	})
+
+	return provider
+}
+
+func UserController(module *core.DynamicModule) *core.DynamicController {
+	ctrl := module.NewController("user")
+
+	ctrl.Get("/", func(ctx core.Ctx) {
+		name := ctrl.Inject("user")
+		ctx.JSON(core.Map{
+			"data": name,
+		})
+	})
+
+	return ctrl
+}
+
+func UserModule(module *core.DynamicModule) *core.DynamicModule {
+	userModule := module.New(core.NewModuleOptions{
+		Controllers: []core.Controller{UserController},
+		Providers:   []core.Provider{UserProvider},
+	})
+
 	return userModule
 }
 
@@ -34,9 +59,21 @@ func AppController(module *core.DynamicModule) *core.DynamicController {
 	return ctrl
 }
 
+func RootModule(module *core.DynamicModule) *core.DynamicModule {
+	rootModule := module.New(core.NewModuleOptions{})
+
+	rootModule.NewProvider("root", "root")
+	rootModule.Export("root")
+
+	return rootModule
+}
+
 func AppModule() *core.DynamicModule {
 	appModule := core.NewModule(core.NewModuleOptions{
-		Imports:     []core.Module{UserModule},
+		Imports: []core.Module{
+			RootModule,
+			UserModule,
+		},
 		Controllers: []core.Controller{AppController},
 		Providers:   []core.Provider{AppService},
 	})
@@ -46,7 +83,7 @@ func AppModule() *core.DynamicModule {
 
 func main() {
 	app := core.CreateFactory(AppModule, "api").EnableCors(middleware.CorsOptions{
-		AllowedMethods: []string{"POST"},
+		AllowedMethods: []string{"POST", "GET"},
 	})
 	app.BeforeShutdown(func() {
 		fmt.Println("Before shutdown")
