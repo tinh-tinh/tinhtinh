@@ -1,7 +1,10 @@
 # Tinh Tinh
 
-<img alt="GitHub Tag" src="https://img.shields.io/github/v/tag/tinh-tinh/tinhtinh">
+<div>
+<img alt="GitHub Release" src="https://img.shields.io/github/v/release/tinh-tinh/tinhtinh">
 <img alt="GitHub License" src="https://img.shields.io/github/license/tinh-tinh/tinhtinh">
+</div>
+
 
 
 An easy to use, extensible boilerplate for Go applications.
