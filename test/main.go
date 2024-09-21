@@ -45,7 +45,9 @@ func AppModule() *core.DynamicModule {
 }
 
 func main() {
-	app := core.CreateFactory(AppModule, "api").EnableCors(middleware.CorsOptions{})
+	app := core.CreateFactory(AppModule, "api").EnableCors(middleware.CorsOptions{
+		AllowedMethods: []string{"POST"},
+	})
 	app.BeforeShutdown(func() {
 		fmt.Println("Before shutdown")
 	})
