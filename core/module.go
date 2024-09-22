@@ -1,7 +1,7 @@
 package core
 
 import (
-	"runtime"
+	"net/http"
 	"slices"
 	"time"
 
@@ -13,8 +13,15 @@ type DocRoute struct {
 	Security []string
 }
 
+type Scope string
+
+const (
+	Global  Scope = "global"
+	Request Scope = "request"
+)
+
 type DynamicModule struct {
-	global        bool
+	Scope         Scope
 	Routers       []*Router
 	Middlewares   []Middleware
 	DataProviders []*DynamicProvider
@@ -26,7 +33,7 @@ type Controller func(module *DynamicModule) *DynamicController
 type Provider func(module *DynamicModule) *DynamicProvider
 
 type NewModuleOptions struct {
-	Global      bool
+	Scope       Scope
 	Imports     []Module
 	Controllers []Controller
 	Providers   []Provider
@@ -34,10 +41,29 @@ type NewModuleOptions struct {
 }
 
 func NewModule(opt NewModuleOptions) *DynamicModule {
-	module := &DynamicModule{
-		global: opt.Global,
+	if opt.Scope == "" {
+		opt.Scope = Global
 	}
+	module := &DynamicModule{}
+	initModule(module, opt)
 
+	return module
+}
+
+func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
+	if opt.Scope == "" {
+		opt.Scope = Global
+	}
+	newMod := &DynamicModule{}
+	newMod.DataProviders = append(newMod.DataProviders, m.getExports()...)
+	newMod.Middlewares = append(newMod.Middlewares, m.Middlewares...)
+
+	initModule(newMod, opt)
+	return newMod
+}
+
+func initModule(module *DynamicModule, opt NewModuleOptions) {
+	module.Scope = opt.Scope
 	// Providers
 	for _, p := range opt.Providers {
 		p(module)
@@ -58,6 +84,29 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 		module.DataProviders = append(module.DataProviders, mod.getExports()...)
 	}
 
+	if module.Scope == Request {
+		module.Use(func(h http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				reqProvider := module.NewProvider(ProviderOptions{
+					Name:  REQUEST,
+					Value: r,
+				})
+				module.DataProviders = append(module.DataProviders, reqProvider)
+				for _, p := range module.getRequest() {
+					if p.Value == nil {
+						var values []interface{}
+						for _, p := range p.inject {
+							values = append(values, module.ref(p))
+						}
+
+						p.Value = p.factory(values...)
+					}
+				}
+				h.ServeHTTP(w, r)
+			})
+		})
+	}
+
 	// Controllers
 	for _, ct := range opt.Controllers {
 		ct(module)
@@ -68,49 +117,6 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 		provider := e(module)
 		provider.Status = PUBLIC
 	}
-
-	return module
-}
-
-func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
-	newMod := &DynamicModule{
-		global: opt.Global,
-	}
-
-	newMod.DataProviders = append(newMod.DataProviders, m.getExports()...)
-	// Providers
-	providers := make([]Provider, 0)
-	for _, p := range opt.Providers {
-		p(newMod)
-		providers = append(providers, p)
-	}
-
-	// Imports
-	for _, mFnc := range opt.Imports {
-		mod := mFnc(newMod)
-		utils.Log(
-			utils.Green("[TT] "),
-			utils.White(time.Now().Format("2006-01-02 15:04:05")),
-			utils.Yellow(" [Module Initializer] "),
-			utils.Green(utils.GetFunctionName(m)+"\n"),
-		)
-
-		mod.init()
-		newMod.Routers = append(newMod.Routers, mod.Routers...)
-		newMod.DataProviders = append(newMod.DataProviders, mod.getExports()...)
-
-		if newMod.global {
-			mod.Providers(providers...)
-		}
-	}
-
-	// Controllers
-	for _, ct := range opt.Controllers {
-		ct(newMod)
-	}
-
-	runtime.GC()
-	return newMod
 }
 
 func (m *DynamicModule) Controllers(controllers ...Controller) *DynamicModule {
@@ -126,10 +132,13 @@ func (m *DynamicModule) Providers(providers ...Provider) {
 	}
 }
 
-func (m *DynamicModule) Ref(name Provide) interface{} {
+func (m *DynamicModule) ref(name Provide) interface{} {
 	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
 		return e.Name == name
 	})
+	if idx == -1 {
+		return nil
+	}
 	return m.DataProviders[idx].Value
 }
 

@@ -8,12 +8,13 @@ import (
 )
 
 func UserProvider(module *core.DynamicModule) *core.DynamicProvider {
-	provider := module.NewFactoryProvider(core.FactoryOptions{
+	provider := module.NewProvider(core.ProviderOptions{
 		Name: "user",
 		Factory: func(param ...interface{}) interface{} {
-			return fmt.Sprintf("%vUser", param[0])
+			fmt.Println("param", param)
+			return fmt.Sprintf("Req%v Root%vUser", param[0], param[1])
 		},
-		Inject: []core.Provide{"root"},
+		Inject: []core.Provide{core.REQUEST, "root", "jajaj"},
 	})
 
 	return provider
@@ -34,6 +35,7 @@ func UserController(module *core.DynamicModule) *core.DynamicController {
 
 func UserModule(module *core.DynamicModule) *core.DynamicModule {
 	userModule := module.New(core.NewModuleOptions{
+		Scope:       core.Request,
 		Controllers: []core.Controller{UserController},
 		Providers:   []core.Provider{UserProvider},
 	})
@@ -42,7 +44,10 @@ func UserModule(module *core.DynamicModule) *core.DynamicModule {
 }
 
 func AppService(module *core.DynamicModule) *core.DynamicProvider {
-	provider := module.NewProvider("abc", "test")
+	provider := module.NewProvider(core.ProviderOptions{
+		Name:  "app",
+		Value: "test",
+	})
 	return provider
 }
 
@@ -50,7 +55,7 @@ func AppController(module *core.DynamicModule) *core.DynamicController {
 	ctrl := module.NewController("test")
 
 	ctrl.Get("/", func(ctx core.Ctx) {
-		name := ctrl.Inject("test")
+		name := ctrl.Inject("sjkfkjgjkebjgrkebjkgb")
 		ctx.JSON(core.Map{
 			"data": name,
 		})
@@ -59,23 +64,53 @@ func AppController(module *core.DynamicModule) *core.DynamicController {
 	return ctrl
 }
 
+func RootProvider(module *core.DynamicModule) *core.DynamicProvider {
+	provider := module.NewProvider(core.ProviderOptions{
+		Name: "root",
+		Factory: func(param ...interface{}) interface{} {
+			return fmt.Sprintf("%vRoot", param[0])
+		},
+		Inject: []core.Provide{core.REQUEST},
+	})
+
+	return provider
+}
+
 func RootModule(module *core.DynamicModule) *core.DynamicModule {
-	rootModule := module.New(core.NewModuleOptions{})
-
-	rootModule.NewProvider("root", "root")
-	rootModule.Export("root")
-
+	rootModule := module.New(core.NewModuleOptions{
+		Scope:     core.Request,
+		Providers: []core.Provider{RootProvider},
+		Exports:   []core.Provider{RootProvider},
+	})
 	return rootModule
+}
+
+func AbcModule(module *core.DynamicModule) *core.DynamicModule {
+	abcModule := module.New(core.NewModuleOptions{
+		Scope: core.Request,
+	})
+
+	abcModule.NewProvider(core.ProviderOptions{
+		Name: "jajaj",
+		Factory: func(param ...interface{}) interface{} {
+			return fmt.Sprintf("%vAbc", param[0])
+		},
+		Inject: []core.Provide{core.REQUEST},
+	})
+	abcModule.Export("jajaj")
+
+	return abcModule
 }
 
 func AppModule() *core.DynamicModule {
 	appModule := core.NewModule(core.NewModuleOptions{
 		Imports: []core.Module{
 			RootModule,
+			AbcModule,
 			UserModule,
 		},
-		Controllers: []core.Controller{AppController},
-		Providers:   []core.Provider{AppService},
+		// Controllers: []core.Controller{AppController},
+		// Providers:   []core.Provider{AppService},
 	})
 
 	return appModule
@@ -85,6 +120,7 @@ func main() {
 	app := core.CreateFactory(AppModule, "api").EnableCors(middleware.CorsOptions{
 		AllowedMethods: []string{"POST", "GET"},
 	})
+	app.Log()
 	app.BeforeShutdown(func() {
 		fmt.Println("Before shutdown")
 	})

@@ -32,7 +32,10 @@ func Register[K string, V any](opt Options[K, V]) core.Module {
 		})
 
 		cacheModule := module.New(core.NewModuleOptions{})
-		cacheModule.NewProvider(memory, CACHE_MANAGER)
+		cacheModule.NewProvider(core.ProviderOptions{
+			Name:  CACHE_MANAGER,
+			Value: memory,
+		})
 		cacheModule.Export(CACHE_MANAGER)
 
 		return cacheModule
