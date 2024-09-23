@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/middleware"
@@ -11,8 +12,8 @@ func UserProvider(module *core.DynamicModule) *core.DynamicProvider {
 	provider := module.NewProvider(core.ProviderOptions{
 		Name: "user",
 		Factory: func(param ...interface{}) interface{} {
-			fmt.Println("param", param)
-			return fmt.Sprintf("Req%v Root%vUser", param[0], param[1])
+			fmt.Println("param", param[1])
+			return fmt.Sprintf("Root%vUser", param[1])
 		},
 		Inject: []core.Provide{core.REQUEST, "root", "jajaj"},
 	})
@@ -68,7 +69,8 @@ func RootProvider(module *core.DynamicModule) *core.DynamicProvider {
 	provider := module.NewProvider(core.ProviderOptions{
 		Name: "root",
 		Factory: func(param ...interface{}) interface{} {
-			return fmt.Sprintf("%vRoot", param[0])
+			req := param[0].(*http.Request)
+			return fmt.Sprintf("%vRoot", req.Header.Get("x-api-key"))
 		},
 		Inject: []core.Provide{core.REQUEST},
 	})
@@ -119,6 +121,7 @@ func AppModule() *core.DynamicModule {
 func main() {
 	app := core.CreateFactory(AppModule, "api").EnableCors(middleware.CorsOptions{
 		AllowedMethods: []string{"POST", "GET"},
+		AllowedHeaders: []string{"*"},
 	})
 	app.Log()
 	app.BeforeShutdown(func() {
