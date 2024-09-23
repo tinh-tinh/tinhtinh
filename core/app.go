@@ -17,13 +17,13 @@ import (
 )
 
 type App struct {
-	pool   sync.Pool
-	Prefix string
-	log    bool
-	Mux    *http.ServeMux
-	Module *DynamicModule
-	cors   *middleware.Cors
-	hooks  []*Hook
+	pool       sync.Pool
+	Prefix     string
+	Mux        *http.ServeMux
+	Module     *DynamicModule
+	cors       *middleware.Cors
+	hooks      []*Hook
+	Middleware []Middleware
 }
 
 type ModuleParam func() *DynamicModule
@@ -64,13 +64,13 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 	return app
 }
 
-func (app *App) Log() *App {
-	app.log = true
+func (app *App) EnableCors(opt middleware.CorsOptions) *App {
+	app.cors = middleware.NewCors(opt)
 	return app
 }
 
-func (app *App) EnableCors(opt middleware.CorsOptions) *App {
-	app.cors = middleware.NewCors(opt)
+func (app *App) Use(middleware ...Middleware) *App {
+	app.Middleware = append(app.Middleware, middleware...)
 	return app
 }
 
@@ -79,13 +79,15 @@ func (app *App) Listen(port int) {
 		Addr:    ":" + IntToString(port),
 		Handler: app.Mux,
 	}
-	if app.log {
-		loggedRouter := logRequests(server.Handler)
-		server.Handler = loggedRouter
-	}
 	if app.cors != nil {
 		corsHandler := app.cors.Handler(server.Handler)
 		server.Handler = corsHandler
+	}
+
+	if len(app.Middleware) > 0 {
+		for _, m := range app.Middleware {
+			server.Handler = m(server.Handler)
+		}
 	}
 
 	log.Printf("Server running on http://localhost:%d/%s\n", port, app.Prefix)

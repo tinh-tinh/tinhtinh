@@ -95,7 +95,7 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 					if p.Value == nil {
 						var values []interface{}
 						for _, p := range p.inject {
-							values = append(values, module.ref(p))
+							values = append(values, module.Ref(p))
 						}
 
 						p.Value = p.factory(values...)
@@ -136,7 +136,7 @@ func (m *DynamicModule) Providers(providers ...Provider) {
 	}
 }
 
-func (m *DynamicModule) ref(name Provide) interface{} {
+func (m *DynamicModule) Ref(name Provide) interface{} {
 	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
 		return e.Name == name
 	})

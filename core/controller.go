@@ -217,5 +217,5 @@ func (c *DynamicController) free() {
 
 // deprecated
 func (c *DynamicController) Inject(name Provide) interface{} {
-	return c.module.ref(name)
+	return c.module.Ref(name)
 }
