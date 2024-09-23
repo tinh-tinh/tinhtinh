@@ -1,5 +1,10 @@
 package core
 
+import (
+	"fmt"
+	"log"
+)
+
 type Provide string
 
 const REQUEST Provide = "REQUEST"
@@ -30,12 +35,20 @@ type ProviderOptions struct {
 }
 
 func (module *DynamicModule) NewProvider(opt ProviderOptions) *DynamicProvider {
-	provider := &DynamicProvider{
-		Name:   opt.Name,
-		Status: PRIVATE,
-		Scope:  module.Scope,
+	var provider *DynamicProvider
+	providerIdx := module.findIdx(opt.Name)
+	fmt.Println(providerIdx)
+	if providerIdx != -1 {
+		log.Printf("The value of provider %s will be override\n", opt.Name)
+		provider = module.DataProviders[providerIdx]
+	} else {
+		provider = &DynamicProvider{
+			Name:   opt.Name,
+			Status: PRIVATE,
+			Scope:  module.Scope,
+		}
+		module.DataProviders = append(module.DataProviders, provider)
 	}
-	module.DataProviders = append(module.DataProviders, provider)
 	if provider.Scope == Request {
 		provider.inject = opt.Inject
 		provider.factory = opt.Factory

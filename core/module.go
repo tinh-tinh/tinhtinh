@@ -87,11 +87,10 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 	if module.Scope == Request {
 		module.Use(func(h http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				reqProvider := module.NewProvider(ProviderOptions{
+				module.NewProvider(ProviderOptions{
 					Name:  REQUEST,
 					Value: r,
 				})
-				module.DataProviders = append(module.DataProviders, reqProvider)
 				for _, p := range module.getRequest() {
 					if p.Value == nil {
 						var values []interface{}
@@ -103,6 +102,11 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 					}
 				}
 				h.ServeHTTP(w, r)
+				for _, p := range module.getRequest() {
+					if p.Value != nil {
+						p.Value = nil
+					}
+				}
 			})
 		})
 	}
@@ -140,6 +144,13 @@ func (m *DynamicModule) ref(name Provide) interface{} {
 		return nil
 	}
 	return m.DataProviders[idx].Value
+}
+
+func (m *DynamicModule) findIdx(name Provide) int {
+	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
+		return e.Name == name
+	})
+	return idx
 }
 
 func (m *DynamicModule) Export(name Provide) *DynamicProvider {
