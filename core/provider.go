@@ -59,7 +59,7 @@ func (module *DynamicModule) NewProvider(opt ProviderOptions) *DynamicProvider {
 	if opt.Value == nil {
 		var values []interface{}
 		for _, p := range opt.Inject {
-			values = append(values, module.ref(p))
+			values = append(values, module.Ref(p))
 		}
 		provider.Value = opt.Factory(values...)
 	}

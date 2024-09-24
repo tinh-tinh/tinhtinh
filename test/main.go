@@ -6,6 +6,7 @@ import (
 
 	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/middleware"
+	"github.com/tinh-tinh/tinhtinh/middleware/logger"
 )
 
 func UserProvider(module *core.DynamicModule) *core.DynamicProvider {
@@ -123,7 +124,11 @@ func main() {
 		AllowedMethods: []string{"POST", "GET"},
 		AllowedHeaders: []string{"*"},
 	})
-	app.Log()
+
+	app.Use(logger.Middleware(logger.MiddlewareOptions{
+		Rotate: true,
+		Format: "${method} ${path} ${status} ${latency}",
+	}))
 	app.BeforeShutdown(func() {
 		fmt.Println("Before shutdown")
 	})
