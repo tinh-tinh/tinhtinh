@@ -11,11 +11,11 @@ import (
 type Level int
 
 const (
-	LevelFatal Level = iota
-	LevelError
-	LevelWarn
+	LevelDebug Level = iota
 	LevelInfo
-	LevelDebug
+	LevelWarn
+	LevelError
+	LevelFatal
 )
 
 type Logger struct {
@@ -26,12 +26,20 @@ type Logger struct {
 }
 
 type Options struct {
-	Path   string
+	// Log path. Default is "logs".
+	Path string
+	// Rotate log files. Default is false.
 	Rotate bool
 	// Max Size in MB of each file log. Default is infinity.
 	Max int64
 }
 
+// Create a new Logger with the specified options.
+//
+// The created logger will have the given path for the log files. If the path is
+// empty, the default value "logs" is used. The logger will rotate log files if
+// the Rotate option is true. The maximum size of each log file can be set with
+// the Max option. The default value is infinity.
 func Create(opt Options) *Logger {
 	if opt.Path == "" {
 		opt.Path = "logs"
@@ -61,6 +69,10 @@ func (log *Logger) Error(msg string) {
 
 func (log *Logger) Fatal(msg string) {
 	log.write(LevelFatal, msg)
+}
+
+func (log *Logger) Log(level Level, msg string) {
+	log.write(level, msg)
 }
 
 func (log *Logger) write(level Level, msg string) {

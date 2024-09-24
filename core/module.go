@@ -40,6 +40,10 @@ type NewModuleOptions struct {
 	Exports     []Provider
 }
 
+// NewModule creates a new module with the given options.
+//
+// The scope of the module will default to Global if not specified.
+// The module will be initialized with the given imports, controllers, providers and exports.
 func NewModule(opt NewModuleOptions) *DynamicModule {
 	if opt.Scope == "" {
 		opt.Scope = Global
@@ -50,6 +54,13 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	return module
 }
 
+// New creates a new module as a sub-module of the current module.
+//
+// The sub-module will inherit all the exports of the current module and
+// will have the same middlewares as the current module.
+//
+// The scope of the sub-module will default to Global if not specified.
+// The sub-module will be initialized with the given imports, controllers, providers and exports.
 func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	if opt.Scope == "" {
 		opt.Scope = Global
@@ -62,6 +73,16 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	return newMod
 }
 
+// initModule initializes the given module with the given options.
+//
+// It sets the scope of the module, runs the providers, imports the sub-modules,
+// runs the controllers, and sets the exports.
+//
+// If the scope of the module is Request, it wraps the handler with a middleware
+// that creates a new request provider for each request, and sets the value of
+// the providers that are injected with the request to the value of the provider
+// of the current request. After the request is handled, it sets the value of
+// the providers that are injected with the request to nil.
 func initModule(module *DynamicModule, opt NewModuleOptions) {
 	module.Scope = opt.Scope
 	// Providers
@@ -123,6 +144,8 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 	}
 }
 
+// Controllers registers the given controllers with the module.
+// The controllers are registered in the order they are given.
 func (m *DynamicModule) Controllers(controllers ...Controller) *DynamicModule {
 	for _, v := range controllers {
 		v(m)
@@ -130,12 +153,16 @@ func (m *DynamicModule) Controllers(controllers ...Controller) *DynamicModule {
 	return m
 }
 
+// Providers registers the given providers with the module.
+// The providers are registered in the order they are given.
 func (m *DynamicModule) Providers(providers ...Provider) {
 	for _, v := range providers {
 		v(m)
 	}
 }
 
+// Ref returns the value of the provider with the given name.
+// If the provider is not found, Ref returns nil.
 func (m *DynamicModule) Ref(name Provide) interface{} {
 	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
 		return e.Name == name
@@ -153,6 +180,8 @@ func (m *DynamicModule) findIdx(name Provide) int {
 	return idx
 }
 
+// Export sets the status of the provider with the given name to PUBLIC and returns
+// the provider.
 func (m *DynamicModule) Export(name Provide) *DynamicProvider {
 	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
 		return e.Name == name
