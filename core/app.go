@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/middleware"
+	"github.com/tinh-tinh/tinhtinh/middleware/cors"
 	"github.com/tinh-tinh/tinhtinh/utils"
 )
 
@@ -21,13 +21,20 @@ type App struct {
 	Prefix     string
 	Mux        *http.ServeMux
 	Module     *DynamicModule
-	cors       *middleware.Cors
+	cors       *cors.Cors
 	hooks      []*Hook
 	Middleware []Middleware
 }
 
 type ModuleParam func() *DynamicModule
 
+// CreateFactory is a function that creates an App instance with a DynamicModule
+// and a specified prefix. The DynamicModule is created by calling the given
+// module function, and the prefix is set on the App instance. The App instance's
+// Mux is set to a new http.ServeMux, and the Module is initialized. The routes
+// on the Module are resolved and added to the Mux. The Mux is then set to
+// handle the root path with a handler that writes "API is running" to the
+// response writer. Finally, the App instance is returned.
 func CreateFactory(module ModuleParam, prefix string) *App {
 	app := &App{
 		pool:   sync.Pool{},
@@ -64,16 +71,34 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 	return app
 }
 
-func (app *App) EnableCors(opt middleware.CorsOptions) *App {
-	app.cors = middleware.NewCors(opt)
+// EnableCors enables CORS on the API server. The passed in options are used
+// to configure the CORS middleware.
+func (app *App) EnableCors(opt cors.CorsOptions) *App {
+	app.cors = cors.NewCors(opt)
 	return app
 }
 
+// Use appends the given middleware functions to the App instance's list of
+// middleware handlers. The middleware handlers are run in the order they are
+// added to the App instance. The middleware handlers are run before the
+// App instance's handlers. The App instance's middleware handlers are run
+// after the module's middleware handlers. The module middleware handlers are
+// run after the module's parent middleware handlers. The module middleware
+// handlers are run before the module's controllers. The App instance's
+// middleware handlers are run before the App instance's handlers.
 func (app *App) Use(middleware ...Middleware) *App {
 	app.Middleware = append(app.Middleware, middleware...)
 	return app
 }
 
+// Listen starts the App instance's HTTP server on the given port. The App
+// instance's Mux is used as the handler for the server. If the App instance's
+// CORS middleware is not nil, it is added to the server's handler. If the App
+// instance's middleware handlers are not empty, they are added to the server's
+// handler. The server is then started in a goroutine. The App instance's
+// shutdown hooks are run in the order they were added. The server is then shut
+// down gracefully. The App instance's shutdown hooks are run in the order they
+// were added.
 func (app *App) Listen(port int) {
 	server := http.Server{
 		Addr:    ":" + IntToString(port),

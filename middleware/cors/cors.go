@@ -1,5 +1,5 @@
 // See document about cors: https://fetch.spec.whatwg.org/#http-cors-protocol
-package middleware
+package cors
 
 import (
 	"net/http"
@@ -8,12 +8,41 @@ import (
 )
 
 type CorsOptions struct {
-	AllowedOrigins   []string
+	// AllowedOrigins is a list of origins a cross-domain request can be executed from.
+	// If the special "*" value is present in the list, all origins will be allowed.
+	// An origin may be:
+	// * A exact string origins
+	// * A regex pattern of origin
+	// Eg.
+	//   AllowedOrigins: []string{"https://foo.com", "http://foo.com"}
+	//   AllowedOrigins: []string{"foo.com", "foo.com:1234", "^https://foo.com$"}
+	//   AllowedOrigins: []string{"*"}
+	AllowedOrigins []string
+	// AllowOriginFunc is a custom function for processing the Origin header.
+	// It returns true if allowed or false otherwise. If no Origin header is
+	// present, it returns true by default.
+	// Eg.
+	//   AllowedOriginFunc: func(r *http.Request) bool {
+	//     origin := r.Header["Origin"][0]
+	//     return origin == "https://foo.com"
+	//   }
 	AllowedOriginCtx func(r *http.Request) bool
-	AllowedMethods   []string
-	AllowedHeaders   []string
-	Credentials      bool
-	PassThrough      bool
+	// AllowedMethods is a list of methods the client is allowed to use with
+	// cross-domain requests.
+	// If the special "*" value is present in the list, all methods will be allowed.
+	// Eg.
+	//   AllowedMethods: []string{"GET", "POST"}
+	//   AllowedMethods: []string{"*"}
+	AllowedMethods []string
+	// AllowedHeaders is a list of non-simple headers the client is allowed to use
+	// with cross-domain requests.
+	// If the special "*" value is present in the list, all headers will be allowed.
+	// Eg.
+	//   AllowedHeaders: []string{"Authorization", "Content-Type"}
+	//   AllowedHeaders: []string{"*"}
+	AllowedHeaders []string
+	Credentials    bool
+	PassThrough    bool
 }
 
 type Cors struct {
@@ -29,6 +58,25 @@ type Cors struct {
 	optionPassthrough bool
 }
 
+// NewCors returns a new CORS middleware.
+//
+// If options.AllowedOrigins is empty or if the special "*" value is present in
+// the list, all origins will be allowed.
+//
+// If options.AllowedOriginCtx is not nil, it will be used to process the Origin
+// header. If no Origin header is present, it returns true by default.
+//
+// If options.AllowedMethods is empty or if the special "*" value is present in
+// the list, all methods will be allowed.
+//
+// If options.AllowedHeaders is empty or if the special "*" value is present in
+// the list, all headers will be allowed.
+//
+// If options.Credentials is true, the middleware will include the
+// Access-Control-Allow-Credentials header in the response.
+//
+// If options.PassThrough is true, the middleware will not intercept OPTIONS
+// requests.
 func NewCors(options CorsOptions) *Cors {
 	c := &Cors{
 		allowedOrigins:    options.AllowedOrigins,
@@ -52,7 +100,7 @@ func NewCors(options CorsOptions) *Cors {
 		}
 	}
 
-	if options.AllowedHeaders == nil || len(options.AllowedHeaders) == 0 {
+	if len(options.AllowedHeaders) == 0 {
 		c.allowedHeadersAll = true
 	}
 
@@ -73,6 +121,17 @@ func NewCors(options CorsOptions) *Cors {
 	return c
 }
 
+// Handler returns a http.Handler that adds CORS headers to the responses.
+//
+// It handles two types of requests: OPTIONS requests (preflight) and actual
+// requests.
+//
+// For OPTIONS requests, it sets the CORS headers and returns a 200 status code.
+// If the Passthrough option is set to true, the handler will also pass the
+// request to the underlying handler.
+//
+// For actual requests, it sets the CORS headers and passes the request to the
+// underlying handler if the request is allowed according to the CORS policy.
 func (cors Cors) Handler(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
@@ -91,6 +150,10 @@ func (cors Cors) Handler(h http.Handler) http.Handler {
 	})
 }
 
+// handleActualReq validates and sets the CORS headers for an actual request.
+//
+// It returns true if the request is allowed according to the CORS policy,
+// and false otherwise.
 func (cors *Cors) handleActualReq(w http.ResponseWriter, r *http.Request) bool {
 	headers := w.Header()
 	// Validate and set origin
@@ -116,6 +179,15 @@ func (cors *Cors) handleActualReq(w http.ResponseWriter, r *http.Request) bool {
 	return true
 }
 
+// handlePreflight validates and sets the CORS headers for a preflight request.
+//
+// It handles the following steps:
+//
+// 1. Validate and set origin
+// 2. Validate and set method
+// 3. Validate and set headers
+//
+// If any of the steps fail, it returns an error response.
 func (cors *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 	headers := w.Header()
 
@@ -155,6 +227,12 @@ func (cors *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// isOriginAllowed checks if the given request's origin is allowed
+// according to the CORS policy. If the policy is set to allow all
+// origins, it returns true. If the policy is set to allow a specific
+// set of origins, it checks if the request's origin is in the list.
+// If the policy is set to a custom function, it calls the function
+// and returns the result.
 func (cors *Cors) isOriginAllowed(r *http.Request) bool {
 	if cors.allowedOriginFnc != nil {
 		return cors.allowedOriginFnc(r)
@@ -173,6 +251,10 @@ func (cors *Cors) isOriginAllowed(r *http.Request) bool {
 	return false
 }
 
+// isMethodAllowed checks if the given request's method is allowed
+// according to the CORS policy. If the policy is set to allow all
+// methods, it returns true. If the policy is set to allow a specific
+// set of methods, it checks if the request's method is in the list.
 func (cors Cors) isMethodAllowed(method string) bool {
 	if method == http.MethodOptions {
 		return true
@@ -186,6 +268,10 @@ func (cors Cors) isMethodAllowed(method string) bool {
 	return false
 }
 
+// isHeaderAllowed checks if the given request's headers are allowed
+// according to the CORS policy. If the policy is set to allow all
+// headers, it returns true. If the policy is set to allow a specific
+// set of headers, it checks if the request's headers are in the list.
 func (cors Cors) isHeaderAllowed(r *http.Request) bool {
 	if cors.allowedHeadersAll {
 		return true

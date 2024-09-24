@@ -21,12 +21,36 @@ type wrappedWriter struct {
 	statusCode int
 }
 
+// Middleware returns a middleware that logs the request and response.
+//
+// The middleware will log the request method, path, remote address, response status
+// and latency. The format of the log message is configurable with the Format
+// option. The format string can contain the following placeholders:
+// - ${method}: the request method
+// - ${path}: the request path
+// - ${ip}: the remote address
+// - ${status}: the response status
+// - ${latency}: the latency of the request
+//
+// The Path option specifies the path of the log files. The Rotate option specifies
+// whether the log files should be rotated. The Max option specifies the maximum
+// size of each log file. The unit of the size is MB. The default value is
+// infinity. The Level option specifies the level of the log messages. The level
+// can be one of the following:
+// - LevelFatal: log messages with a fatal level
+// - LevelError: log messages with an error level
+// - LevelWarn: log messages with a warning level
+// - LevelInfo: log messages with an info level
+// - LevelDebug: log messages with a debug level
+//
+// The middleware will log the request and response with the specified level.
 func Middleware(opt MiddlewareOptions) func(http.Handler) http.Handler {
 	logger := Create(Options{
 		Path:   opt.Path,
 		Rotate: opt.Rotate,
 		Max:    opt.Max,
 	})
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -53,7 +77,7 @@ func Middleware(opt MiddlewareOptions) func(http.Handler) http.Handler {
 					content = strings.Replace(content, "${latency}", elapsed.String(), 1)
 				}
 			}
-			logger.Info(content)
+			logger.Log(opt.Level, content)
 		})
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/middleware"
+	"github.com/tinh-tinh/tinhtinh/middleware/cors"
 	"github.com/tinh-tinh/tinhtinh/middleware/logger"
 )
 
@@ -120,7 +120,7 @@ func AppModule() *core.DynamicModule {
 }
 
 func main() {
-	app := core.CreateFactory(AppModule, "api").EnableCors(middleware.CorsOptions{
+	app := core.CreateFactory(AppModule, "api").EnableCors(cors.CorsOptions{
 		AllowedMethods: []string{"POST", "GET"},
 		AllowedHeaders: []string{"*"},
 	})
