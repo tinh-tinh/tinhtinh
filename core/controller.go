@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"net/http"
 	"runtime"
 	"strings"
@@ -181,13 +180,6 @@ func (c *DynamicController) Delete(path string, handler Handler) {
 }
 
 func (c *DynamicController) registry(method string, path string, handler http.Handler) {
-	route := ParseRoute(method + " " + path)
-	if c.version != "" {
-		route.SetPrefix("v" + c.version)
-	}
-	route.SetPrefix(c.name)
-
-	fmt.Println(c.middlewares)
 	mergeHandler := handler
 	for _, v := range c.middlewares {
 		mergeHandler = v(mergeHandler)
@@ -198,11 +190,14 @@ func (c *DynamicController) registry(method string, path string, handler http.Ha
 	}
 
 	router := &Router{
+		Name:     c.name,
+		Method:   method,
 		Tag:      c.tag,
-		Path:     route.GetPath(),
+		Path:     path,
 		Handler:  mergeHandler,
 		Dtos:     c.Dtos,
 		Security: c.Security,
+		Version:  c.version,
 	}
 	c.module.Routers = append(c.module.Routers, router)
 	c.free()
