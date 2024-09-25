@@ -6,6 +6,7 @@ import (
 
 	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/middleware/cors"
+	"github.com/tinh-tinh/tinhtinh/middleware/helmet"
 	"github.com/tinh-tinh/tinhtinh/middleware/logger"
 )
 
@@ -129,6 +130,12 @@ func main() {
 		Rotate: true,
 		Format: "${method} ${path} ${status} ${latency}",
 	}))
+
+	h := helmet.New(helmet.HelmetOptions{
+		XPoweredBy: helmet.XPoweredBy{
+			Enabled: true, Value: "tinhtinh"},
+	})
+	app.Use(h.Handler)
 	app.BeforeShutdown(func() {
 		fmt.Println("Before shutdown")
 	})
