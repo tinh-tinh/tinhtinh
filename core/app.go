@@ -22,6 +22,7 @@ type App struct {
 	Mux        *http.ServeMux
 	Module     *DynamicModule
 	cors       *cors.Cors
+	version    *Version
 	hooks      []*Hook
 	Middleware []Middleware
 }
@@ -42,32 +43,14 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 		Prefix: prefix,
 		Mux:    http.NewServeMux(),
 	}
+
 	utils.Log(
 		utils.Green("[TT] "),
 		utils.White(time.Now().Format("2006-01-02 15:04:05")),
 		utils.Yellow(" [Module Initializer] "),
 		utils.Green(utils.GetFunctionName(module)+"\n"),
 	)
-
 	app.Module.init()
-	for _, r := range app.Module.Routers {
-		route := ParseRoute(r.Path)
-		route.SetPrefix(app.Prefix)
-		utils.Log(
-			utils.Green("[TT] "),
-			utils.White(time.Now().Format("2006-01-02 15:04:05")),
-			utils.Yellow(" [RoutesResolver] "),
-			utils.Green(route.GetPath()+"\n"),
-		)
-		app.Mux.Handle(route.GetPath(), r.Handler)
-	}
-
-	app.Mux.Handle(IfSlashPrefixString(app.Prefix), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, err := io.WriteString(w, "API is running")
-		if err != nil {
-			log.Fatalf("error when running server %v", err)
-		}
-	}))
 	return app
 }
 
@@ -100,6 +83,14 @@ func (app *App) Use(middleware ...Middleware) *App {
 // down gracefully. The App instance's shutdown hooks are run in the order they
 // were added.
 func (app *App) Listen(port int) {
+	app.registerRoutes()
+	app.Mux.Handle(IfSlashPrefixString(app.Prefix), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := io.WriteString(w, "API is running")
+		if err != nil {
+			log.Fatalf("error when running server %v", err)
+		}
+	}))
+
 	server := http.Server{
 		Addr:    ":" + IntToString(port),
 		Handler: app.Mux,
