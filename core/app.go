@@ -74,15 +74,13 @@ func (app *App) Use(middleware ...Middleware) *App {
 	return app
 }
 
-// Listen starts the App instance's HTTP server on the given port. The App
-// instance's Mux is used as the handler for the server. If the App instance's
-// CORS middleware is not nil, it is added to the server's handler. If the App
-// instance's middleware handlers are not empty, they are added to the server's
-// handler. The server is then started in a goroutine. The App instance's
-// shutdown hooks are run in the order they were added. The server is then shut
-// down gracefully. The App instance's shutdown hooks are run in the order they
-// were added.
-func (app *App) Listen(port int) {
+// prepareBeforeListen is a helper function that prepares the App instance's
+// HTTP handler before listening. It registers the routes from the App
+// instance's Module, and adds a handler that writes "API is running" to the
+// request writer. It also adds the App instance's CORS middleware if it is
+// not nil. Finally, it chains the App instance's middleware handlers and
+// returns the final handler.
+func (app *App) prepareBeforeListen() http.Handler {
 	app.registerRoutes()
 	app.Mux.Handle(IfSlashPrefixString(app.Prefix), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := io.WriteString(w, "API is running")
@@ -91,19 +89,38 @@ func (app *App) Listen(port int) {
 		}
 	}))
 
-	server := http.Server{
-		Addr:    ":" + IntToString(port),
-		Handler: app.Mux,
-	}
+	var handler http.Handler
+	handler = app.Mux
 	if app.cors != nil {
-		corsHandler := app.cors.Handler(server.Handler)
-		server.Handler = corsHandler
+		corsHandler := app.cors.Handler(handler)
+		handler = corsHandler
 	}
 
 	if len(app.Middleware) > 0 {
 		for _, m := range app.Middleware {
-			server.Handler = m(server.Handler)
+			handler = m(handler)
 		}
+	}
+
+	return handler
+}
+
+// Listen starts the API server on the specified port.
+//
+// It first prepares the server's handler with the module's routes and
+// middleware. Then it starts the server and logs a message to the console
+// indicating that the server is running.
+//
+// The server is then shut down when the process receives a SIGINT or SIGTERM
+// signal. It waits for 10 seconds for the server to shut down, and if it does
+// not shut down within that time, it prints an error message to the console.
+//
+// Finally, it runs any hooks registered with the AFTER_SHUTDOWN run-at value.
+func (app *App) Listen(port int) {
+	handler := app.prepareBeforeListen()
+	server := http.Server{
+		Addr:    ":" + IntToString(port),
+		Handler: handler,
 	}
 
 	log.Printf("Server running on http://localhost:%d/%s\n", port, app.Prefix)
