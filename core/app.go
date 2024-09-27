@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -119,7 +120,7 @@ func (app *App) prepareBeforeListen() http.Handler {
 func (app *App) Listen(port int) {
 	handler := app.prepareBeforeListen()
 	server := http.Server{
-		Addr:    ":" + IntToString(port),
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: handler,
 	}
 

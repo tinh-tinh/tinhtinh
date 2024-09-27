@@ -48,14 +48,7 @@ func (module *DynamicModule) Use(middleware ...Middleware) *DynamicModule {
 	return module
 }
 
-// Guard registers the given guard functions with the module. The guard
-// functions are run in the order they are added to the module. The
-// guard functions are run before the module's middleware handlers.
-// The guard functions are run after the module's parent middleware
-// handlers. The module middleware handlers are run before the
-// module's controllers. The guard functions are run before the
-// controller's middleware handlers. If any of the guard functions
-// return false, the request will be rejected with a 403 status code.
+// DEPRECATED
 func (module *DynamicModule) Guard(guards ...Guard) *DynamicModule {
 	for _, v := range guards {
 		mid := module.ParseGuard(v)
