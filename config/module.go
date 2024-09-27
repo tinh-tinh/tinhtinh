@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"sync"
 
@@ -44,14 +45,16 @@ func ForRoot[E any](path ...string) core.Module {
 			lastValue = env
 		}
 
+		configModule := module.New(core.NewModuleOptions{})
+
 		if lastValue == nil {
-			panic("env not found")
+			log.Println("env not found")
+			return configModule
 		}
 
-		configModule := module.New(core.NewModuleOptions{})
 		configModule.NewProvider(core.ProviderOptions{
 			Name:  ENV,
-			Value: *lastValue,
+			Value: lastValue,
 		})
 		configModule.Export(ENV)
 
