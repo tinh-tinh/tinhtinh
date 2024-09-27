@@ -20,3 +20,21 @@ func Test_OnInit(t *testing.T) {
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
 }
+
+func Test_BeforeShutdown(t *testing.T) {
+	appModule := func() *DynamicModule {
+		module := NewModule(NewModuleOptions{})
+
+		return module
+	}
+
+	app := CreateFactory(appModule, "api")
+	app.BeforeShutdown(func() {
+		t.Log("BeforeShutdown")
+	})
+
+	testServer := httptest.NewServer(app.prepareBeforeListen())
+	defer testServer.Close()
+
+	t.Log(testServer.URL)
+}

@@ -131,3 +131,24 @@ func Test_free(t *testing.T) {
 
 	require.Empty(t, controller.middlewares)
 }
+
+func Test_Registry(t *testing.T) {
+	module := NewModule(NewModuleOptions{})
+
+	middleware := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h.ServeHTTP(w, r)
+		})
+	}
+
+	controller := module.NewController("test").Use(middleware).Registry()
+
+	controller.Get("", func(ctx Ctx) {
+		ctx.JSON(Map{
+			"data": 1,
+		})
+	})
+
+	require.Len(t, controller.globalMiddlewares, 1)
+	require.Len(t, controller.middlewares, 0)
+}

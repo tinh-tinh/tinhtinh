@@ -6,27 +6,27 @@ import (
 	"github.com/tinh-tinh/tinhtinh/core"
 )
 
-type Store[K any, V any] interface {
-	Get(key K) *V
-	Set(key K, val V, ttl ...time.Duration)
-	Keys() []K
+type Store interface {
+	Get(key string) interface{}
+	Set(key string, val interface{}, ttl ...time.Duration)
+	Keys() []string
 	Count() int
-	Has(key K) bool
-	Delete(key K)
+	Has(key string) bool
+	Delete(key string)
 	Clear()
 }
 
-type Options[K string, V interface{}] struct {
-	Store Store[K, V]
+type Options struct {
+	Store Store
 	Ttl   time.Duration
 	Max   int
 }
 
 const CACHE_MANAGER core.Provide = "CACHE_MANAGER"
 
-func Register[K string, V any](opt Options[K, V]) core.Module {
+func Register(opt Options) core.Module {
 	return func(module *core.DynamicModule) *core.DynamicModule {
-		memory := NewInMemory[K, V](MemoryOptions{
+		memory := NewInMemory(MemoryOptions{
 			Ttl: opt.Ttl,
 			Max: opt.Max,
 		})
