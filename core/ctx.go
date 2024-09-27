@@ -190,3 +190,19 @@ func ParseCtx(ctxFnc func(ctx Ctx)) http.Handler {
 		ctxFnc(ctx)
 	})
 }
+
+func (ctx *Ctx) UploadedFile() *UploadedFileInfo {
+	uploadedFiles := ctx.Get(DefaultDestFolder)
+	if uploadedFiles == nil {
+		return nil
+	}
+	return uploadedFiles.(*UploadedFileInfo)
+}
+
+func (ctx *Ctx) UploadedFiles() map[string][]UploadedFileInfo {
+	uploadedFiles := ctx.Get(DefaultDestFolder)
+	if uploadedFiles == nil {
+		return nil
+	}
+	return uploadedFiles.(map[string][]UploadedFileInfo)
+}
