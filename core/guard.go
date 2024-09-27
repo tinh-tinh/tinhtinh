@@ -6,12 +6,10 @@ import (
 	"github.com/tinh-tinh/tinhtinh/common"
 )
 
-// Guard func
+// DEPRECATED
 type Guard func(module *DynamicModule, ctx Ctx) bool
 
-// ParseGuard takes a Guard function and returns a Middleware that checks
-// if the user has access according to the Guard function. If the user does
-// not have access, it returns a 403 status code and ends the request.
+// DEPRECATED
 func (module *DynamicModule) ParseGuard(guard Guard) Middleware {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

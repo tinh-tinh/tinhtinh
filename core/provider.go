@@ -92,3 +92,14 @@ func (module *DynamicModule) getRequest() []*DynamicProvider {
 	}
 	return reqs
 }
+
+func (module *DynamicModule) appendProvider(providers ...*DynamicProvider) {
+	for _, provider := range providers {
+		idx := module.findIdx(provider.Name)
+		if idx == -1 {
+			module.DataProviders = append(module.DataProviders, provider)
+			return
+		}
+		module.DataProviders[idx] = provider
+	}
+}
