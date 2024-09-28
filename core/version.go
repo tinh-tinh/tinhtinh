@@ -78,7 +78,7 @@ func (app *App) versionMiddleware(routers []*Router) http.Handler {
 			version = app.version.Get(r)
 		}
 		if version == "" || len(routers) == 1 {
-			routers[0].Handler.ServeHTTP(w, r)
+			routers[0].getHandler(app).ServeHTTP(w, r)
 		} else {
 			idxVersion := slices.IndexFunc(routers, func(e *Router) bool {
 				return e.Version == version
@@ -89,7 +89,7 @@ func (app *App) versionMiddleware(routers []*Router) http.Handler {
 				return
 			}
 
-			routers[idxVersion].Handler.ServeHTTP(w, r)
+			routers[idxVersion].getHandler(app).ServeHTTP(w, r)
 		}
 	})
 }

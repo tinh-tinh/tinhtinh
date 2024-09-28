@@ -1,7 +1,6 @@
 package core
 
 import (
-	"net/http"
 	"runtime"
 	"strings"
 )
@@ -149,48 +148,49 @@ func (c *DynamicController) Registry() *DynamicController {
 
 // Get registers a new GET route with the given path and handler.
 func (c *DynamicController) Get(path string, handler Handler) {
-	c.registry("GET", path, ParseCtx(handler))
+	c.registry("GET", path, handler)
 }
 
 // Post registers a new POST route with the given path and handler.
 func (c *DynamicController) Post(path string, handler Handler) {
-	c.registry("POST", path, ParseCtx(handler))
+	c.registry("POST", path, handler)
 }
 
 // Patch registers a new PATCH route with the given path and handler.
 func (c *DynamicController) Patch(path string, handler Handler) {
-	c.registry("PATCH", path, ParseCtx(handler))
+	c.registry("PATCH", path, handler)
 }
 
 // Put registers a new PUT route with the given path and handler.
 func (c *DynamicController) Put(path string, handler Handler) {
-	c.registry("PUT", path, ParseCtx(handler))
+	c.registry("PUT", path, handler)
 }
 
 // Delete registers a new DELETE route with the given path and handler.
 func (c *DynamicController) Delete(path string, handler Handler) {
-	c.registry("DELETE", path, ParseCtx(handler))
+	c.registry("DELETE", path, handler)
 }
 
-func (c *DynamicController) registry(method string, path string, handler http.Handler) {
-	mergeHandler := handler
-	for _, v := range c.middlewares {
-		mergeHandler = v(mergeHandler)
-	}
+func (c *DynamicController) registry(method string, path string, handler Handler) {
+	// mergeHandler := handler
+	// for _, v := range c.middlewares {
+	// 	mergeHandler = v(mergeHandler)
+	// }
 
-	for _, v := range c.globalMiddlewares {
-		mergeHandler = v(mergeHandler)
-	}
+	// for _, v := range c.globalMiddlewares {
+	// 	mergeHandler = v(mergeHandler)
+	// }
 
 	router := &Router{
-		Name:     c.name,
-		Method:   method,
-		Tag:      c.tag,
-		Path:     path,
-		Handler:  mergeHandler,
-		Dtos:     c.Dtos,
-		Security: c.Security,
-		Version:  c.version,
+		Name:        c.name,
+		Method:      method,
+		Tag:         c.tag,
+		Path:        path,
+		Middlewares: append(c.globalMiddlewares, c.middlewares...),
+		Handler:     handler,
+		Dtos:        c.Dtos,
+		Security:    c.Security,
+		Version:     c.version,
 	}
 	c.module.Routers = append(c.module.Routers, router)
 	c.free()

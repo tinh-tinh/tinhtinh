@@ -13,7 +13,7 @@ type Guard func(module *DynamicModule, ctx Ctx) bool
 func (module *DynamicModule) ParseGuard(guard Guard) Middleware {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			isAccess := guard(module, NewCtx(w, r))
+			isAccess := guard(module, NewCtxWithoutApp(w, r))
 			if !isAccess {
 				common.ForbiddenException(w, "you can not access")
 				return
@@ -34,7 +34,7 @@ type GuardWithCtrl func(ctrl *DynamicController, ctx Ctx) bool
 func (ctrl *DynamicController) ParseGuardCtrl(guard GuardWithCtrl) Middleware {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			isAccess := guard(ctrl, NewCtx(w, r))
+			isAccess := guard(ctrl, NewCtxWithoutApp(w, r))
 			if !isAccess {
 				common.ForbiddenException(w, "you can not access")
 				return

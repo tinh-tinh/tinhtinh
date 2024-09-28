@@ -51,7 +51,8 @@ func AppModule() *DynamicModule {
 }
 
 func Test_NewProvider(t *testing.T) {
-	app := CreateFactory(AppModule, "api")
+	app := CreateFactory(AppModule)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -65,7 +66,8 @@ func Test_NewProvider(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "child", res.Data)
 }
 

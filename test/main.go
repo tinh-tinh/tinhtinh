@@ -11,11 +11,12 @@ import (
 )
 
 func main() {
-	app := core.CreateFactory(app.NewModule, "api").EnableCors(cors.CorsOptions{
+	app := core.CreateFactory(app.NewModule).EnableCors(cors.CorsOptions{
 		AllowedMethods: []string{"POST", "GET"},
 		AllowedHeaders: []string{"*"},
 	})
 
+	app.SetGlobalPrefix("/api")
 	app.EnableVersioning(core.VersionOptions{
 		Type: core.MediaTypeVersion,
 		Key:  "v=",

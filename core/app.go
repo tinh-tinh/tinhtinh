@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,17 +19,33 @@ import (
 )
 
 type App struct {
-	pool       sync.Pool
-	Prefix     string
-	Mux        *http.ServeMux
-	Module     *DynamicModule
-	cors       *cors.Cors
-	version    *Version
-	hooks      []*Hook
+	pool sync.Pool
+	// prefix is the URL prefix of the API.
+	Prefix string
+	// Mux is the http.ServeMux that the App uses to serve requests.
+	// The App uses this Mux to serve requests.
+	Mux *http.ServeMux
+	// Module is the module that the App uses to initialize itself.
+	// The App uses this Module to initialize itself.
+	Module *DynamicModule
+	// cors is the CORS middleware.
+	cors *cors.Cors
+	// version is the type version of the API.
+	version *Version
+	// hooks are the hooks that the App uses to initialize itself.
+	// Two hooks can registered is: BeforeShutdown and AfterShutdown
+	hooks []*Hook
+	// middleware are the middleware that the App uses to initialize itself.
 	Middleware []Middleware
+	encoder    Encode
+	decoder    Decode
 }
 
 type ModuleParam func() *DynamicModule
+type AppOptions struct {
+	Encoder Encode
+	Decoder Decode
+}
 
 // CreateFactory is a function that creates an App instance with a DynamicModule
 // and a specified prefix. The DynamicModule is created by calling the given
@@ -37,12 +54,23 @@ type ModuleParam func() *DynamicModule
 // on the Module are resolved and added to the Mux. The Mux is then set to
 // handle the root path with a handler that writes "API is running" to the
 // response writer. Finally, the App instance is returned.
-func CreateFactory(module ModuleParam, prefix string) *App {
+func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 	app := &App{
-		pool:   sync.Pool{},
-		Module: module(),
-		Prefix: prefix,
-		Mux:    http.NewServeMux(),
+		Module:  module(),
+		Mux:     http.NewServeMux(),
+		encoder: json.Marshal,
+		decoder: json.Unmarshal,
+	}
+
+	app.pool = sync.Pool{
+		New: func() any {
+			return NewCtx(app)
+		},
+	}
+
+	if len(opt) > 0 {
+		app.encoder = opt[0].Encoder
+		app.decoder = opt[0].Decoder
 	}
 
 	utils.Log(
@@ -52,6 +80,13 @@ func CreateFactory(module ModuleParam, prefix string) *App {
 		utils.Green(utils.GetFunctionName(module)+"\n"),
 	)
 	app.Module.init()
+	return app
+}
+
+// SetGlobalPrefix sets the global prefix of the API. The global prefix is
+// prepended to the URL paths of the API.
+func (app *App) SetGlobalPrefix(prefix string) *App {
+	app.Prefix = IfSlashPrefixString(prefix)
 	return app
 }
 
