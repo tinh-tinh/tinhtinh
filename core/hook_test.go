@@ -15,7 +15,8 @@ func Test_OnInit(t *testing.T) {
 		return module
 	}
 
-	app := CreateFactory(appModule, "api")
+	app := CreateFactory(appModule)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -28,7 +29,8 @@ func Test_BeforeShutdown(t *testing.T) {
 		return module
 	}
 
-	app := CreateFactory(appModule, "api")
+	app := CreateFactory(appModule)
+	app.SetGlobalPrefix("/api")
 	app.BeforeShutdown(func() {
 		t.Log("BeforeShutdown")
 	})

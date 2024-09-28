@@ -49,7 +49,8 @@ func AppVersionModule() ModuleParam {
 }
 
 func Test_VersionURI(t *testing.T) {
-	app := CreateFactory(AppVersionModule(), "api")
+	app := CreateFactory(AppVersionModule())
+	app.SetGlobalPrefix("/api")
 	app.EnableVersioning(VersionOptions{
 		Type: URIVersion,
 	})
@@ -66,7 +67,8 @@ func Test_VersionURI(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "1", res.Data)
 
 	resp2, err := testClient.Get(testServer.URL + "/api/test/v2")
@@ -77,12 +79,14 @@ func Test_VersionURI(t *testing.T) {
 	require.Nil(t, err)
 
 	var res2 Response
-	json.Unmarshal(data2, &res2)
+	err = json.Unmarshal(data2, &res2)
+	require.Nil(t, err)
 	require.Equal(t, "2", res2.Data)
 }
 
 func Test_VersionHeader(t *testing.T) {
-	app := CreateFactory(AppVersionModule(), "api")
+	app := CreateFactory(AppVersionModule())
+	app.SetGlobalPrefix("/api")
 	app.EnableVersioning(VersionOptions{
 		Type:   HeaderVersion,
 		Header: "X-Version",
@@ -104,7 +108,8 @@ func Test_VersionHeader(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "1", res.Data)
 
 	req.Header.Set("X-Version", "2")
@@ -116,12 +121,14 @@ func Test_VersionHeader(t *testing.T) {
 	require.Nil(t, err)
 
 	var res2 Response
-	json.Unmarshal(data2, &res2)
+	err = json.Unmarshal(data2, &res2)
+	require.Nil(t, err)
 	require.Equal(t, "2", res2.Data)
 }
 
 func Test_VersionMedia(t *testing.T) {
-	app := CreateFactory(AppVersionModule(), "api")
+	app := CreateFactory(AppVersionModule())
+	app.SetGlobalPrefix("/api")
 	app.EnableVersioning(VersionOptions{
 		Type: MediaTypeVersion,
 		Key:  "v=",
@@ -143,7 +150,8 @@ func Test_VersionMedia(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "1", res.Data)
 
 	req.Header.Set("Accept", "application/json; v=2")
@@ -155,12 +163,14 @@ func Test_VersionMedia(t *testing.T) {
 	require.Nil(t, err)
 
 	var res2 Response
-	json.Unmarshal(data2, &res2)
+	err = json.Unmarshal(data2, &res2)
+	require.Nil(t, err)
 	require.Equal(t, "2", res2.Data)
 }
 
 func Test_VersionCustom(t *testing.T) {
-	app := CreateFactory(AppVersionModule(), "api")
+	app := CreateFactory(AppVersionModule())
+	app.SetGlobalPrefix("/api")
 	app.EnableVersioning(VersionOptions{
 		Type: CustomVersion,
 		Extractor: func(r *http.Request) string {
@@ -180,7 +190,8 @@ func Test_VersionCustom(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "1", res.Data)
 
 	resp2, err := testClient.Get(testServer.URL + "/api/test?version=2")
@@ -191,6 +202,7 @@ func Test_VersionCustom(t *testing.T) {
 	require.Nil(t, err)
 
 	var res2 Response
-	json.Unmarshal(data2, &res2)
+	err = json.Unmarshal(data2, &res2)
+	require.Nil(t, err)
 	require.Equal(t, "2", res2.Data)
 }

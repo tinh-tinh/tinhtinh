@@ -41,7 +41,8 @@ func Test_PipeMiddleware(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -81,7 +82,8 @@ func Test_Query(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -120,7 +122,8 @@ func Test_Param(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()

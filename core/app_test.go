@@ -1,8 +1,10 @@
 package core
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -54,7 +56,8 @@ func Test_EnableCors(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 	app.EnableCors(cors.CorsOptions{
 		AllowedMethods: []string{"POST"},
 	})
@@ -111,7 +114,8 @@ func Test_Exception(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -149,4 +153,48 @@ func Test_Exception(t *testing.T) {
 	resp, err = testClient.Get(testServer.URL + "/api/test/internal-server-error")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+}
+
+func Benchmark_App(b *testing.B) {
+	appController := func(module *DynamicModule) *DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx Ctx) {
+			data := make(map[string]string)
+
+			for i := 0; i < b.N; i++ {
+				data[fmt.Sprintf("%d", i)] = fmt.Sprintf("%d", i)
+			}
+
+			ctx.JSON(Map{
+				"data": data,
+			})
+
+			runtime.GC()
+		})
+
+		return ctrl
+	}
+
+	module := func() *DynamicModule {
+		appModule := NewModule(NewModuleOptions{
+			Controllers: []Controller{appController},
+		})
+
+		return appModule
+	}
+
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.prepareBeforeListen())
+	defer testServer.Close()
+
+	testClient := testServer.Client()
+
+	for i := 0; i < b.N; i++ {
+		resp, err := testClient.Get(testServer.URL + "/api/test")
+		require.Nil(b, err)
+		require.Equal(b, http.StatusOK, resp.StatusCode)
+	}
 }

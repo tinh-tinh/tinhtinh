@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/common"
 )
 
 func Test_Ctx_Req(t *testing.T) {
@@ -33,7 +34,8 @@ func Test_Ctx_Req(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -47,7 +49,8 @@ func Test_Ctx_Req(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, strings.Replace(testServer.URL, "http://", "", 1), res.Data)
 }
 
@@ -73,7 +76,8 @@ func Test_Ctx_Res(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -107,7 +111,8 @@ func Test_Ctx_Headers(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -126,7 +131,8 @@ func Test_Ctx_Headers(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "value", res.Data)
 }
 
@@ -139,7 +145,10 @@ func Test_Ctx_BodyParser(t *testing.T) {
 
 		ctrl.Post("", func(ctx Ctx) {
 			var bodyData *BodyData
-			ctx.BodyParser(&bodyData)
+			err := ctx.BodyParser(&bodyData)
+			if err != nil {
+				common.InternalServerException(ctx.Res(), err.Error())
+			}
 			ctx.JSON(Map{
 				"data": bodyData.Name,
 			})
@@ -156,7 +165,8 @@ func Test_Ctx_BodyParser(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -171,7 +181,8 @@ func Test_Ctx_BodyParser(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "test", res.Data)
 }
 
@@ -200,7 +211,8 @@ func Test_Ctx_Body(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -215,7 +227,8 @@ func Test_Ctx_Body(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "test", res.Data)
 }
 
@@ -244,7 +257,8 @@ func Test_Ctx_Params(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -258,7 +272,8 @@ func Test_Ctx_Params(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "123", res.Data)
 }
 
@@ -287,7 +302,8 @@ func Test_Ctx_Queries(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -301,7 +317,8 @@ func Test_Ctx_Queries(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "test", res.Data)
 }
 
@@ -327,7 +344,8 @@ func Test_Ctx_Param(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -341,7 +359,8 @@ func Test_Ctx_Param(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "123", res.Data)
 }
 
@@ -367,7 +386,8 @@ func Test_Ctx_Query(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -381,7 +401,8 @@ func Test_Ctx_Query(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "test", res.Data)
 }
 
@@ -407,7 +428,8 @@ func Test_Ctx_QueryInt(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -425,7 +447,8 @@ func Test_Ctx_QueryInt(t *testing.T) {
 	}
 
 	var res IntResponse
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, 10, res.Data)
 }
 
@@ -451,7 +474,8 @@ func Test_Ctx_QueryBool(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -469,7 +493,8 @@ func Test_Ctx_QueryBool(t *testing.T) {
 	}
 
 	var res BoolResponse
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, true, res.Data)
 }
 
@@ -492,7 +517,8 @@ func Test_Ctx_Status(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -532,7 +558,8 @@ func Test_CtxContext(t *testing.T) {
 		return appModule
 	}
 
-	app := CreateFactory(module, "api")
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.prepareBeforeListen())
 	defer testServer.Close()
@@ -546,6 +573,7 @@ func Test_CtxContext(t *testing.T) {
 	require.Nil(t, err)
 
 	var res Response
-	json.Unmarshal(data, &res)
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
 	require.Equal(t, "value", res.Data)
 }

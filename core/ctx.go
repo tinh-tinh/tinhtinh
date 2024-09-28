@@ -2,14 +2,15 @@ package core
 
 import (
 	"context"
-	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 )
 
 type Ctx struct {
-	r *http.Request
-	w http.ResponseWriter
+	r   *http.Request
+	w   http.ResponseWriter
+	app *App
 }
 
 // Req returns the original http.Request from the client.
@@ -58,7 +59,13 @@ func (ctx *Ctx) SetCookie(key string, value string, maxAge int) {
 
 // BodyParser is a helper to parse the request body into a given interface
 func (ctx *Ctx) BodyParser(payload interface{}) error {
-	err := json.NewDecoder(ctx.r.Body).Decode(payload)
+	body, err := io.ReadAll(ctx.r.Body)
+	if err != nil {
+		return err
+	}
+
+	err = ctx.app.decoder(body, payload)
+	// err := json.NewDecoder(ctx.r.Body).Decode(payload)
 	if err != nil {
 		return err
 	}
@@ -137,7 +144,13 @@ type Map map[string]interface{}
 // If there is an error while encoding the data, it panics.
 func (ctx *Ctx) JSON(data Map) {
 	ctx.w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(ctx.w).Encode(data)
+	// err := json.NewEncoder(ctx.w).Encode(data)
+	res, err := ctx.app.encoder(data)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = ctx.w.Write(res)
 	if err != nil {
 		panic(err)
 	}
@@ -169,7 +182,18 @@ func (ctx *Ctx) Set(key interface{}, val interface{}) {
 //
 // The returned Ctx can be used to call any of the methods on Ctx, such as
 // Req, Res, Headers, etc.
-func NewCtx(w http.ResponseWriter, r *http.Request) Ctx {
+func NewCtx(app *App) *Ctx {
+	return &Ctx{
+		app: app,
+	}
+}
+
+func (ctx *Ctx) SetCtx(w http.ResponseWriter, r *http.Request) {
+	ctx.w = w
+	ctx.r = r
+}
+
+func NewCtxWithoutApp(w http.ResponseWriter, r *http.Request) Ctx {
 	return Ctx{
 		w: w,
 		r: r,
@@ -184,10 +208,12 @@ func NewCtx(w http.ResponseWriter, r *http.Request) Ctx {
 // returns without doing anything else.
 //
 // The returned http.HandlerFunc can be used as a handler for an HTTP request.
-func ParseCtx(ctxFnc func(ctx Ctx)) http.Handler {
+func ParseCtx(app *App, ctxFnc func(ctx Ctx)) http.Handler {
+	ctx := app.pool.Get().(*Ctx)
+	defer app.pool.Put(ctx)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := NewCtx(w, r)
-		ctxFnc(ctx)
+		ctx.SetCtx(w, r)
+		ctxFnc(*ctx)
 	})
 }
 

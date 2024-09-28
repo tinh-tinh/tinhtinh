@@ -9,14 +9,24 @@ import (
 )
 
 type Router struct {
-	Name     string
-	Method   string
-	Tag      string
-	Path     string
-	Handler  http.Handler
-	Dtos     []Pipe
-	Security []string
-	Version  string
+	Name        string
+	Method      string
+	Tag         string
+	Path        string
+	Handler     Handler
+	Middlewares []Middleware
+	Dtos        []Pipe
+	Security    []string
+	Version     string
+}
+
+func (r *Router) getHandler(app *App) http.Handler {
+	mergeHandler := ParseCtx(app, r.Handler)
+	for _, v := range r.Middlewares {
+		mergeHandler = v(mergeHandler)
+	}
+
+	return mergeHandler
 }
 
 func (app *App) registerRoutes() {
@@ -44,6 +54,8 @@ func (app *App) registerRoutes() {
 	for k, v := range routes {
 		app.Mux.Handle(k, app.versionMiddleware(v))
 	}
+
+	app.Module.Routers = nil
 }
 
 type Route struct {
