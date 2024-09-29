@@ -10,7 +10,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/dto/transform"
 )
 
-func Scanner(val interface{}, trans bool) error {
+func Scanner(val interface{}) error {
 	var errMsg []string
 	if reflect.TypeOf(val).Kind() == reflect.Struct {
 		log.Fatalf("%v should be a value not struct", val)
@@ -61,25 +61,23 @@ func Scanner(val interface{}, trans bool) error {
 			case "isObjectId":
 				if !IsObjectId(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid ObjectID")
-				} else if trans {
-					ct.Field(i).Set(reflect.ValueOf(transform.StringToObjectID(value.(string))))
 				}
 			case "isInt":
 				if !IsInt(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid int")
-				} else if trans {
+				} else {
 					ct.Field(i).Set(reflect.ValueOf(transform.ToInt(value)))
 				}
 			case "isFloat":
 				if !IsFloat(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid float")
-				} else if trans {
+				} else {
 					ct.Field(i).Set(reflect.ValueOf(transform.ToFloat(value)))
 				}
 			case "isNumber":
 				if !IsNumber(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid number")
-				} else if trans {
+				} else {
 					if IsInt(value) {
 						ct.Field(i).Set(reflect.ValueOf(transform.ToInt(value)))
 					} else {
@@ -89,18 +87,18 @@ func Scanner(val interface{}, trans bool) error {
 			case "isDateString":
 				if !IsDateString(value.(string)) {
 					errMsg = append(errMsg, field.Name+" is not a valid date time")
-				} else if trans {
+				} else {
 					ct.Field(i).Set(reflect.ValueOf(transform.StringToDate(value.(string))))
 				}
 			case "isBool":
 				if !IsBool(value.(string)) {
 					errMsg = append(errMsg, field.Name+" is not a valid bool")
-				} else if trans {
+				} else {
 					ct.Field(i).Set(reflect.ValueOf(transform.ToBool(value)))
 				}
 			case "nested":
 				if field.Type.Kind() == reflect.Pointer {
-					err := Scanner(ct.Field(i).Interface(), trans)
+					err := Scanner(ct.Field(i).Interface())
 					if err != nil {
 						errMsg = append(errMsg, err.Error())
 					}
@@ -109,7 +107,7 @@ func Scanner(val interface{}, trans bool) error {
 					if arrVal.IsValid() {
 						for i := 0; i < arrVal.Len(); i++ {
 							item := arrVal.Index(i)
-							err := Scanner(item.Interface(), trans)
+							err := Scanner(item.Interface())
 							if err != nil {
 								errMsg = append(errMsg, err.Error())
 							}

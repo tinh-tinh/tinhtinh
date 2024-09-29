@@ -5,18 +5,7 @@ import (
 	"log"
 	"strconv"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-func StringToObjectID(str string) primitive.ObjectID {
-	id, _ := primitive.ObjectIDFromHex(str)
-	return id
-}
-
-func ObjectIDToString(id primitive.ObjectID) string {
-	return id.Hex()
-}
 
 func StringToBool(str string) bool {
 	val, _ := strconv.ParseBool(str)

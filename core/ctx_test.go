@@ -143,7 +143,7 @@ func Test_Ctx_BodyParser(t *testing.T) {
 		ctrl := module.NewController("test")
 
 		ctrl.Post("", func(ctx Ctx) {
-			var bodyData *BodyData
+			var bodyData BodyData
 			err := ctx.BodyParser(&bodyData)
 			if err != nil {
 				common.InternalServerException(ctx.Res(), err.Error())
@@ -573,4 +573,104 @@ func Test_CtxContext(t *testing.T) {
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, "value", res.Data)
+}
+
+func Test_QueryParser(t *testing.T) {
+	type QueryData struct {
+		Age    int  `query:"age"`
+		Format bool `query:"format"`
+	}
+	controller := func(module *DynamicModule) *DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx Ctx) {
+			var queryData QueryData
+			err := ctx.QueryParse(&queryData)
+			if err != nil {
+				common.InternalServerException(ctx.Res(), err.Error())
+			}
+			ctx.JSON(Map{
+				"data": queryData,
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *DynamicModule {
+		appModule := NewModule(NewModuleOptions{
+			Controllers: []Controller{controller},
+		})
+
+		return appModule
+	}
+
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.prepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/test?age=12&format=true")
+
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	var res Response
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+}
+
+func Test_ParamParser(t *testing.T) {
+	type ParamData struct {
+		ID int `param:"id"`
+	}
+	controller := func(module *DynamicModule) *DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("{id}", func(ctx Ctx) {
+			var queryData ParamData
+			err := ctx.ParamParse(&queryData)
+			if err != nil {
+				common.InternalServerException(ctx.Res(), err.Error())
+			}
+			ctx.JSON(Map{
+				"data": queryData.ID,
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *DynamicModule {
+		appModule := NewModule(NewModuleOptions{
+			Controllers: []Controller{controller},
+		})
+
+		return appModule
+	}
+
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.prepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/test/345")
+
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	var res Response
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, float64(345), res.Data)
 }

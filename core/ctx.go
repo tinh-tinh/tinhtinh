@@ -2,8 +2,10 @@ package core
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strconv"
 )
 
@@ -68,6 +70,73 @@ func (ctx *Ctx) BodyParser(payload interface{}) error {
 	err = ctx.app.decoder(body, payload)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (ctx *Ctx) QueryParse(payload interface{}) error {
+	ct := reflect.ValueOf(payload).Elem()
+	fmt.Println(ct)
+	for i := 0; i < ct.NumField(); i++ {
+		field := ct.Type().Field(i)
+		tagVal := field.Tag.Get("query")
+		if tagVal != "" {
+			val := ctx.Req().URL.Query().Get(tagVal)
+			if val == "" {
+				continue
+			}
+			switch field.Type.Name() {
+			case "string":
+				ct.Field(i).SetString(val)
+			case "int":
+				intVal, err := strconv.Atoi(val)
+				if err != nil {
+					return err
+				}
+				ct.Field(i).SetInt(int64(intVal))
+			case "bool":
+				boolVal, err := strconv.ParseBool(val)
+				if err != nil {
+					return err
+				}
+				ct.Field(i).SetBool(boolVal)
+			default:
+				return fmt.Errorf("unsupported type: %s", field.Type.Name())
+			}
+		}
+	}
+	return nil
+}
+
+func (ctx *Ctx) ParamParse(payload interface{}) error {
+	ct := reflect.ValueOf(payload).Elem()
+	for i := 0; i < ct.NumField(); i++ {
+		field := ct.Type().Field(i)
+		tagVal := field.Tag.Get("param")
+		if tagVal != "" {
+			val := ctx.Req().PathValue(tagVal)
+			if val == "" {
+				continue
+			}
+			switch field.Type.Name() {
+			case "string":
+				ct.Field(i).SetString(val)
+			case "int":
+				intVal, err := strconv.Atoi(val)
+				if err != nil {
+					return err
+				}
+				ct.Field(i).SetInt(int64(intVal))
+			case "bool":
+				boolVal, err := strconv.ParseBool(val)
+				if err != nil {
+					return err
+				}
+				ct.Field(i).SetBool(boolVal)
+			default:
+				return fmt.Errorf("unsupported type: %s", field.Type.Name())
+			}
+		}
 	}
 	return nil
 }
