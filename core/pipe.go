@@ -1,8 +1,6 @@
 package core
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -38,33 +36,31 @@ type Pipe struct {
 // The middleware will also validate the dtos and return a 400 status code if
 // any of the dtos are invalid.
 func PipeMiddleware(pipes ...Pipe) Middleware {
-	return func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			for _, pipe := range pipes {
-				dto := pipe.Dto
-				switch pipe.In {
-				case InBody:
-					err := json.NewDecoder(r.Body).Decode(dto)
-					if err != nil {
-						common.BadRequestException(w, err.Error())
-						return
-					}
-				case InQuery:
-					scanQuery(r, dto)
-				case InPath:
-					scanParam(r, dto)
-				}
-
-				err := validator.Scanner(dto, pipe.Transform)
+	return func(ctx Ctx) error {
+		for _, pipe := range pipes {
+			dto := pipe.Dto
+			switch pipe.In {
+			case InBody:
+				err := ctx.BodyParser(dto)
 				if err != nil {
-					common.BadRequestException(w, err.Error())
-					return
+					common.BadRequestException(ctx.Res(), err.Error())
+					return err
 				}
-				ctx := context.WithValue(r.Context(), pipe.In, dto)
-				r = r.WithContext(ctx)
-				h.ServeHTTP(w, r)
+			case InQuery:
+				scanQuery(ctx.Req(), dto)
+			case InPath:
+				scanParam(ctx.Req(), dto)
 			}
-		})
+
+			fmt.Println(dto)
+			err := validator.Scanner(dto, pipe.Transform)
+			if err != nil {
+				common.BadRequestException(ctx.Res(), err.Error())
+				return err
+			}
+			ctx.Set(pipe.In, dto)
+		}
+		return ctx.Next()
 	}
 }
 

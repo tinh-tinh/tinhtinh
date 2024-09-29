@@ -36,7 +36,7 @@ type App struct {
 	// Two hooks can registered is: BeforeShutdown and AfterShutdown
 	hooks []*Hook
 	// middleware are the middleware that the App uses to initialize itself.
-	Middleware []Middleware
+	Middleware []middlewareRaw
 	encoder    Encode
 	decoder    Decode
 }
@@ -105,7 +105,7 @@ func (app *App) EnableCors(opt cors.CorsOptions) *App {
 // run after the module's parent middleware handlers. The module middleware
 // handlers are run before the module's controllers. The App instance's
 // middleware handlers are run before the App instance's handlers.
-func (app *App) Use(middleware ...Middleware) *App {
+func (app *App) Use(middleware ...middlewareRaw) *App {
 	app.Middleware = append(app.Middleware, middleware...)
 	return app
 }

@@ -1,7 +1,6 @@
 package core
 
 import (
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -531,12 +530,10 @@ func Test_Ctx_Status(t *testing.T) {
 
 func Test_CtxContext(t *testing.T) {
 	const key CtxKey = "key"
-	middleware := func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(context.WithValue(r.Context(), key, "value"))
 
-			h.ServeHTTP(w, r)
-		})
+	middleware := func(ctx Ctx) error {
+		ctx.Set(key, "value")
+		return ctx.Next()
 	}
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")

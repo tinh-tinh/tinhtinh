@@ -156,3 +156,40 @@ func Test_appendProvider(t *testing.T) {
 	module.appendProvider(provider)
 	require.Equal(t, 1, len(module.DataProviders))
 }
+
+func Test_FactoryProvider(t *testing.T) {
+	rootModule := func(module *DynamicModule) *DynamicModule {
+		root := module.New(NewModuleOptions{
+			Scope: Global,
+		})
+		root.NewProvider(ProviderOptions{
+			Name:  "root",
+			Value: "root",
+		})
+		root.Export("root")
+
+		return root
+	}
+
+	childModule := func(module *DynamicModule) *DynamicModule {
+		child := module.New(NewModuleOptions{
+			Scope: Global,
+		})
+		child.NewProvider(ProviderOptions{
+			Name: "child",
+			Factory: func(param ...interface{}) interface{} {
+				return fmt.Sprintf("%vChild", param[0])
+			},
+			Inject: []Provide{Provide("root")},
+		})
+		child.Export("child")
+
+		return child
+	}
+
+	module := NewModule(NewModuleOptions{
+		Imports: []Module{rootModule, childModule},
+	})
+
+	require.Equal(t, "rootChild", module.Ref("child"))
+}

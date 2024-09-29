@@ -124,6 +124,11 @@ func Test_VersionHeader(t *testing.T) {
 	err = json.Unmarshal(data2, &res2)
 	require.Nil(t, err)
 	require.Equal(t, "2", res2.Data)
+
+	req.Header.Set("X-Version", "3")
+	resp3, err := testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp3.StatusCode)
 }
 
 func Test_VersionMedia(t *testing.T) {
@@ -154,7 +159,7 @@ func Test_VersionMedia(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, "1", res.Data)
 
-	req.Header.Set("Accept", "application/json; v=2")
+	req.Header.Set("Accept", "application/json; v=2; charset=utf-8")
 	resp2, err := testClient.Do(req)
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp2.StatusCode)
