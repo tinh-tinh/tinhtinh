@@ -23,7 +23,8 @@ type Router struct {
 func (r *Router) getHandler(app *App) http.Handler {
 	mergeHandler := ParseCtx(app, r.Handler)
 	for _, v := range r.Middlewares {
-		mergeHandler = v(mergeHandler)
+		mid := ParseCtxMiddleware(app, v)
+		mergeHandler = mid(mergeHandler)
 	}
 
 	return mergeHandler

@@ -1,7 +1,6 @@
 package core
 
 import (
-	"net/http"
 	"slices"
 	"time"
 
@@ -107,29 +106,28 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 	}
 
 	if module.Scope == Request {
-		module.Use(func(h http.Handler) http.Handler {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				module.NewProvider(ProviderOptions{
-					Name:  REQUEST,
-					Value: r,
-				})
-				for _, p := range module.getRequest() {
-					if p.Value == nil {
-						var values []interface{}
-						for _, p := range p.inject {
-							values = append(values, module.Ref(p))
-						}
-
-						p.Value = p.factory(values...)
-					}
-				}
-				h.ServeHTTP(w, r)
-				for _, p := range module.getRequest() {
-					if p.Value != nil {
-						p.Value = nil
-					}
-				}
+		module.Use(func(ctx Ctx) error {
+			module.NewProvider(ProviderOptions{
+				Name:  REQUEST,
+				Value: ctx.Req(),
 			})
+			for _, p := range module.getRequest() {
+				if p.Value == nil {
+					var values []interface{}
+					for _, p := range p.inject {
+						values = append(values, module.Ref(p))
+					}
+
+					p.Value = p.factory(values...)
+				}
+			}
+			ctx.Next()
+			for _, p := range module.getRequest() {
+				if p.Value != nil {
+					p.Value = nil
+				}
+			}
+			return nil
 		})
 	}
 

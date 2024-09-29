@@ -8,9 +8,10 @@ import (
 )
 
 type Ctx struct {
-	r   *http.Request
-	w   http.ResponseWriter
-	app *App
+	r       *http.Request
+	w       http.ResponseWriter
+	handler http.Handler
+	app     *App
 }
 
 // Req returns the original http.Request from the client.
@@ -65,7 +66,6 @@ func (ctx *Ctx) BodyParser(payload interface{}) error {
 	}
 
 	err = ctx.app.decoder(body, payload)
-	// err := json.NewDecoder(ctx.r.Body).Decode(payload)
 	if err != nil {
 		return err
 	}
@@ -144,7 +144,6 @@ type Map map[string]interface{}
 // If there is an error while encoding the data, it panics.
 func (ctx *Ctx) JSON(data Map) {
 	ctx.w.Header().Set("Content-Type", "application/json")
-	// err := json.NewEncoder(ctx.w).Encode(data)
 	res, err := ctx.app.encoder(data)
 	if err != nil {
 		panic(err)
@@ -175,6 +174,11 @@ func (ctx *Ctx) Set(key interface{}, val interface{}) {
 	ctx.r = ctx.r.WithContext(context.WithValue(ctx.r.Context(), key, val))
 }
 
+func (ctx *Ctx) Next() error {
+	ctx.handler.ServeHTTP(ctx.w, ctx.r)
+	return nil
+}
+
 // NewCtx creates a new Ctx from the given http.ResponseWriter and *http.Request.
 //
 // It returns a new Ctx with the given http.ResponseWriter and *http.Request set
@@ -193,11 +197,8 @@ func (ctx *Ctx) SetCtx(w http.ResponseWriter, r *http.Request) {
 	ctx.r = r
 }
 
-func NewCtxWithoutApp(w http.ResponseWriter, r *http.Request) Ctx {
-	return Ctx{
-		w: w,
-		r: r,
-	}
+func (ctx *Ctx) SetHandler(h http.Handler) {
+	ctx.handler = h
 }
 
 // ParseCtx wraps a function that takes a Ctx argument and returns an

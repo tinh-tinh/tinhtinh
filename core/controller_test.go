@@ -1,7 +1,6 @@
 package core
 
 import (
-	"net/http"
 	"slices"
 	"testing"
 
@@ -113,10 +112,8 @@ func Test_AddSecurity(t *testing.T) {
 func Test_free(t *testing.T) {
 	module := NewModule(NewModuleOptions{})
 
-	middleware := func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			h.ServeHTTP(w, r)
-		})
+	middleware := func(ctx Ctx) error {
+		return ctx.Next()
 	}
 
 	controller := module.NewController("test").Use(middleware)
@@ -135,10 +132,8 @@ func Test_free(t *testing.T) {
 func Test_Registry(t *testing.T) {
 	module := NewModule(NewModuleOptions{})
 
-	middleware := func(h http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			h.ServeHTTP(w, r)
-		})
+	middleware := func(ctx Ctx) error {
+		return ctx.Next()
 	}
 
 	controller := module.NewController("test").Use(middleware).Registry()

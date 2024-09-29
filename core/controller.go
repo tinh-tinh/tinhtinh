@@ -47,15 +47,6 @@ func (module *DynamicModule) Use(middleware ...Middleware) *DynamicModule {
 	return module
 }
 
-// DEPRECATED
-func (module *DynamicModule) Guard(guards ...Guard) *DynamicModule {
-	for _, v := range guards {
-		mid := module.ParseGuard(v)
-		module.Middlewares = append(module.Middlewares, mid)
-	}
-	return module
-}
-
 // Tag sets the tag for the controller. The tag is used to generate the
 // route path for the controller. The tag is used in combination with the
 // module's prefix and the controller's name to generate the route path.
@@ -99,9 +90,9 @@ func (c *DynamicController) Use(middleware ...Middleware) *DynamicController {
 // functions are run after the module's middleware handlers. The guard functions
 // are run before the controller's handlers. If any of the guard functions
 // return false, the request will be rejected with a 403 status code.
-func (c *DynamicController) Guard(guards ...GuardWithCtrl) *DynamicController {
+func (c *DynamicController) Guard(guards ...Guard) *DynamicController {
 	for _, v := range guards {
-		mid := c.ParseGuardCtrl(v)
+		mid := c.ParseGuard(v)
 		c.middlewares = append(c.middlewares, mid)
 	}
 	return c
@@ -203,7 +194,6 @@ func (c *DynamicController) free() {
 	runtime.GC()
 }
 
-// deprecated
 func (c *DynamicController) Inject(name Provide) interface{} {
 	return c.module.Ref(name)
 }
