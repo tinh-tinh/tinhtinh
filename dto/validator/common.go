@@ -6,9 +6,6 @@ import (
 	"strconv"
 	"time"
 	"unicode"
-
-	"github.com/google/uuid"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func typeof(v interface{}) string {
@@ -71,18 +68,18 @@ func IsUUID(str interface{}) bool {
 	if typeof(str) != "string" {
 		return false
 	}
-	_, err := uuid.Parse(str.(string))
 
-	return err == nil
+	uuidPattern := `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`
+	return IsRegexMatch(uuidPattern, str)
 }
 
 func IsObjectId(str interface{}) bool {
 	if typeof(str) != "string" {
 		return false
 	}
-	_, err := primitive.ObjectIDFromHex(str.(string))
 
-	return err == nil
+	objectIdPattern := `/^[a-f\d]{24}$/i`
+	return IsRegexMatch(objectIdPattern, str)
 }
 
 func IsRegexMatch(pattern string, str interface{}) bool {

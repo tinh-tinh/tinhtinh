@@ -16,7 +16,7 @@ type UserDetail struct {
 type User struct {
 	ID     int         `validate:"required,isInt"`
 	Detail *UserDetail `validate:"nested"`
-	Banner string      `validate:"isBool"`
+	Banner string      `validate:"isAlpha"`
 }
 
 type UserList struct {
@@ -41,7 +41,7 @@ func Test_Scanner(t *testing.T) {
 		Banner: "true",
 	}
 
-	err1 := Scanner(user1, false)
+	err1 := Scanner(user1)
 	require.NotNil(t, err1)
 	require.Equal(t, "Name is required\nName is not a valid alpha", err1.Error())
 
@@ -55,13 +55,13 @@ func Test_Scanner(t *testing.T) {
 		Detail: userDetails2,
 	}
 
-	err2 := Scanner(user2, false)
+	err2 := Scanner(user2)
 	require.Nil(t, err2)
 
 	userList := &UserList{
 		Users: []*User{user1, user2},
 	}
-	err3 := Scanner(userList, false)
+	err3 := Scanner(userList)
 	require.NotNil(t, err3)
 	require.Equal(t, "Name is required\nName is not a valid alpha", err3.Error())
 
@@ -69,7 +69,7 @@ func Test_Scanner(t *testing.T) {
 		Author: user2,
 		Title:  "",
 	}
-	err4 := Scanner(post, false)
+	err4 := Scanner(post)
 	require.NotNil(t, err4)
 	require.Equal(t, "Title is required", err4.Error())
 }
@@ -89,12 +89,12 @@ func Benchmark_Scanner(b *testing.B) {
 				ID:     n,
 				Detail: userDetail,
 			}
-			require.Nil(b, Scanner(user, true))
+			require.Nil(b, Scanner(user))
 			userList = append(userList, user)
 		}
 
 		require.Nil(b, Scanner(&UserList{
 			Users: userList,
-		}, true))
+		}))
 	})
 }
