@@ -21,7 +21,7 @@ type wrappedWriter struct {
 	statusCode int
 }
 
-// Middleware returns a middleware that logs the request and response.
+// Handler returns a middleware that logs the request and response.
 //
 // The middleware will log the request method, path, remote address, response status
 // and latency. The format of the log message is configurable with the Format
@@ -44,7 +44,7 @@ type wrappedWriter struct {
 // - LevelDebug: log messages with a debug level
 //
 // The middleware will log the request and response with the specified level.
-func Middleware(opt MiddlewareOptions) func(http.Handler) http.Handler {
+func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 	logger := Create(Options{
 		Path:   opt.Path,
 		Rotate: opt.Rotate,

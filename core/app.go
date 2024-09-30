@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/tinh-tinh/tinhtinh/middleware/cors"
+	"github.com/tinh-tinh/tinhtinh/middleware/session"
 	"github.com/tinh-tinh/tinhtinh/utils"
 )
 
@@ -37,14 +38,18 @@ type App struct {
 	hooks []*Hook
 	// middleware are the middleware that the App uses to initialize itself.
 	Middleware []middlewareRaw
-	encoder    Encode
-	decoder    Decode
+	// encoder is the encoder that the App uses to initialize itself.
+	encoder Encode
+	// decoder is the decoder that the App uses to initialize itself.
+	decoder Decode
+	session *session.Config
 }
 
 type ModuleParam func() *DynamicModule
 type AppOptions struct {
 	Encoder Encode
 	Decoder Decode
+	Session *session.Config
 }
 
 // CreateFactory is a function that creates an App instance with a DynamicModule
@@ -69,8 +74,15 @@ func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 	}
 
 	if len(opt) > 0 {
-		app.encoder = opt[0].Encoder
-		app.decoder = opt[0].Decoder
+		if opt[0].Encoder != nil {
+			app.encoder = opt[0].Encoder
+		}
+		if opt[0].Decoder != nil {
+			app.decoder = opt[0].Decoder
+		}
+		if opt[0].Session != nil {
+			app.session = opt[0].Session
+		}
 	}
 
 	utils.Log(

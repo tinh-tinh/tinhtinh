@@ -1,4 +1,4 @@
-package cache
+package memory
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 func Test_NewInMemory(t *testing.T) {
 	t.Parallel()
 
-	store := NewInMemory(MemoryOptions{
+	store := New(Options{
 		Max: 100,
 		Ttl: 1 * time.Hour,
 	})
@@ -76,7 +76,7 @@ func Test_NewInMemory(t *testing.T) {
 
 func Test_Options(t *testing.T) {
 
-	store := NewInMemory(MemoryOptions{
+	store := New(Options{
 		Max: 10,
 		Ttl: 1 * time.Hour,
 	})
