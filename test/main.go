@@ -11,7 +11,9 @@ import (
 )
 
 func main() {
-	app := core.CreateFactory(app.NewModule).EnableCors(cors.CorsOptions{
+	app := core.CreateFactory(app.NewModule, core.AppOptions{})
+
+	app.EnableCors(cors.CorsOptions{
 		AllowedMethods: []string{"POST", "GET"},
 		AllowedHeaders: []string{"*"},
 	})
@@ -22,7 +24,7 @@ func main() {
 		Key:  "v=",
 	})
 
-	app.Use(logger.Middleware(logger.MiddlewareOptions{
+	app.Use(logger.Handler(logger.MiddlewareOptions{
 		Rotate: true,
 		Format: "${method} ${path} ${status} ${latency}",
 	}))

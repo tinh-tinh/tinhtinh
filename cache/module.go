@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/internal/memory"
 )
 
 type Store interface {
@@ -26,7 +27,7 @@ const CACHE_MANAGER core.Provide = "CACHE_MANAGER"
 
 func Register(opt Options) core.Module {
 	return func(module *core.DynamicModule) *core.DynamicModule {
-		memory := NewInMemory(MemoryOptions{
+		memory := memory.New(memory.Options{
 			Ttl: opt.Ttl,
 			Max: opt.Max,
 		})

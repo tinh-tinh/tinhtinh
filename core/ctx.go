@@ -248,6 +248,18 @@ func (ctx *Ctx) Next() error {
 	return nil
 }
 
+func (ctx *Ctx) Session(key string, val ...interface{}) interface{} {
+	if len(val) > 0 {
+		cookie := ctx.app.session.Set(key, val)
+		http.SetCookie(ctx.w, cookie)
+	}
+	cookie, err := ctx.Req().Cookie(key)
+	if err != nil {
+		return nil
+	}
+	return ctx.app.session.Get(cookie.Value)
+}
+
 // NewCtx creates a new Ctx from the given http.ResponseWriter and *http.Request.
 //
 // It returns a new Ctx with the given http.ResponseWriter and *http.Request set
