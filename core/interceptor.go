@@ -1,7 +1,8 @@
 package core
 
 import (
-	"context"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -30,145 +31,151 @@ type FileField struct {
 	MaxCount int
 }
 
-type UploadedFileInfo struct {
-	FilePath     string
+type FileInfo struct {
+	FileName     string
 	OriginalName string
-	FileSize     int64
-	FileType     string
+	Encoding     string
+	MimeType     string
+	Size         int64
+	Destination  string
+	FieldName    string
+	Path         string
 }
 
 const DefaultDestFolder CtxKey = "uploads"
 
-func FileInterceptor(fileOptions UploadedFileOptions) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if fileOptions.DestFolder == "" {
-				common.BadRequestException(w, "file destination folder cannot be empty")
-				return
-			}
+const FILE CtxKey = "FILE"
+const FILES CtxKey = "FILES"
 
-			err := r.ParseMultipartForm(fileOptions.MaxSize)
-			if err != nil {
-				common.BadRequestException(w, "error parsing form: "+err.Error())
-				return
-			}
-			fileHeaders := r.MultipartForm.File[fileOptions.FieldName]
-			if len(fileHeaders) == 0 {
-				common.BadRequestException(w, "no file provided for field "+fileOptions.FieldName)
-				return
-			}
+func FileInterceptor(opt UploadedFileOptions) Middleware {
+	return func(ctx Ctx) error {
+		err := ctx.Req().ParseMultipartForm(opt.MaxSize)
+		if err != nil {
+			common.BadRequestException(ctx.Res(), err.Error())
+			return err
+		}
 
-			fileHeader := fileHeaders[0]
+		fileHeaders := ctx.Req().MultipartForm.File[opt.FieldName]
+		if len(fileHeaders) == 0 {
+			common.BadRequestException(ctx.Res(), "no file provide for field")
+			return errors.New("no file provide for field")
+		}
 
-			file, err := fileHeader.Open()
-			if err != nil {
-				common.BadRequestException(w, "error opening file: "+err.Error())
-				return
-			}
-			defer file.Close()
+		fileHeader := fileHeaders[0]
 
-			fileHeaderBytes := make([]byte, 512)
-			file.Read(fileHeaderBytes)
-			fileType := http.DetectContentType(fileHeaderBytes)
-			file.Seek(0, io.SeekStart)
+		file, err := fileHeader.Open()
+		if err != nil {
+			common.BadRequestException(ctx.Res(), err.Error())
+			return err
+		}
+		defer file.Close()
 
-			if len(fileOptions.AllowedMimes) > 0 {
-				allowed := false
-				for _, mime := range fileOptions.AllowedMimes {
-					if fileType == mime {
-						allowed = true
-						break
-					}
+		fileHeaderBytes := make([]byte, 512)
+		_, err = file.Read(fileHeaderBytes)
+		if err != nil {
+			common.InternalServerException(ctx.Res(), err.Error())
+			return err
+		}
+		fileType := http.DetectContentType(fileHeaderBytes)
+		_, err = file.Seek(0, io.SeekStart)
+		if err != nil {
+			common.InternalServerException(ctx.Res(), err.Error())
+			return err
+		}
+
+		if len(opt.AllowedMimes) > 0 {
+			allowed := false
+			for _, mime := range opt.AllowedMimes {
+				if fileType == mime {
+					allowed = true
+					break
 				}
-				if !allowed {
-					common.BadRequestException(w, "file type "+fileType+" is not allowed")
-					return
-				}
 			}
-
-			if _, err := os.Stat(fileOptions.DestFolder); os.IsNotExist(err) {
-				os.MkdirAll(fileOptions.DestFolder, os.ModePerm)
+			if !allowed {
+				common.BadRequestException(ctx.Res(), "file type "+fileType+" is not allowed")
+				return errors.New("file type " + fileType + " is not allowed")
 			}
+		}
 
-			destPath := filepath.Join(fileOptions.DestFolder, fileHeader.Filename)
-			destFile, err := os.Create(destPath)
+		if _, err := os.Stat(opt.DestFolder); os.IsNotExist(err) {
+			err = os.MkdirAll(opt.DestFolder, os.ModePerm)
 			if err != nil {
-				common.BadRequestException(w, "error saving file: "+err.Error())
-				return
+				common.InternalServerException(ctx.Res(), err.Error())
+				return err
 			}
-			defer destFile.Close()
+		}
 
-			_, err = io.Copy(destFile, file)
-			if err != nil {
-				common.BadRequestException(w, "error copying file: "+err.Error())
-				return
-			}
+		destPath := filepath.Join(opt.DestFolder, fileHeader.Filename)
+		destFile, err := os.Create(destPath)
+		if err != nil {
+			common.BadRequestException(ctx.Res(), err.Error())
+			return err
+		}
+		defer destFile.Close()
 
-			filename := fileHeader.Filename
-			if fileOptions.OriginalName != "" {
-				filename = fileOptions.OriginalName
-			}
+		uploadFile := &FileInfo{
+			FileName:     fileHeader.Filename,
+			OriginalName: opt.OriginalName,
+			Encoding:     fileHeader.Header.Get("Content-Encoding"),
+			MimeType:     fileType,
+			Size:         fileHeader.Size,
+			Destination:  destPath,
+			FieldName:    opt.FieldName,
+			Path:         destPath,
+		}
 
-			uploadedFile := &UploadedFileInfo{
-				FilePath:     destPath,
-				OriginalName: filename,
-				FileSize:     fileHeader.Size,
-				FileType:     fileType,
-			}
-			ctx := context.WithValue(r.Context(), DefaultDestFolder, uploadedFile)
-			r = r.WithContext(ctx)
-
-			next.ServeHTTP(w, r)
-		})
+		ctx.Set(FILE, uploadFile)
+		return ctx.Next()
 	}
 }
 
-func FilesInterceptor(fileOptions UploadedFilesOptions) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if fileOptions.DestFolder == "" {
-				common.BadRequestException(w, "file destination folder cannot be empty")
-				return
-			}
+func FilesInterceptor(fileOptions UploadedFilesOptions) Middleware {
+	return func(ctx Ctx) error {
+		err := ctx.Req().ParseMultipartForm(fileOptions.MaxSize)
+		if err != nil {
+			common.BadRequestException(ctx.Res(), err.Error())
+			return err
+		}
 
-			err := r.ParseMultipartForm(fileOptions.MaxSize)
-			if err != nil {
-				common.BadRequestException(w, "error parsing form: "+err.Error())
-				return
+		if len(fileOptions.AllowedMimes) == 0 {
+			fileOptions.AllowedMimes = []string{
+				"image/jpeg", "image/png",
+				"video/mp4", "video/x-msvideo",
+				"video/x-matroska", "video/quicktime",
+				"video/x-flv",
 			}
+		}
 
-			if len(fileOptions.AllowedMimes) == 0 {
-				fileOptions.AllowedMimes = []string{
-					"image/jpeg", "image/png",
-					"video/mp4", "video/x-msvideo",
-					"video/x-matroska", "video/quicktime",
-					"video/x-flv",
+		uploadedFiles := make(map[string][]*FileInfo)
+
+		for _, field := range fileOptions.FileFields {
+			fileHeaders := ctx.Req().MultipartForm.File[field.Name]
+			if len(fileHeaders) == 0 {
+				common.BadRequestException(ctx.Res(), "no file provide for field")
+				return errors.New("no file provide for field")
+			}
+			for i, fileHeader := range fileHeaders {
+				file, err := fileHeader.Open()
+				if err != nil {
+
+					common.BadRequestException(ctx.Res(), err.Error())
+					return err
 				}
-			}
 
-			uploadedFiles := make(map[string][]UploadedFileInfo)
-
-			for _, field := range fileOptions.FileFields {
-				files := r.MultipartForm.File[field.Name]
-
-				if len(files) > field.MaxCount {
-					common.BadRequestException(w, "too many files for field "+field.Name)
-					return
+				fileHeaderBytes := make([]byte, 512)
+				_, err = file.Read(fileHeaderBytes)
+				if err != nil {
+					common.InternalServerException(ctx.Res(), err.Error())
+					return err
+				}
+				fileType := http.DetectContentType(fileHeaderBytes)
+				_, err = file.Seek(0, io.SeekStart)
+				if err != nil {
+					common.InternalServerException(ctx.Res(), err.Error())
+					return err
 				}
 
-				for _, fileHeader := range files {
-					file, err := fileHeader.Open()
-					if err != nil {
-						common.BadRequestException(w, "error opening file: "+err.Error())
-						return
-					}
-					defer file.Close()
-
-					fileHeaderBytes := make([]byte, 512)
-					file.Read(fileHeaderBytes)
-					fileType := http.DetectContentType(fileHeaderBytes)
-					file.Seek(0, io.SeekStart)
-
+				if len(fileOptions.AllowedMimes) > 0 {
 					allowed := false
 					for _, mime := range fileOptions.AllowedMimes {
 						if fileType == mime {
@@ -177,46 +184,35 @@ func FilesInterceptor(fileOptions UploadedFilesOptions) func(http.Handler) http.
 						}
 					}
 					if !allowed {
-						common.BadRequestException(w, "file type "+fileType+" is not allowed")
-						return
+						common.BadRequestException(ctx.Res(), "file type "+fileType+" is not allowed")
+						return errors.New("file type " + fileType + " is not allowed")
 					}
-
-					if _, err := os.Stat(fileOptions.DestFolder); os.IsNotExist(err) {
-						os.MkdirAll(fileOptions.DestFolder, os.ModePerm)
-					}
-
-					destPath := filepath.Join(fileOptions.DestFolder, fileHeader.Filename)
-					destFile, err := os.Create(destPath)
-					if err != nil {
-						common.BadRequestException(w, "error saving file: "+err.Error())
-						return
-					}
-					defer destFile.Close()
-
-					_, err = io.Copy(destFile, file)
-					if err != nil {
-						common.BadRequestException(w, "error copying file: "+err.Error())
-						return
-					}
-
-					filename := fileHeader.Filename
-					if fileOptions.OriginalName != "" {
-						filename = fileOptions.OriginalName
-					}
-
-					uploadedFiles[field.Name] = append(uploadedFiles[field.Name], UploadedFileInfo{
-						FilePath:     destPath,
-						OriginalName: filename,
-						FileSize:     fileHeader.Size,
-						FileType:     fileType,
-					})
 				}
+				destPath := filepath.Join(fileOptions.DestFolder, fmt.Sprint(i), fileHeader.Filename)
+				destFile, err := os.Create(destPath)
+				if err != nil {
+					common.BadRequestException(ctx.Res(), err.Error())
+					return err
+				}
+
+				uploadFile := &FileInfo{
+					FileName:     fileHeader.Filename,
+					OriginalName: fileOptions.OriginalName,
+					Encoding:     fileHeader.Header.Get("Content-Encoding"),
+					MimeType:     fileType,
+					Size:         fileHeader.Size,
+					Destination:  destPath,
+					FieldName:    field.Name,
+					Path:         destPath,
+				}
+
+				uploadedFiles[field.Name] = append(uploadedFiles[field.Name], uploadFile)
+				destFile.Close()
+				file.Close()
 			}
+		}
 
-			ctx := context.WithValue(r.Context(), DefaultDestFolder, uploadedFiles)
-			r = r.WithContext(ctx)
-
-			next.ServeHTTP(w, r)
-		})
+		ctx.Set(FILES, uploadedFiles)
+		return ctx.Next()
 	}
 }

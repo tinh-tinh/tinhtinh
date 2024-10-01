@@ -35,6 +35,10 @@ func Test_BeforeShutdown(t *testing.T) {
 		t.Log("BeforeShutdown")
 	})
 
+	app.AfterShutdown(func() {
+		t.Log("AfterShutdown")
+	})
+
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 

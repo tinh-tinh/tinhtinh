@@ -301,18 +301,18 @@ func ParseCtx(app *App, ctxFnc func(ctx Ctx)) http.Handler {
 	})
 }
 
-func (ctx *Ctx) UploadedFile() *UploadedFileInfo {
-	uploadedFiles := ctx.Get(DefaultDestFolder)
+func (ctx *Ctx) UploadedFile() *FileInfo {
+	uploadedFiles := ctx.Get(FILE)
 	if uploadedFiles == nil {
 		return nil
 	}
-	return uploadedFiles.(*UploadedFileInfo)
+	return uploadedFiles.(*FileInfo)
 }
 
-func (ctx *Ctx) UploadedFiles() map[string][]UploadedFileInfo {
+func (ctx *Ctx) UploadedFiles() map[string][]FileInfo {
 	uploadedFiles := ctx.Get(DefaultDestFolder)
 	if uploadedFiles == nil {
 		return nil
 	}
-	return uploadedFiles.(map[string][]UploadedFileInfo)
+	return uploadedFiles.(map[string][]FileInfo)
 }
