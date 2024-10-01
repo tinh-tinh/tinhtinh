@@ -72,7 +72,7 @@ func Test_RequestModule(t *testing.T) {
 	app := CreateFactory(appModule)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 
 	testClient := testServer.Client()
@@ -141,7 +141,7 @@ func Test_Controller(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 
 	testClient := testServer.Client()

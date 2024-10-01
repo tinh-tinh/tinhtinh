@@ -104,7 +104,7 @@ func (app *App) SetGlobalPrefix(prefix string) *App {
 
 // EnableCors enables CORS on the API server. The passed in options are used
 // to configure the CORS middleware.
-func (app *App) EnableCors(opt cors.CorsOptions) *App {
+func (app *App) EnableCors(opt cors.Options) *App {
 	app.cors = cors.NewCors(opt)
 	return app
 }
@@ -122,13 +122,13 @@ func (app *App) Use(middleware ...middlewareRaw) *App {
 	return app
 }
 
-// prepareBeforeListen is a helper function that prepares the App instance's
+// PrepareBeforeListen is a helper function that prepares the App instance's
 // HTTP handler before listening. It registers the routes from the App
 // instance's Module, and adds a handler that writes "API is running" to the
 // request writer. It also adds the App instance's CORS middleware if it is
 // not nil. Finally, it chains the App instance's middleware handlers and
 // returns the final handler.
-func (app *App) prepareBeforeListen() http.Handler {
+func (app *App) PrepareBeforeListen() http.Handler {
 	app.registerRoutes()
 	app.Mux.Handle(IfSlashPrefixString(app.Prefix), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := io.WriteString(w, "API is running")
@@ -165,7 +165,7 @@ func (app *App) prepareBeforeListen() http.Handler {
 //
 // Finally, it runs any hooks registered with the AFTER_SHUTDOWN run-at value.
 func (app *App) Listen(port int) {
-	handler := app.prepareBeforeListen()
+	handler := app.PrepareBeforeListen()
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: handler,

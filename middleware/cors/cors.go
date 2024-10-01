@@ -7,7 +7,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/common"
 )
 
-type CorsOptions struct {
+type Options struct {
 	// AllowedOrigins is a list of origins a cross-domain request can be executed from.
 	// If the special "*" value is present in the list, all origins will be allowed.
 	// An origin may be:
@@ -77,7 +77,7 @@ type Cors struct {
 //
 // If options.PassThrough is true, the middleware will not intercept OPTIONS
 // requests.
-func NewCors(options CorsOptions) *Cors {
+func NewCors(options Options) *Cors {
 	c := &Cors{
 		allowedOrigins:    options.AllowedOrigins,
 		allowedOriginFnc:  options.AllowedOriginCtx,

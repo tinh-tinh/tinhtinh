@@ -58,11 +58,11 @@ func Test_EnableCors(t *testing.T) {
 
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
-	app.EnableCors(cors.CorsOptions{
+	app.EnableCors(cors.Options{
 		AllowedMethods: []string{"POST"},
 	})
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -117,7 +117,7 @@ func Test_Exception(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 
 	testClient := testServer.Client()
@@ -187,7 +187,7 @@ func Benchmark_App(b *testing.B) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 
 	testClient := testServer.Client()
