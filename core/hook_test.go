@@ -18,7 +18,7 @@ func Test_OnInit(t *testing.T) {
 	app := CreateFactory(appModule)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 }
 
@@ -35,7 +35,7 @@ func Test_BeforeShutdown(t *testing.T) {
 		t.Log("BeforeShutdown")
 	})
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 
 	t.Log(testServer.URL)

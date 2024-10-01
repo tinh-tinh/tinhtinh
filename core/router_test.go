@@ -78,7 +78,7 @@ func Test_registerRoutes(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 

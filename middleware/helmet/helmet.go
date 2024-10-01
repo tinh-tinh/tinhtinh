@@ -27,12 +27,6 @@ type CrossOriginResourcePolicy struct {
 	Enabled bool   // Whether the policy is enabled or not.
 }
 
-// OriginAgentCluster controls whether a document is assigned to an origin-keyed agent cluster.
-type OriginAgentCluster struct {
-	IsEnabled bool // Deprecated, should use Enabled.
-	Enabled   bool // Whether the policy is enabled or not.
-}
-
 // ReferrerPolicy specifies how much referrer information should be included with requests.
 type ReferrerPolicy struct {
 	Policy  interface{} // Referrer policy, e.g., "no-referrer", "origin-when-cross-origin".
@@ -110,11 +104,10 @@ type XXSSProtection struct {
 }
 
 // Helmet is the structure that holds all security headers.
-type HelmetOptions struct {
+type Options struct {
 	CrossOriginEmbedderPolicy     CrossOriginEmbedderPolicy     // COEP header configuration.
 	CrossOriginOpenerPolicy       CrossOriginOpenerPolicy       // COOP header configuration.
 	CrossOriginResourcePolicy     CrossOriginResourcePolicy     // CORP header configuration.
-	OriginAgentCluster            OriginAgentCluster            // Origin agent cluster configuration.
 	ReferrerPolicy                ReferrerPolicy                // Referrer policy configuration.
 	ContentSecurityPolicy         ContentSecurityPolicy         // CSP configuration.
 	StrictTransportSecurity       StrictTransportSecurity       // HSTS configuration.
@@ -127,128 +120,131 @@ type HelmetOptions struct {
 	XXSSProtection                XXSSProtection                // X-XSS-Protection header configuration.
 }
 
-func (helmet HelmetOptions) Handler(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Cross-Origin-Embedder-Policy
-		if helmet.CrossOriginEmbedderPolicy.Enabled {
-			policy := "require-corp"
-			if helmet.CrossOriginEmbedderPolicy.Policy == "credentialless" {
-				policy = "credentialless"
-			}
-			w.Header().Set("Cross-Origin-Embedder-Policy", policy)
-		}
-
-		// Cross-Origin-Opener-Policy
-		if helmet.CrossOriginOpenerPolicy.Enabled {
-			openerPolicy := "same-origin"
-			if helmet.CrossOriginOpenerPolicy.Policy == "same-origin-allow-popups" {
-				openerPolicy = "same-origin-allow-popups"
-			}
-			w.Header().Set("Cross-Origin-Opener-Policy", openerPolicy)
-		}
-
-		// Cross-Origin-Resource-Policy
-		if helmet.CrossOriginResourcePolicy.Enabled {
-			resourcePolicy := "same-origin"
-			if helmet.CrossOriginResourcePolicy.Policy == "same-site" {
-				resourcePolicy = "same-site"
-			}
-			w.Header().Set("Cross-Origin-Resource-Policy", resourcePolicy)
-		}
-
-		// Origin-Agent-Cluster
-		if helmet.OriginAgentCluster.IsEnabled && helmet.OriginAgentCluster.Enabled {
-			w.Header().Set("Origin-Agent-Cluster", "?1")
-		}
-
-		// Strict-Transport-Security
-		if helmet.StrictTransportSecurity.Enabled {
-			if helmet.StrictTransportSecurity.MaxAge > 0 {
-				hsts := fmt.Sprintf("max-age=%d", helmet.StrictTransportSecurity.MaxAge)
-				if helmet.StrictTransportSecurity.IncludeSubDomains {
-					hsts += "; includeSubDomains"
+func Handler(opt Options) func(h http.Handler) http.Handler {
+	helmet := newDefault(opt)
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Cross-Origin-Embedder-Policy
+			if helmet.CrossOriginEmbedderPolicy.Enabled {
+				policy := "require-corp"
+				if helmet.CrossOriginEmbedderPolicy.Policy == "credentialless" {
+					policy = "credentialless"
 				}
-				if helmet.StrictTransportSecurity.Preload {
-					hsts += "; preload"
+				w.Header().Set("Cross-Origin-Embedder-Policy", policy)
+			}
+
+			// Cross-Origin-Opener-Policy
+			if helmet.CrossOriginOpenerPolicy.Enabled {
+				openerPolicy := "same-origin"
+				if helmet.CrossOriginOpenerPolicy.Policy == "same-origin-allow-popups" {
+					openerPolicy = "same-origin-allow-popups"
 				}
-				w.Header().Set("Strict-Transport-Security", hsts)
+				w.Header().Set("Cross-Origin-Opener-Policy", openerPolicy)
 			}
-		}
 
-		// Referrer-Policy
-		if helmet.ReferrerPolicy.Enabled {
-			switch policy := helmet.ReferrerPolicy.Policy.(type) {
-			case string:
-				w.Header().Set("Referrer-Policy", policy)
-			case []string:
-				w.Header().Set("Referrer-Policy", strings.Join(policy, ","))
+			// Cross-Origin-Resource-Policy
+			if helmet.CrossOriginResourcePolicy.Enabled {
+				resourcePolicy := "same-origin"
+				if helmet.CrossOriginResourcePolicy.Policy == "same-site" {
+					resourcePolicy = "same-site"
+				}
+				w.Header().Set("Cross-Origin-Resource-Policy", resourcePolicy)
 			}
-		}
 
-		// X-Content-Type-Options
-		if helmet.XContentTypeOptions.Enabled {
-			w.Header().Set("X-Content-Type-Options", helmet.XContentTypeOptions.Value)
-		}
+			// Strict-Transport-Security
+			if helmet.StrictTransportSecurity.Enabled {
+				if helmet.StrictTransportSecurity.MaxAge > 0 {
+					hsts := fmt.Sprintf("max-age=%d", helmet.StrictTransportSecurity.MaxAge)
+					if helmet.StrictTransportSecurity.IncludeSubDomains {
+						hsts += "; includeSubDomains"
+					}
+					if helmet.StrictTransportSecurity.Preload {
+						hsts += "; preload"
+					}
+					w.Header().Set("Strict-Transport-Security", hsts)
+				}
+			}
 
-		// X-DNS-Prefetch-Control
-		if helmet.XDnsPrefetchControl.Enabled {
-			w.Header().Set("X-DNS-Prefetch-Control", helmet.XDnsPrefetchControl.Value)
-		} else {
-			w.Header().Set("X-DNS-Prefetch-Control", "off")
-		}
+			// Referrer-Policy
+			if helmet.ReferrerPolicy.Enabled {
+				switch policy := helmet.ReferrerPolicy.Policy.(type) {
+				case string:
+					w.Header().Set("Referrer-Policy", policy)
+				case []string:
+					w.Header().Set("Referrer-Policy", strings.Join(policy, ","))
+				}
+			}
 
-		// X-Download-Options
-		if helmet.XDownloadOptions.Enabled {
-			w.Header().Set("X-Download-Options", helmet.XDownloadOptions.Value)
-		}
+			// X-Content-Type-Options
+			if helmet.XContentTypeOptions.Enabled {
+				w.Header().Set("X-Content-Type-Options", helmet.XContentTypeOptions.Value)
+			}
 
-		// X-Frame-Options
-		if helmet.XFrameOptions.Enabled {
-			w.Header().Set("X-Frame-Options", helmet.XFrameOptions.Action)
-		}
-
-		// X-Permitted-Cross-Domain-Policies
-		if helmet.XPermittedCrossDomainPolicies.Enabled {
-			w.Header().Set("X-Permitted-Cross-Domain-Policies", helmet.XPermittedCrossDomainPolicies.PermittedPolicies)
-		}
-
-		// X-Powered-By
-		if helmet.XPoweredBy.Enabled {
-			w.Header().Set("X-Powered-By", helmet.XPoweredBy.Value)
-		} else {
-			w.Header().Del("X-Powered-By") // Xóa header nếu không được phép
-		}
-
-		// X-XSS-Protection
-		if helmet.XXSSProtection.Enabled {
-			w.Header().Set("X-XSS-Protection", helmet.XXSSProtection.Value)
-		}
-
-		// Content-Security-Policy or Content-Security-Policy-Report-Only
-		if helmet.ContentSecurityPolicy.OptionSecurityPolicy != nil {
-			cspHeader := handleOptions(*helmet.ContentSecurityPolicy.OptionSecurityPolicy)
-			if helmet.ContentSecurityPolicy.OptionSecurityPolicy.ReportOnly {
-				w.Header().Set("Content-Security-Policy-Report-Only", cspHeader)
+			// X-DNS-Prefetch-Control
+			if helmet.XDnsPrefetchControl.Enabled {
+				w.Header().Set("X-DNS-Prefetch-Control", helmet.XDnsPrefetchControl.Value)
 			} else {
-				w.Header().Set("Content-Security-Policy", cspHeader)
+				w.Header().Set("X-DNS-Prefetch-Control", "off")
 			}
-		}
 
-		h.ServeHTTP(w, r)
-	})
+			// X-Download-Options
+			if helmet.XDownloadOptions.Enabled {
+				w.Header().Set("X-Download-Options", helmet.XDownloadOptions.Value)
+			}
+
+			// X-Frame-Options
+			if helmet.XFrameOptions.Enabled {
+				w.Header().Set("X-Frame-Options", helmet.XFrameOptions.Action)
+			}
+
+			// X-Permitted-Cross-Domain-Policies
+			if helmet.XPermittedCrossDomainPolicies.Enabled {
+				w.Header().Set("X-Permitted-Cross-Domain-Policies", helmet.XPermittedCrossDomainPolicies.PermittedPolicies)
+			}
+
+			// X-Powered-By
+			if helmet.XPoweredBy.Enabled {
+				w.Header().Set("X-Powered-By", helmet.XPoweredBy.Value)
+			} else {
+				w.Header().Del("X-Powered-By") // Xóa header nếu không được phép
+			}
+
+			// X-XSS-Protection
+			if helmet.XXSSProtection.Enabled {
+				w.Header().Set("X-XSS-Protection", helmet.XXSSProtection.Value)
+			}
+
+			// Content-Security-Policy or Content-Security-Policy-Report-Only
+			if helmet.ContentSecurityPolicy.OptionSecurityPolicy != nil {
+				cspHeader := handleOptions(*helmet.ContentSecurityPolicy.OptionSecurityPolicy)
+				if helmet.ContentSecurityPolicy.OptionSecurityPolicy.ReportOnly {
+					w.Header().Set("Content-Security-Policy-Report-Only", cspHeader)
+				} else {
+					w.Header().Set("Content-Security-Policy", cspHeader)
+				}
+			}
+
+			h.ServeHTTP(w, r)
+		})
+	}
 }
 
 // Hàm khởi tạo Helmet với tùy chọn cấu hình
-func New(options HelmetOptions) *HelmetOptions {
-	h := &HelmetOptions{
-		StrictTransportSecurity:   options.StrictTransportSecurity,
-		ContentSecurityPolicy:     options.ContentSecurityPolicy,
-		XContentTypeOptions:       options.XContentTypeOptions,
-		XDnsPrefetchControl:       options.XDnsPrefetchControl,
-		XDownloadOptions:          options.XDownloadOptions,
-		XFrameOptions:             options.XFrameOptions,
-		CrossOriginEmbedderPolicy: options.CrossOriginEmbedderPolicy,
-		XPoweredBy:                options.XPoweredBy,
+func newDefault(options Options) *Options {
+	h := &Options{
+		StrictTransportSecurity:       options.StrictTransportSecurity,
+		ContentSecurityPolicy:         options.ContentSecurityPolicy,
+		XContentTypeOptions:           options.XContentTypeOptions,
+		XDnsPrefetchControl:           options.XDnsPrefetchControl,
+		XDownloadOptions:              options.XDownloadOptions,
+		XFrameOptions:                 options.XFrameOptions,
+		CrossOriginEmbedderPolicy:     options.CrossOriginEmbedderPolicy,
+		CrossOriginOpenerPolicy:       options.CrossOriginOpenerPolicy,
+		CrossOriginResourcePolicy:     options.CrossOriginResourcePolicy,
+		XPoweredBy:                    options.XPoweredBy,
+		XXSSProtection:                options.XXSSProtection,
+		XPermittedCrossDomainPolicies: options.XPermittedCrossDomainPolicies,
+		ReferrerPolicy:                options.ReferrerPolicy,
 	}
 
 	if options.ContentSecurityPolicy.OptionSecurityPolicy != nil {
@@ -298,7 +294,7 @@ func New(options HelmetOptions) *HelmetOptions {
 		}
 	}
 
-	if h.StrictTransportSecurity.Enabled {
+	if !h.StrictTransportSecurity.Enabled {
 		h.StrictTransportSecurity = StrictTransportSecurity{
 			Enabled: true,
 			MaxAge:  31536000,

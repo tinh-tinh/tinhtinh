@@ -38,7 +38,7 @@ func Test_Ctx_Req(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -80,7 +80,7 @@ func Test_Ctx_Res(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -115,7 +115,7 @@ func Test_Ctx_Headers(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -169,7 +169,7 @@ func Test_Ctx_BodyParser(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -215,7 +215,7 @@ func Test_Ctx_Body(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -261,7 +261,7 @@ func Test_Ctx_Params(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -306,7 +306,7 @@ func Test_Ctx_Queries(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -348,7 +348,7 @@ func Test_Ctx_Param(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -390,7 +390,7 @@ func Test_Ctx_Query(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -432,7 +432,7 @@ func Test_Ctx_QueryInt(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -478,7 +478,7 @@ func Test_Ctx_QueryBool(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -521,7 +521,7 @@ func Test_Ctx_Status(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -560,7 +560,7 @@ func Test_CtxContext(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -610,7 +610,7 @@ func Test_QueryParser(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -659,7 +659,7 @@ func Test_ParamParser(t *testing.T) {
 	app := CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -716,7 +716,7 @@ func Test_Ctx_Session(t *testing.T) {
 	})
 	app.SetGlobalPrefix("/api")
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 

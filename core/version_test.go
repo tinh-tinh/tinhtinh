@@ -55,7 +55,7 @@ func Test_VersionURI(t *testing.T) {
 		Type: URIVersion,
 	})
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -92,7 +92,7 @@ func Test_VersionHeader(t *testing.T) {
 		Header: "X-Version",
 	})
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -139,7 +139,7 @@ func Test_VersionMedia(t *testing.T) {
 		Key:  "v=",
 	})
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
@@ -183,7 +183,7 @@ func Test_VersionCustom(t *testing.T) {
 		},
 	})
 
-	testServer := httptest.NewServer(app.prepareBeforeListen())
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
