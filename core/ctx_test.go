@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tinh-tinh/tinhtinh/common"
+	"github.com/tinh-tinh/tinhtinh/middleware/session"
 )
 
 func Test_Ctx_Req(t *testing.T) {
@@ -673,4 +675,72 @@ func Test_ParamParser(t *testing.T) {
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, float64(345), res.Data)
+}
+
+func Test_Ctx_Session(t *testing.T) {
+	controller := func(module *DynamicModule) *DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Post("", func(ctx Ctx) {
+			ctx.Session("key", "val")
+
+			ctx.JSON(Map{
+				"data": "ok",
+			})
+		})
+
+		ctrl.Get("", func(ctx Ctx) {
+			data := ctx.Session("key")
+			fmt.Print(data)
+			ctx.JSON(Map{
+				"data": data,
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *DynamicModule {
+		appModule := NewModule(NewModuleOptions{
+			Controllers: []Controller{controller},
+		})
+
+		return appModule
+	}
+
+	session := session.New(session.Options{
+		Secret: "secret",
+	})
+	app := CreateFactory(module, AppOptions{
+		Session: session,
+	})
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.prepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	resp, err := testClient.Post(testServer.URL+"/api/test", "application/json", nil)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	req, err := http.NewRequest("GET", testServer.URL+"/api/test", nil)
+	require.Nil(t, err)
+
+	req.AddCookie(resp.Cookies()[0])
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	type StringResponse struct {
+		Data string `json:"data"`
+	}
+
+	var res StringResponse
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, "val", res.Data)
 }

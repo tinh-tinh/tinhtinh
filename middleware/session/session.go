@@ -2,11 +2,10 @@ package session
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
-	"log"
 	"net/http"
-	"os/exec"
 	"time"
 
 	"github.com/tinh-tinh/tinhtinh/internal/memory"
@@ -44,10 +43,11 @@ func New(opt Options) *Config {
 }
 
 func (s *Config) Get(key string) interface{} {
-	return s.store.Get(s.Hash(key))
+	data := s.store.Get(s.Hash(key))
+	return data
 }
 
-func (s *Config) Set(key string, val interface{}) *http.Cookie {
+func (s *Config) Set(key string, val interface{}) http.Cookie {
 	var ID string
 	if s.GeneratorID != nil {
 		ID = s.GeneratorID()
@@ -63,7 +63,7 @@ func (s *Config) Set(key string, val interface{}) *http.Cookie {
 		Secure:   true,
 	}
 	s.store.Set(s.Hash(ID), val, s.ExpiresIn)
-	return &s.cookie
+	return s.cookie
 }
 
 func (s *Config) Hash(data string) string {
@@ -76,9 +76,9 @@ func (s *Config) Hash(data string) string {
 }
 
 func (s *Config) DefaultGenerateID() string {
-	newUUID, err := exec.Command("uuidgen").Output()
-	if err != nil {
-		log.Fatal(err)
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		panic(err)
 	}
-	return string(newUUID)
+	return hex.EncodeToString(bytes)
 }
