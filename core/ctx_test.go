@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tinh-tinh/tinhtinh/common"
+	"github.com/tinh-tinh/tinhtinh/middleware/cookie"
 	"github.com/tinh-tinh/tinhtinh/middleware/session"
 )
 
@@ -740,6 +741,130 @@ func Test_Ctx_Session(t *testing.T) {
 	}
 
 	var res StringResponse
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, "val", res.Data)
+}
+
+func Test_Cookie(t *testing.T) {
+	controller := func(module *DynamicModule) *DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Post("", func(ctx Ctx) {
+			ctx.SetCookie("key", "val", 3600)
+
+			ctx.JSON(Map{
+				"data": "ok",
+			})
+		})
+
+		ctrl.Get("", func(ctx Ctx) {
+			data := ctx.Cookies("key").Value
+			fmt.Print(data)
+			ctx.JSON(Map{
+				"data": data,
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *DynamicModule {
+		appModule := NewModule(NewModuleOptions{
+			Controllers: []Controller{controller},
+		})
+
+		return appModule
+	}
+
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	resp, err := testClient.Post(testServer.URL+"/api/test", "application/json", nil)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	req, err := http.NewRequest("GET", testServer.URL+"/api/test", nil)
+	require.Nil(t, err)
+	req.AddCookie(resp.Cookies()[0])
+
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	var res Response
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, "val", res.Data)
+}
+
+func Test_SignedCookie(t *testing.T) {
+	controller := func(module *DynamicModule) *DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Post("", func(ctx Ctx) {
+			ctx.SignedCookie("key", "val")
+
+			ctx.JSON(Map{
+				"data": "ok",
+			})
+		})
+
+		ctrl.Get("", func(ctx Ctx) {
+			data, err := ctx.SignedCookie("key")
+			if err != nil {
+				common.InternalServerException(ctx.Res(), err.Error())
+				return
+			}
+			ctx.JSON(Map{
+				"data": data,
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *DynamicModule {
+		appModule := NewModule(NewModuleOptions{
+			Controllers: []Controller{controller},
+		})
+
+		return appModule
+	}
+
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+	app.Use(cookie.Handler(cookie.Options{
+		Key: "abc&1*~#^2^#s0^=)^^7%b34",
+	}))
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	resp, err := testClient.Post(testServer.URL+"/api/test", "application/json", nil)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	req, err := http.NewRequest("GET", testServer.URL+"/api/test", nil)
+	require.Nil(t, err)
+	req.AddCookie(resp.Cookies()[0])
+
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	var res Response
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, "val", res.Data)

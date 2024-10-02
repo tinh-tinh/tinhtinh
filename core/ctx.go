@@ -2,11 +2,15 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"reflect"
 	"strconv"
+
+	"github.com/tinh-tinh/tinhtinh/common"
+	"github.com/tinh-tinh/tinhtinh/middleware/cookie"
 )
 
 type Ctx struct {
@@ -58,6 +62,43 @@ func (ctx *Ctx) SetCookie(key string, value string, maxAge int) {
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
+}
+
+func (ctx *Ctx) SignedCookie(key string, val ...string) (string, error) {
+	s, ok := ctx.Get(cookie.SIGNED_COOKIE).(*cookie.SecureCookie)
+	if !ok {
+		common.InternalServerException(ctx.Res(), "failed to get signed cookie")
+		return "", errors.New("failed to get signed cookie")
+	}
+	if len(val) > 0 {
+		encoded, err := s.Encrypt(val[0])
+		if err != nil {
+			fmt.Println(err)
+			common.InternalServerException(ctx.Res(), "failed to encode signed cookie")
+			return "", errors.New("failed to encode signed cookie")
+		}
+		cookie := &http.Cookie{
+			Name:     key,
+			Value:    encoded,
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteLaxMode,
+		}
+		http.SetCookie(ctx.w, cookie)
+		return val[0], nil
+	}
+
+	cookie, err := ctx.Req().Cookie(key)
+	if err != nil {
+		common.InternalServerException(ctx.Res(), "failed to get signed cookie")
+		return "", errors.New("failed to get signed cookie")
+	}
+	value, err := s.Decrypt(cookie.Value)
+	if err != nil {
+		common.InternalServerException(ctx.Res(), "failed to decode signed cookie")
+		return "", errors.New("failed to decode signed cookie")
+	}
+	return value, nil
 }
 
 // BodyParser is a helper to parse the request body into a given interface
