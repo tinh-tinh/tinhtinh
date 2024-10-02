@@ -309,10 +309,10 @@ func (ctx *Ctx) UploadedFile() *FileInfo {
 	return uploadedFiles.(*FileInfo)
 }
 
-func (ctx *Ctx) UploadedFiles() map[string][]FileInfo {
+func (ctx *Ctx) UploadedFiles() []*FileInfo {
 	uploadedFiles := ctx.Get(DefaultDestFolder)
 	if uploadedFiles == nil {
 		return nil
 	}
-	return uploadedFiles.(map[string][]FileInfo)
+	return uploadedFiles.([]*FileInfo)
 }
