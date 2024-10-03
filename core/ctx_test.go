@@ -810,7 +810,11 @@ func Test_SignedCookie(t *testing.T) {
 		ctrl := module.NewController("test")
 
 		ctrl.Post("", func(ctx Ctx) {
-			ctx.SignedCookie("key", "val")
+			_, err := ctx.SignedCookie("key", "val")
+			if err != nil {
+				common.InternalServerException(ctx.Res(), err.Error())
+				return
+			}
 
 			ctx.JSON(Map{
 				"data": "ok",

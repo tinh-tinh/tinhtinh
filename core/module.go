@@ -121,7 +121,10 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 					p.Value = p.factory(values...)
 				}
 			}
-			ctx.Next()
+			err := ctx.Next()
+			if err != nil {
+				return err
+			}
 			for _, p := range module.getRequest() {
 				if p.Value != nil {
 					p.Value = nil
