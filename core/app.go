@@ -41,15 +41,17 @@ type App struct {
 	// encoder is the encoder that the App uses to initialize itself.
 	encoder Encode
 	// decoder is the decoder that the App uses to initialize itself.
-	decoder Decode
-	session *session.Config
+	decoder    Decode
+	session    *session.Config
+	staticPath string
 }
 
 type ModuleParam func() *DynamicModule
 type AppOptions struct {
-	Encoder Encode
-	Decoder Decode
-	Session *session.Config
+	Encoder    Encode
+	Decoder    Decode
+	Session    *session.Config
+	StaticPath string
 }
 
 // CreateFactory is a function that creates an App instance with a DynamicModule
@@ -82,6 +84,9 @@ func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 		}
 		if opt[0].Session != nil {
 			app.session = opt[0].Session
+		}
+		if opt[0].StaticPath != "" {
+			app.staticPath = opt[0].StaticPath
 		}
 	}
 
@@ -130,12 +135,21 @@ func (app *App) Use(middleware ...middlewareRaw) *App {
 // returns the final handler.
 func (app *App) PrepareBeforeListen() http.Handler {
 	app.registerRoutes()
-	app.Mux.Handle(IfSlashPrefixString(app.Prefix), http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	prefix := "/"
+	if app.Prefix != "" {
+		prefix = IfSlashPrefixString(app.Prefix)
+	}
+	app.Mux.Handle(prefix, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := io.WriteString(w, "API is running")
 		if err != nil {
 			log.Fatalf("error when running server %v", err)
 		}
 	}))
+
+	if app.staticPath != "" {
+		routePath := "/" + app.staticPath + "/"
+		app.Mux.Handle(routePath, http.StripPrefix(routePath, http.FileServer(http.Dir(app.staticPath))))
+	}
 
 	var handler http.Handler
 	handler = app.Mux
