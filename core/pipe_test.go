@@ -14,15 +14,10 @@ func Test_PipeMiddleware(t *testing.T) {
 		Name     string `validate:"required"`
 		Email    string `validate:"required,isEmail"`
 		Password string `validate:"isStrongPassword"`
+		Age      int    `validate:"isInt"`
 	}
 	appController := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
-
-		ctrl.Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
-				"data": "1",
-			})
-		})
 
 		ctrl.Pipe(Body(&SignUpDto{})).Post("", func(ctx Ctx) {
 			ctx.JSON(Map{
@@ -55,12 +50,21 @@ func Test_PipeMiddleware(t *testing.T) {
 	resp, err = testClient.Post(testServer.URL+"/api/test", "application/json", strings.NewReader(`{"name":"test", "email":"test@gmail.com", "password":"Test@1234546"}`))
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = testClient.Post(testServer.URL+"/api/test", "application/json", strings.NewReader(`{"name":"test", "email":"test@gmail.com", "password":"Test@1234546", "age": "haha"}`))
+	require.Nil(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	resp, err = testClient.Post(testServer.URL+"/api/test", "application/json", strings.NewReader(`{"name":"test", "email":"test@gmail.com", "password":"Test@1234546", "age":333}`))
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func Test_Query(t *testing.T) {
 	type FilterDto struct {
 		Name  string `validate:"required" query:"name"`
 		Email string `validate:"required,isEmail" query:"email"`
+		Age   int    `validate:"isInt" query:"age"`
 	}
 	appController := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
@@ -93,7 +97,15 @@ func Test_Query(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
+	resp, err = testClient.Get(testServer.URL + "/api/test?name=test&email=test@gmail.com&age=g")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
 	resp, err = testClient.Get(testServer.URL + "/api/test?name=test&email=test@gmail.com")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test?name=test&email=test@gmail.com&age=12")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }

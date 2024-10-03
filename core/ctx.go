@@ -11,6 +11,7 @@ import (
 
 	"github.com/tinh-tinh/tinhtinh/common"
 	"github.com/tinh-tinh/tinhtinh/middleware/cookie"
+	"github.com/tinh-tinh/tinhtinh/middleware/storage"
 )
 
 type Ctx struct {
@@ -342,18 +343,26 @@ func ParseCtx(app *App, ctxFnc func(ctx Ctx)) http.Handler {
 	})
 }
 
-func (ctx *Ctx) UploadedFile() *UploadedFileInfo {
-	uploadedFiles := ctx.Get(DefaultDestFolder)
-	if uploadedFiles == nil {
+func (ctx *Ctx) UploadedFile() *storage.File {
+	uploadedFile, ok := ctx.Get(FILE).(*storage.File)
+	if uploadedFile == nil || !ok {
 		return nil
 	}
-	return uploadedFiles.(*UploadedFileInfo)
+	return uploadedFile
 }
 
-func (ctx *Ctx) UploadedFiles() map[string][]UploadedFileInfo {
-	uploadedFiles := ctx.Get(DefaultDestFolder)
-	if uploadedFiles == nil {
+func (ctx *Ctx) UploadedFiles() []*storage.File {
+	uploadedFiles, ok := ctx.Get(FILES).([]*storage.File)
+	if uploadedFiles == nil || !ok {
 		return nil
 	}
-	return uploadedFiles.(map[string][]UploadedFileInfo)
+	return uploadedFiles
+}
+
+func (ctx *Ctx) UploadedFieldFile() map[string][]*storage.File {
+	uploadedFieldFile, ok := ctx.Get(FIELD_FILES).(map[string][]*storage.File)
+	if uploadedFieldFile == nil || !ok {
+		return nil
+	}
+	return uploadedFieldFile
 }
