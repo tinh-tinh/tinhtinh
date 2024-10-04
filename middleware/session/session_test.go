@@ -20,7 +20,7 @@ func Test_Session(t *testing.T) {
 
 func Test_Expiration(t *testing.T) {
 	s := New(Options{
-		ExpiresIn: 3 * time.Second,
+		ExpiresIn: 1 * time.Second,
 	})
 
 	cookie := s.Set("abc", "mno")
