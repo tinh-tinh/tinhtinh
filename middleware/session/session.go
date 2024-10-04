@@ -29,8 +29,9 @@ type Options struct {
 
 func New(opt Options) *Config {
 	session := &Config{
-		Secret: opt.Secret,
-		store:  memory.New(opt.StoreOptions),
+		Secret:    opt.Secret,
+		store:     memory.New(opt.StoreOptions),
+		ExpiresIn: opt.ExpiresIn,
 	}
 	if session.ExpiresIn == 0 {
 		session.ExpiresIn = time.Hour
