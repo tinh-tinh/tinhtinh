@@ -1,6 +1,7 @@
 package core
 
 import (
+	"net/http"
 	"runtime"
 	"strings"
 )
@@ -162,16 +163,22 @@ func (c *DynamicController) Delete(path string, handler Handler) {
 	c.registry("DELETE", path, handler)
 }
 
+func (c *DynamicController) Handler(path string, handler http.Handler) {
+	router := &Router{
+		Name:        c.name,
+		Tag:         c.tag,
+		Path:        path,
+		Middlewares: append(c.globalMiddlewares, c.middlewares...),
+		Dtos:        c.Dtos,
+		Security:    c.Security,
+		Version:     c.version,
+		httpHandler: handler,
+	}
+	c.module.Routers = append(c.module.Routers, router)
+	c.free()
+}
+
 func (c *DynamicController) registry(method string, path string, handler Handler) {
-	// mergeHandler := handler
-	// for _, v := range c.middlewares {
-	// 	mergeHandler = v(mergeHandler)
-	// }
-
-	// for _, v := range c.globalMiddlewares {
-	// 	mergeHandler = v(mergeHandler)
-	// }
-
 	router := &Router{
 		Name:        c.name,
 		Method:      method,
