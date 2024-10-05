@@ -18,10 +18,16 @@ type Router struct {
 	Dtos        []Pipe
 	Security    []string
 	Version     string
+	httpHandler http.Handler
 }
 
 func (r *Router) getHandler(app *App) http.Handler {
-	mergeHandler := ParseCtx(app, r.Handler)
+	var mergeHandler http.Handler
+	if r.httpHandler != nil {
+		mergeHandler = r.httpHandler
+	} else {
+		mergeHandler = ParseCtx(app, r.Handler)
+	}
 	for _, v := range r.Middlewares {
 		mid := ParseCtxMiddleware(app, v)
 		mergeHandler = mid(mergeHandler)
@@ -38,7 +44,10 @@ func (app *App) registerRoutes() {
 		if app.version != nil && app.version.Type == URIVersion && r.Version != "" {
 			route.SetPrefix("v" + r.Version)
 		}
-		route.SetPrefix(app.Prefix + "/" + r.Name)
+		route.SetPrefix(r.Name)
+		if app.Prefix != "" {
+			route.SetPrefix(app.Prefix)
+		}
 		utils.Log(
 			utils.Green("[TT] "),
 			utils.White(time.Now().Format("2006-01-02 15:04:05")),
@@ -83,6 +92,9 @@ func (r *Route) SetPrefix(prefix string) {
 }
 
 func (r *Route) GetPath() string {
+	if r.Method == "" {
+		return r.Path + "/"
+	}
 	return r.Method + " " + r.Path
 }
 

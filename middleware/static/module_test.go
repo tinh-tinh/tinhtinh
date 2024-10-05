@@ -1,4 +1,4 @@
-package test
+package static
 
 import (
 	"net/http"
@@ -24,13 +24,12 @@ func Test_Static(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		return core.NewModule(core.NewModuleOptions{
+			Imports:     []core.Module{ForRoot("upload")},
 			Controllers: []core.Controller{appController},
 		})
 	}
 
-	app := core.CreateFactory(appModule, core.AppOptions{
-		StaticPath: "upload",
-	})
+	app := core.CreateFactory(appModule)
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
