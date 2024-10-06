@@ -13,6 +13,7 @@ type Router struct {
 	Method      string
 	Tag         string
 	Path        string
+	Metadata    []*Metadata
 	Handler     Handler
 	Middlewares []Middleware
 	Dtos        []Pipe
