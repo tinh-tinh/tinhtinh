@@ -23,3 +23,41 @@ func (ctrl *DynamicController) ParseGuard(guard Guard) Middleware {
 		return ctx.Next()
 	}
 }
+
+// Guard registers the given guard functions with the controller. The guard
+// functions are run in the order they are added to the controller. The guard
+// functions are run before the controller's middleware handlers. The guard
+// functions are run after the module's middleware handlers. The guard functions
+// are run before the controller's handlers. If any of the guard functions
+// return false, the request will be rejected with a 403 status code.
+func (c *DynamicController) Guard(guards ...Guard) *DynamicController {
+	for _, v := range guards {
+		mid := c.ParseGuard(v)
+		c.middlewares = append(c.middlewares, mid)
+	}
+	return c
+}
+
+type AppGuard func(module *DynamicModule, ctx Ctx) bool
+
+func (module *DynamicModule) ParseGuard(guard AppGuard) Middleware {
+	return func(ctx Ctx) error {
+		isAccess := guard(module, ctx)
+		if !isAccess {
+			common.ForbiddenException(ctx.Res(), "you can not access")
+			return errors.New("you can not access")
+		}
+		return ctx.Next()
+	}
+}
+
+func (module *DynamicModule) Guard(guards ...AppGuard) *DynamicModule {
+	for _, g := range guards {
+		guard := module.ParseGuard(g)
+		for _, router := range module.Routers {
+			router.Middlewares = append(router.Middlewares, guard)
+		}
+	}
+
+	return module
+}

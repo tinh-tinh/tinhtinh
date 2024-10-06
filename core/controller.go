@@ -37,18 +37,6 @@ func (module *DynamicModule) NewController(name string) *DynamicController {
 	}
 }
 
-// Use appends the given middleware functions to the module's list of
-// middleware handlers. The middleware handlers are run in the order they
-// are added to the module. The middleware handlers are run before the
-// controller's middleware handlers. The module's middleware handlers
-// are run after the module's parent middleware handlers. The module
-// middleware handlers are run before the module's controllers.
-func (module *DynamicModule) Use(middleware ...Middleware) *DynamicModule {
-	module.Middlewares = append(module.Middlewares, middleware...)
-
-	return module
-}
-
 // Tag sets the tag for the controller. The tag is used to generate the
 // route path for the controller. The tag is used in combination with the
 // module's prefix and the controller's name to generate the route path.
@@ -69,34 +57,6 @@ func (c *DynamicController) Tag(tag string) *DynamicController {
 // version is not set.
 func (c *DynamicController) Version(version string) *DynamicController {
 	c.version = version
-	return c
-}
-
-// Use appends the given middleware functions to the controller's list of
-// middleware handlers. The middleware handlers are run in the order they
-// are added to the controller. The middleware handlers are run before the
-// controller's handlers. The controller's middleware handlers are run
-// after the module's middleware handlers. The module middleware handlers
-// are run after the module's parent middleware handlers. The module
-// middleware handlers are run before the module's controllers. The
-// controller middleware handlers are run before the controller's
-// handlers.
-func (c *DynamicController) Use(middleware ...Middleware) *DynamicController {
-	c.middlewares = append(c.middlewares, middleware...)
-	return c
-}
-
-// Guard registers the given guard functions with the controller. The guard
-// functions are run in the order they are added to the controller. The guard
-// functions are run before the controller's middleware handlers. The guard
-// functions are run after the module's middleware handlers. The guard functions
-// are run before the controller's handlers. If any of the guard functions
-// return false, the request will be rejected with a 403 status code.
-func (c *DynamicController) Guard(guards ...Guard) *DynamicController {
-	for _, v := range guards {
-		mid := c.ParseGuard(v)
-		c.middlewares = append(c.middlewares, mid)
-	}
 	return c
 }
 
