@@ -1,6 +1,8 @@
 package core
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -8,17 +10,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_ParseGuardCtrl(t *testing.T) {
-	guard := func(ctrl *DynamicController, ctx Ctx) bool {
-		return ctx.Query("key") == "value"
-	}
+func Test_CtxContext(t *testing.T) {
+	const key CtxKey = "key"
 
-	authCtrl := func(module *DynamicModule) *DynamicController {
+	middleware := func(ctx Ctx) error {
+		ctx.Set(key, "value")
+		return ctx.Next()
+	}
+	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Guard(guard).Get("", func(ctx Ctx) {
+		ctrl.Use(middleware).Get("", func(ctx Ctx) {
 			ctx.JSON(Map{
-				"data": "1",
+				"data": ctx.Get(key),
 			})
 		})
 
@@ -27,7 +31,7 @@ func Test_ParseGuardCtrl(t *testing.T) {
 
 	module := func() *DynamicModule {
 		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{authCtrl},
+			Controllers: []Controller{controller},
 		})
 
 		return appModule
@@ -40,26 +44,32 @@ func Test_ParseGuardCtrl(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	resp, err := testClient.Get(testServer.URL + "/api/test?key=value")
+	resp, err := testClient.Get(testServer.URL + "/api/test")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	resp, err = testClient.Get(testServer.URL + "/api/test?key=abc")
+	data, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
-	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+
+	var res Response
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, "value", res.Data)
 }
 
-func Test_ParseGuardModule(t *testing.T) {
-	guard := func(module *DynamicModule, ctx Ctx) bool {
-		return ctx.Query("key") == "value"
-	}
+func Test_Middleware(t *testing.T) {
+	const key CtxKey = "key"
 
-	authCtrl := func(module *DynamicModule) *DynamicController {
+	middleware := func(ctx Ctx) error {
+		ctx.Set(key, "value")
+		return ctx.Next()
+	}
+	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx Ctx) {
 			ctx.JSON(Map{
-				"data": "1",
+				"data": ctx.Get(key),
 			})
 		})
 
@@ -68,10 +78,8 @@ func Test_ParseGuardModule(t *testing.T) {
 
 	module := func() *DynamicModule {
 		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{authCtrl},
-		})
-
-		appModule.Guard(guard)
+			Controllers: []Controller{controller},
+		}).Use(middleware)
 
 		return appModule
 	}
@@ -83,11 +91,15 @@ func Test_ParseGuardModule(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	resp, err := testClient.Get(testServer.URL + "/api/test?key=value")
+	resp, err := testClient.Get(testServer.URL + "/api/test")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	resp, err = testClient.Get(testServer.URL + "/api/test?key=abc")
+	data, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
-	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+
+	var res Response
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, "value", res.Data)
 }
