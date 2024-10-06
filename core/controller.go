@@ -12,6 +12,7 @@ type DynamicController struct {
 	name              string
 	tag               string
 	version           string
+	metadata          []*Metadata
 	Dtos              []Pipe
 	Security          []string
 	middlewares       []Middleware
