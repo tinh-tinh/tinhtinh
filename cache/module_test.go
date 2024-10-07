@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -24,4 +25,21 @@ func Test_Register(t *testing.T) {
 
 	cache.Set("alice", "doe", 0)
 	require.Nil(t, cache.Get("alice"))
+}
+
+func Benchmark_Register(b *testing.B) {
+	appModule := core.NewModule(core.NewModuleOptions{
+		Imports: []core.Module{Register(Options{
+			Ttl: 5 * time.Minute,
+			Max: 500,
+		})},
+	})
+
+	cache := appModule.Ref(CACHE_MANAGER).(Store)
+
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		cache.Set(fmt.Sprint(i), i*10)
+	}
+	fmt.Println(cache.Count())
 }
