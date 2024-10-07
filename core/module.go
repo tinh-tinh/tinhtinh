@@ -102,7 +102,6 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 		mod.init()
 		module.Routers = append(module.Routers, mod.Routers...)
 		module.appendProvider(mod.getExports()...)
-		// module.DataProviders = append(module.DataProviders, mod.getExports()...)
 	}
 
 	if module.Scope == Request {
