@@ -2,34 +2,9 @@ package config
 
 import (
 	"log"
-	"os"
-	"sync"
 
-	"github.com/joho/godotenv"
 	"github.com/tinh-tinh/tinhtinh/core"
 )
-
-type Module struct {
-	sync.Pool
-}
-
-func Register[E any](path string) (*E, error) {
-	if path == "" {
-		path = ".env"
-	}
-	err := godotenv.Load(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var env E
-	Scan(&env)
-	return &env, nil
-}
-
-func GetRaw(key string) string {
-	return os.Getenv(key)
-}
 
 const ENV core.Provide = "ConfigEnv"
 
@@ -38,7 +13,7 @@ func ForRoot[E any](path ...string) core.Module {
 		var lastValue *E
 		path = append([]string{".env"}, path...)
 		for _, v := range path {
-			env, err := Register[E](v)
+			env, err := New[E](v)
 			if err != nil {
 				continue
 			}

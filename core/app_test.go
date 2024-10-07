@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"runtime"
@@ -160,14 +159,8 @@ func Benchmark_App(b *testing.B) {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx Ctx) {
-			data := make(map[string]string)
-
-			for i := 0; i < b.N; i++ {
-				data[fmt.Sprintf("%d", i)] = fmt.Sprintf("%d", i)
-			}
-
 			ctx.JSON(Map{
-				"data": data,
+				"data": "data",
 			})
 
 			runtime.GC()
@@ -192,6 +185,7 @@ func Benchmark_App(b *testing.B) {
 
 	testClient := testServer.Client()
 
+	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		resp, err := testClient.Get(testServer.URL + "/api/test")
 		require.Nil(b, err)

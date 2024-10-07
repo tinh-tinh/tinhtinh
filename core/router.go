@@ -2,6 +2,7 @@ package core
 
 import (
 	"net/http"
+	"runtime"
 	"strings"
 	"time"
 
@@ -37,6 +38,11 @@ func (r *Router) getHandler(app *App) http.Handler {
 	return mergeHandler
 }
 
+func (app *App) free() {
+	app.Module.Routers = nil
+	runtime.GC()
+}
+
 func (app *App) registerRoutes() {
 	routes := make(map[string][]*Router)
 
@@ -64,9 +70,10 @@ func (app *App) registerRoutes() {
 
 	for k, v := range routes {
 		app.Mux.Handle(k, app.versionMiddleware(v))
+		delete(routes, k)
 	}
 
-	app.Module.Routers = nil
+	app.free()
 }
 
 type Route struct {
