@@ -17,7 +17,7 @@ func Test_Metadata(t *testing.T) {
 	}
 
 	controller := func(module *DynamicModule) *DynamicController {
-		ctrl := module.NewController("test").Guard(func(ctrl *DynamicController, ctx Ctx) bool {
+		ctrl := module.NewController("test").Guard(func(ctrl *DynamicController, ctx *Ctx) bool {
 			roles, ok := ctrl.GetMetadata(role_key).([]string)
 			if !ok {
 				return false
