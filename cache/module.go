@@ -3,8 +3,8 @@ package cache
 import (
 	"time"
 
+	"github.com/tinh-tinh/tinhtinh/common/memory"
 	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/internal/memory"
 )
 
 type Store interface {
