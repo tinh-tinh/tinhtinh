@@ -15,10 +15,11 @@ import (
 )
 
 type Ctx struct {
-	r       *http.Request
-	w       http.ResponseWriter
-	handler http.Handler
-	app     *App
+	r        *http.Request
+	w        http.ResponseWriter
+	handler  http.Handler
+	metadata []*Metadata
+	app      *App
 }
 
 // Req returns the original http.Request from the client.
@@ -334,9 +335,11 @@ func (ctx *Ctx) SetHandler(h http.Handler) {
 // returns without doing anything else.
 //
 // The returned http.HandlerFunc can be used as a handler for an HTTP request.
-func ParseCtx(app *App, ctxFnc func(ctx Ctx)) http.Handler {
+func ParseCtx(app *App, ctxFnc func(ctx Ctx), meta ...*Metadata) http.Handler {
 	ctx := app.pool.Get().(*Ctx)
 	defer app.pool.Put(ctx)
+
+	ctx.SetMetadata(meta...)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx.SetCtx(w, r)
 		ctxFnc(*ctx)

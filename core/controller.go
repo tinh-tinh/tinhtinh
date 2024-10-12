@@ -9,11 +9,14 @@ import (
 type Handler func(ctx Ctx)
 
 type DynamicController struct {
-	name              string
-	tag               string
-	version           string
-	metadata          []*Metadata
-	Dtos              []Pipe
+	name string
+	// DEPRECATED: Use metadata in swagger package
+	tag            string
+	version        string
+	globalMetadata []*Metadata
+	metadata       []*Metadata
+	Dtos           []Pipe
+	// DEPRECATED: Use metadata in swagger package
 	Security          []string
 	middlewares       []Middleware
 	globalMiddlewares []Middleware
@@ -28,7 +31,6 @@ type DynamicController struct {
 func (module *DynamicModule) NewController(name string) *DynamicController {
 	return &DynamicController{
 		name:              strings.ToLower(name),
-		tag:               name,
 		globalMiddlewares: module.Middlewares,
 		Dtos:              []Pipe{},
 		Security:          []string{},
@@ -37,12 +39,7 @@ func (module *DynamicModule) NewController(name string) *DynamicController {
 	}
 }
 
-// Tag sets the tag for the controller. The tag is used to generate the
-// route path for the controller. The tag is used in combination with the
-// module's prefix and the controller's name to generate the route path.
-// The tag is required for the controller to be registered with the
-// module. The tag is also used as the default value for the
-// controller's tag if the tag is not set.
+// DEPRECATED: Use metadata in swagger package
 func (c *DynamicController) Tag(tag string) *DynamicController {
 	c.tag = tag
 	return c
@@ -75,10 +72,7 @@ func (c *DynamicController) Pipe(dtos ...Pipe) *DynamicController {
 	return c
 }
 
-// AddSecurity adds the given security roles to the controller. The security
-// roles are checked in the order they are added to the controller. If any of
-// the security roles return false, the request will be rejected with a 403
-// status code.
+// DEPRECATED: Use metadata in swagger package
 func (c *DynamicController) AddSecurity(security ...string) *DynamicController {
 	c.Security = append(c.Security, security...)
 	return c
@@ -95,6 +89,8 @@ func (c *DynamicController) AddSecurity(security ...string) *DynamicController {
 func (c *DynamicController) Registry() *DynamicController {
 	c.globalMiddlewares = append(c.globalMiddlewares, c.middlewares...)
 	c.middlewares = []Middleware{}
+	c.globalMetadata = append(c.globalMetadata, c.metadata...)
+	c.metadata = []*Metadata{}
 
 	return c
 }
@@ -127,11 +123,10 @@ func (c *DynamicController) Delete(path string, handler Handler) {
 func (c *DynamicController) Handler(path string, handler http.Handler) {
 	router := &Router{
 		Name:        c.name,
-		Tag:         c.tag,
 		Path:        path,
 		Middlewares: append(c.globalMiddlewares, c.middlewares...),
+		Metadata:    append(c.globalMetadata, c.metadata...),
 		Dtos:        c.Dtos,
-		Security:    c.Security,
 		Version:     c.version,
 		httpHandler: handler,
 	}
@@ -143,12 +138,11 @@ func (c *DynamicController) registry(method string, path string, handler Handler
 	router := &Router{
 		Name:        c.name,
 		Method:      method,
-		Tag:         c.tag,
 		Path:        path,
 		Middlewares: append(c.globalMiddlewares, c.middlewares...),
+		Metadata:    append(c.globalMetadata, c.metadata...),
 		Handler:     handler,
 		Dtos:        c.Dtos,
-		Security:    c.Security,
 		Version:     c.version,
 	}
 	c.module.Routers = append(c.module.Routers, router)
@@ -159,6 +153,7 @@ func (c *DynamicController) free() {
 	c.middlewares = []Middleware{}
 	c.Dtos = nil
 	c.Security = nil
+	c.metadata = []*Metadata{}
 	runtime.GC()
 }
 

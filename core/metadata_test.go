@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -17,18 +18,26 @@ func Test_Metadata(t *testing.T) {
 	}
 
 	controller := func(module *DynamicModule) *DynamicController {
-		ctrl := module.NewController("test").Guard(func(ctrl *DynamicController, ctx *Ctx) bool {
-			roles, ok := ctrl.GetMetadata(role_key).([]string)
-			if !ok {
-				return false
-			}
-			isRole := slices.IndexFunc(roles, func(role string) bool {
-				return ctx.Query("role") == role
-			})
-			return isRole != -1
-		})
+		ctrl := module.NewController("test").Guard(
+			func(ctrl *DynamicController, ctx *Ctx) bool {
+				roles, ok := ctx.GetMetadata(role_key).([]string)
+				fmt.Println(roles)
+				if !ok || len(roles) == 0 {
+					return true
+				}
+				isRole := slices.IndexFunc(roles, func(role string) bool {
+					return ctx.Query("role") == role
+				})
+				return isRole != -1
+			}).Registry()
 
 		ctrl.Metadata(roleFnc("admin")).Get("", func(ctx Ctx) {
+			ctx.JSON(Map{
+				"data": "ok",
+			})
+		})
+
+		ctrl.Get("abc", func(ctx Ctx) {
 			ctx.JSON(Map{
 				"data": "ok",
 			})
@@ -57,6 +66,10 @@ func Test_Metadata(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 
 	resp, err = testClient.Get(testServer.URL + "/api/test?role=admin")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/abc")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
