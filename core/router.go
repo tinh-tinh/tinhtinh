@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"net/http"
 	"runtime"
 	"strings"
@@ -10,14 +11,16 @@ import (
 )
 
 type Router struct {
-	Name        string
-	Method      string
+	Name   string
+	Method string
+	// DEPRECATED: Use metadata in swagger package
 	Tag         string
 	Path        string
 	Metadata    []*Metadata
 	Handler     Handler
 	Middlewares []Middleware
 	Dtos        []Pipe
+	// DEPRECATED: Use metadata in swagger package
 	Security    []string
 	Version     string
 	httpHandler http.Handler
@@ -25,10 +28,11 @@ type Router struct {
 
 func (r *Router) getHandler(app *App) http.Handler {
 	var mergeHandler http.Handler
+	fmt.Printf("Metadata in router %v\n", r.Metadata)
 	if r.httpHandler != nil {
 		mergeHandler = r.httpHandler
 	} else {
-		mergeHandler = ParseCtx(app, r.Handler)
+		mergeHandler = ParseCtx(app, r.Handler, r.Metadata...)
 	}
 	for _, v := range r.Middlewares {
 		mid := ParseCtxMiddleware(app, v)

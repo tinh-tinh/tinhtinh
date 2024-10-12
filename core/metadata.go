@@ -14,17 +14,26 @@ func SetMetadata(key string, value interface{}) *Metadata {
 	}
 }
 
-func (controller *DynamicController) Metadata(meta *Metadata) *DynamicController {
-	controller.metadata = append(controller.metadata, meta)
+func (controller *DynamicController) Metadata(meta ...*Metadata) *DynamicController {
+	controller.metadata = append(controller.metadata, meta...)
 	return controller
 }
 
-func (controller *DynamicController) GetMetadata(key string) interface{} {
-	metaIdx := slices.IndexFunc(controller.metadata, func(meta *Metadata) bool {
+func (ctx *Ctx) GetMetadata(key string) interface{} {
+	metaIdx := slices.IndexFunc(ctx.metadata, func(meta *Metadata) bool {
 		return meta.Key == key
 	})
 	if metaIdx != -1 {
-		return controller.metadata[metaIdx].Value
+		return ctx.metadata[metaIdx].Value
 	}
 	return nil
+}
+
+func (ctx *Ctx) SetMetadata(meta ...*Metadata) *Ctx {
+	if len(meta) == 0 {
+		ctx.metadata = []*Metadata{}
+		return ctx
+	}
+	ctx.metadata = meta
+	return ctx
 }
