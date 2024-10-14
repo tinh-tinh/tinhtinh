@@ -18,8 +18,8 @@ func Test_ParseGuardCtrl(t *testing.T) {
 	authCtrl := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Guard(guard).Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Guard(guard).Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "1",
 			})
 		})
@@ -59,8 +59,8 @@ func Test_ParseGuardModule(t *testing.T) {
 	authCtrl := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "1",
 			})
 		})
@@ -105,8 +105,8 @@ func Test_Ctx_Guard(t *testing.T) {
 	authCtrl := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Guard(guard).Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Guard(guard).Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": ctx.Get(Key),
 			})
 		})

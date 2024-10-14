@@ -31,14 +31,14 @@ func Test_Metadata(t *testing.T) {
 				return isRole != -1
 			}).Registry()
 
-		ctrl.Metadata(roleFnc("admin")).Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Metadata(roleFnc("admin")).Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "ok",
 			})
 		})
 
-		ctrl.Get("abc", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Get("abc", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "ok",
 			})
 		})

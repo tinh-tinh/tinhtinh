@@ -43,9 +43,9 @@ func Test_RequestModule(t *testing.T) {
 	userController := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("user")
 
-		ctrl.Get("", func(ctx Ctx) {
+		ctrl.Get("", func(ctx Ctx) error {
 			data := ctrl.Inject(Provide("user"))
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data,
 			})
 		})
@@ -120,9 +120,9 @@ func Test_Controller(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("sub")
 
-		ctrl.Get("", func(ctx Ctx) {
+		ctrl.Get("", func(ctx Ctx) error {
 			data := ctrl.Inject(Provide("sub"))
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data,
 			})
 		})

@@ -18,8 +18,8 @@ func AppVersionModule() ModuleParam {
 	appController1 := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test").Version("1")
 
-		ctrl.Get("/", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Get("/", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "1",
 			})
 		})
@@ -29,8 +29,8 @@ func AppVersionModule() ModuleParam {
 	appController2 := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test").Version("2")
 
-		ctrl.Get("/", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Get("/", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "2",
 			})
 		})

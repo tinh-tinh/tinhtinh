@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-type Handler func(ctx Ctx)
+type Handler func(ctx Ctx) error
 
 type DynamicController struct {
 	name string

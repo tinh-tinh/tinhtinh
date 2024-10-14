@@ -20,8 +20,8 @@ func Test_CtxContext(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Use(middleware).Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Use(middleware).Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": ctx.Get(key),
 			})
 		})
@@ -67,8 +67,8 @@ func Test_Middleware(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": ctx.Get(key),
 			})
 		})

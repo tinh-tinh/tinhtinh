@@ -14,8 +14,8 @@ func Test_HelmetFullSetting(t *testing.T) {
 	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx core.Ctx) {
-			ctx.JSON(core.Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})
@@ -96,8 +96,8 @@ func Test_DefaultHelmet(t *testing.T) {
 	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx core.Ctx) {
-			ctx.JSON(core.Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})
@@ -136,8 +136,8 @@ func Test_HelmetSomeSetting(t *testing.T) {
 	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx core.Ctx) {
-			ctx.JSON(core.Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})

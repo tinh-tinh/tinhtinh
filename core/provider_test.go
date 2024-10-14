@@ -31,9 +31,9 @@ func ChildModule(module *DynamicModule) *DynamicModule {
 
 func AppController(module *DynamicModule) *DynamicController {
 	ctrl := module.NewController("test")
-	ctrl.Get("/", func(ctx Ctx) {
+	ctrl.Get("/", func(ctx Ctx) error {
 		name := ctrl.Inject("child")
-		ctx.JSON(Map{
+		return ctx.JSON(Map{
 			"data": name,
 		})
 	})

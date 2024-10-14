@@ -3,7 +3,6 @@ package core
 import (
 	"net/http"
 	"net/http/httptest"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,32 +14,32 @@ func Test_EnableCors(t *testing.T) {
 	appController := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "1",
 			})
 		})
 
-		ctrl.Post("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Post("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "2",
 			})
 		})
 
-		ctrl.Patch("{id}", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Patch("{id}", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "3",
 			})
 		})
 
-		ctrl.Put("{id}", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Put("{id}", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "4",
 			})
 		})
 
-		ctrl.Delete("{id}", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Delete("{id}", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "5",
 			})
 		})
@@ -74,32 +73,32 @@ func Test_Exception(t *testing.T) {
 	appController := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("bad-request", func(ctx Ctx) {
-			common.BadRequestException(ctx.Res(), "bad request")
+		ctrl.Get("bad-request", func(ctx Ctx) error {
+			return common.BadRequestException(ctx.Res(), "bad request")
 		})
 
-		ctrl.Get("unauthorized", func(ctx Ctx) {
-			common.UnauthorizedException(ctx.Res(), "unauthorized")
+		ctrl.Get("unauthorized", func(ctx Ctx) error {
+			return common.UnauthorizedException(ctx.Res(), "unauthorized")
 		})
 
-		ctrl.Get("forbidden", func(ctx Ctx) {
-			common.ForbiddenException(ctx.Res(), "forbidden")
+		ctrl.Get("forbidden", func(ctx Ctx) error {
+			return common.ForbiddenException(ctx.Res(), "forbidden")
 		})
 
-		ctrl.Get("not-found", func(ctx Ctx) {
-			common.NotFoundException(ctx.Res(), "not found")
+		ctrl.Get("not-found", func(ctx Ctx) error {
+			return common.NotFoundException(ctx.Res(), "not found")
 		})
 
-		ctrl.Get("method-not-allowed", func(ctx Ctx) {
-			common.NotAllowedException(ctx.Res(), "method not allowed")
+		ctrl.Get("method-not-allowed", func(ctx Ctx) error {
+			return common.NotAllowedException(ctx.Res(), "method not allowed")
 		})
 
-		ctrl.Get("conflict", func(ctx Ctx) {
-			common.ConflictException(ctx.Res(), "conflict")
+		ctrl.Get("conflict", func(ctx Ctx) error {
+			return common.ConflictException(ctx.Res(), "conflict")
 		})
 
-		ctrl.Get("internal-server-error", func(ctx Ctx) {
-			common.InternalServerException(ctx.Res(), "internal server error")
+		ctrl.Get("internal-server-error", func(ctx Ctx) error {
+			return common.InternalServerException(ctx.Res(), "internal server error")
 		})
 
 		return ctrl
@@ -158,12 +157,10 @@ func Benchmark_App(b *testing.B) {
 	appController := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "data",
 			})
-
-			runtime.GC()
 		})
 
 		return ctrl

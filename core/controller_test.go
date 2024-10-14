@@ -10,13 +10,13 @@ import (
 // func Test_Tag(t *testing.T) {
 // 	ctrl := func(module *DynamicModule) *DynamicController {
 // 		ctrl := module.NewController("test")
-// 		ctrl.Tag("test").Get("/t1", func(ctx Ctx) {
+// 		ctrl.Tag("test").Get("/t1", func(ctx Ctx) error {
 // 			ctx.JSON(Map{
 // 				"data": "ok",
 // 			})
 // 		})
 
-// 		ctrl.Tag("test2").Get("/t2", func(ctx Ctx) {
+// 		ctrl.Tag("test2").Get("/t2", func(ctx Ctx) error {
 // 			ctx.JSON(Map{
 // 				"data": "ok",
 // 			})
@@ -44,14 +44,14 @@ import (
 func Test_Version(t *testing.T) {
 	ctrl := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
-		ctrl.Version("1").Get("/t1", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Version("1").Get("/t1", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "ok",
 			})
 		})
 
-		ctrl.Version("2").Get("/t2", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Version("2").Get("/t2", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "ok",
 			})
 		})
@@ -78,14 +78,12 @@ func Test_Version(t *testing.T) {
 // func Test_AddSecurity(t *testing.T) {
 // 	ctrl := func(module *DynamicModule) *DynamicController {
 // 		ctrl := module.NewController("test")
-// 		ctrl.AddSecurity("auth").Get("/t1", func(ctx Ctx) {
-// 			ctx.JSON(Map{
+// 		ctrl.AddSecurity("auth").Get("/t1", func(ctx Ctx) error { // 			ctx.JSON(Map{
 // 				"data": "ok",
 // 			})
 // 		})
 
-// 		ctrl.Get("/t2", func(ctx Ctx) {
-// 			ctx.JSON(Map{
+// 		ctrl.Get("/t2", func(ctx Ctx) error { // 			ctx.JSON(Map{
 // 				"data": "ok",
 // 			})
 // 		})
@@ -120,8 +118,8 @@ func Test_free(t *testing.T) {
 
 	require.NotEmpty(t, controller.middlewares)
 
-	controller.Get("", func(ctx Ctx) {
-		ctx.JSON(Map{
+	controller.Get("", func(ctx Ctx) error {
+		return ctx.JSON(Map{
 			"data": "ok",
 		})
 	})
@@ -138,8 +136,8 @@ func Test_Registry(t *testing.T) {
 
 	controller := module.NewController("test").Use(middleware).Registry()
 
-	controller.Get("", func(ctx Ctx) {
-		ctx.JSON(Map{
+	controller.Get("", func(ctx Ctx) error {
+		return ctx.JSON(Map{
 			"data": 1,
 		})
 	})
