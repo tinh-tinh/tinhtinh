@@ -19,8 +19,8 @@ func Test_Ctx_Req(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": ctx.Req().Host,
 			})
 		})
@@ -60,9 +60,9 @@ func Test_Ctx_Res(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
+		ctrl.Get("", func(ctx Ctx) error {
 			ctx.Res().Header().Set("key", "value")
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": "ok",
 			})
 		})
@@ -96,8 +96,8 @@ func Test_Ctx_Headers(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": ctx.Headers("x-key"),
 			})
 		})
@@ -145,13 +145,13 @@ func Test_Ctx_BodyParser(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Post("", func(ctx Ctx) {
+		ctrl.Post("", func(ctx Ctx) error {
 			var bodyData BodyData
 			err := ctx.BodyParser(&bodyData)
 			if err != nil {
 				common.InternalServerException(ctx.Res(), err.Error())
 			}
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": bodyData.Name,
 			})
 		})
@@ -195,9 +195,9 @@ func Test_Ctx_Body(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Body(&BodyData{})).Post("", func(ctx Ctx) {
+		ctrl.Pipe(Body(&BodyData{})).Post("", func(ctx Ctx) error {
 			data := ctx.Body().(*BodyData)
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data.Name,
 			})
 		})
@@ -241,9 +241,9 @@ func Test_Ctx_Params(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Param(&ID{})).Get("/{id}", func(ctx Ctx) {
+		ctrl.Pipe(Param(&ID{})).Get("/{id}", func(ctx Ctx) error {
 			data := ctx.Params().(*ID)
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data.ID,
 			})
 		})
@@ -286,9 +286,9 @@ func Test_Ctx_Queries(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Query(&QueryData{})).Get("", func(ctx Ctx) {
+		ctrl.Pipe(Query(&QueryData{})).Get("", func(ctx Ctx) error {
 			data := ctx.Queries().(*QueryData)
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data.Name,
 			})
 		})
@@ -328,9 +328,9 @@ func Test_Ctx_Param(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("/{id}", func(ctx Ctx) {
+		ctrl.Get("/{id}", func(ctx Ctx) error {
 			data := ctx.Param("id")
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data,
 			})
 		})
@@ -370,9 +370,9 @@ func Test_Ctx_Query(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
+		ctrl.Get("", func(ctx Ctx) error {
 			data := ctx.Query("name")
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data,
 			})
 		})
@@ -412,9 +412,9 @@ func Test_Ctx_QueryInt(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
+		ctrl.Get("", func(ctx Ctx) error {
 			data := ctx.QueryInt("name")
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data,
 			})
 		})
@@ -458,9 +458,9 @@ func Test_Ctx_QueryBool(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
+		ctrl.Get("", func(ctx Ctx) error {
 			data := ctx.QueryBool("name")
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data,
 			})
 		})
@@ -504,8 +504,10 @@ func Test_Ctx_Status(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
-			ctx.Status(http.StatusNotFound)
+		ctrl.Get("", func(ctx Ctx) error {
+			return ctx.Status(http.StatusNotFound).JSON(Map{
+				"data": "ok",
+			})
 		})
 
 		return ctrl
@@ -539,13 +541,13 @@ func Test_QueryParser(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
+		ctrl.Get("", func(ctx Ctx) error {
 			var queryData QueryData
 			err := ctx.QueryParse(&queryData)
 			if err != nil {
 				common.InternalServerException(ctx.Res(), err.Error())
 			}
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": queryData,
 			})
 		})
@@ -588,13 +590,13 @@ func Test_ParamParser(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("{id}", func(ctx Ctx) {
+		ctrl.Get("{id}", func(ctx Ctx) error {
 			var queryData ParamData
 			err := ctx.ParamParse(&queryData)
 			if err != nil {
 				common.InternalServerException(ctx.Res(), err.Error())
 			}
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": queryData.ID,
 			})
 		})
@@ -635,18 +637,18 @@ func Test_Ctx_Session(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Post("", func(ctx Ctx) {
+		ctrl.Post("", func(ctx Ctx) error {
 			ctx.Session("key", "val")
 
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": "ok",
 			})
 		})
 
-		ctrl.Get("", func(ctx Ctx) {
+		ctrl.Get("", func(ctx Ctx) error {
 			data := ctx.Session("key")
 			fmt.Print(data)
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data,
 			})
 		})
@@ -703,18 +705,18 @@ func Test_Cookie(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Post("", func(ctx Ctx) {
+		ctrl.Post("", func(ctx Ctx) error {
 			ctx.SetCookie("key", "val", 3600)
 
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": "ok",
 			})
 		})
 
-		ctrl.Get("", func(ctx Ctx) {
+		ctrl.Get("", func(ctx Ctx) error {
 			data := ctx.Cookies("key").Value
 			fmt.Print(data)
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data,
 			})
 		})
@@ -762,25 +764,23 @@ func Test_SignedCookie(t *testing.T) {
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Post("", func(ctx Ctx) {
+		ctrl.Post("", func(ctx Ctx) error {
 			_, err := ctx.SignedCookie("key", "val")
 			if err != nil {
-				common.InternalServerException(ctx.Res(), err.Error())
-				return
+				return common.InternalServerException(ctx.Res(), err.Error())
 			}
 
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": "ok",
 			})
 		})
 
-		ctrl.Get("", func(ctx Ctx) {
+		ctrl.Get("", func(ctx Ctx) error {
 			data, err := ctx.SignedCookie("key")
 			if err != nil {
-				common.InternalServerException(ctx.Res(), err.Error())
-				return
+				return common.InternalServerException(ctx.Res(), err.Error())
 			}
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": data,
 			})
 		})

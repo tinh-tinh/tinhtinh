@@ -33,9 +33,9 @@ func Test_FileInterceptor(t *testing.T) {
 
 		ctrl.Use(FileInterceptor(storage.UploadFileOption{
 			Storage: store,
-		})).Post("happy", func(ctx Ctx) {
+		})).Post("happy", func(ctx Ctx) error {
 
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": ctx.UploadedFile().OriginalName,
 			})
 		})
@@ -136,11 +136,11 @@ func Test_FilesInterceptor(t *testing.T) {
 
 		ctrl.Use(FilesInterceptor(storage.UploadFileOption{
 			Storage: store,
-		})).Post("", func(ctx Ctx) {
+		})).Post("", func(ctx Ctx) error {
 			files := ctx.UploadedFiles()
 
 			fmt.Printf("file is %v", files)
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": len(files),
 			})
 		})
@@ -250,7 +250,7 @@ func Test_FieldFileInterceptor(t *testing.T) {
 				Name:     "file2",
 				MaxCount: 2,
 			}),
-		).Post("", func(ctx Ctx) {
+		).Post("", func(ctx Ctx) error {
 			files := ctx.UploadedFieldFile()
 
 			idx := 0
@@ -261,7 +261,7 @@ func Test_FieldFileInterceptor(t *testing.T) {
 				}
 			}
 
-			ctx.JSON(Map{
+			return ctx.JSON(Map{
 				"data": idx,
 			})
 		})

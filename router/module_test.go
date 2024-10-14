@@ -13,8 +13,8 @@ func Test_Module(t *testing.T) {
 	userController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("auth")
 
-		ctrl.Get("", func(ctx core.Ctx) {
-			ctx.JSON(core.Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})
@@ -33,8 +33,8 @@ func Test_Module(t *testing.T) {
 	postController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("documents")
 
-		ctrl.Get("", func(ctx core.Ctx) {
-			ctx.JSON(core.Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})

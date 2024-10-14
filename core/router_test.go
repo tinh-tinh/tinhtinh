@@ -35,32 +35,32 @@ func Test_registerRoutes(t *testing.T) {
 	appController := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "1",
 			})
 		})
 
-		ctrl.Post("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Post("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "2",
 			})
 		})
 
-		ctrl.Patch("{id}", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Patch("{id}", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "3",
 			})
 		})
 
-		ctrl.Put("{id}", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Put("{id}", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "4",
 			})
 		})
 
-		ctrl.Delete("{id}", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Delete("{id}", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "5",
 			})
 		})

@@ -19,8 +19,8 @@ func Test_PipeMiddleware(t *testing.T) {
 	appController := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Body(&SignUpDto{})).Post("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Pipe(Body(&SignUpDto{})).Post("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "2",
 			})
 		})
@@ -69,8 +69,8 @@ func Test_Query(t *testing.T) {
 	appController := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Query(&FilterDto{})).Get("", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Pipe(Query(&FilterDto{})).Get("", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "2",
 			})
 		})
@@ -117,8 +117,8 @@ func Test_Param(t *testing.T) {
 	appController := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Param(&ParamDto{})).Get("{id}", func(ctx Ctx) {
-			ctx.JSON(Map{
+		ctrl.Pipe(Param(&ParamDto{})).Get("{id}", func(ctx Ctx) error {
+			return ctx.JSON(Map{
 				"data": "2",
 			})
 		})

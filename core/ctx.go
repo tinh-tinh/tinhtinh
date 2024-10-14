@@ -254,17 +254,19 @@ type Map map[string]interface{}
 // The Content-Type of the response is set to "application/json".
 //
 // If there is an error while encoding the data, it panics.
-func (ctx *Ctx) JSON(data Map) {
+func (ctx *Ctx) JSON(data Map) error {
 	ctx.w.Header().Set("Content-Type", "application/json")
 	res, err := ctx.app.encoder(data)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	_, err = ctx.w.Write(res)
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
 
 // Get returns the value associated with the given key from the request context.
@@ -335,14 +337,17 @@ func (ctx *Ctx) SetHandler(h http.Handler) {
 // returns without doing anything else.
 //
 // The returned http.HandlerFunc can be used as a handler for an HTTP request.
-func ParseCtx(app *App, ctxFnc func(ctx Ctx), meta ...*Metadata) http.Handler {
+func ParseCtx(app *App, ctxFnc func(ctx Ctx) error, meta ...*Metadata) http.Handler {
 	ctx := app.pool.Get().(*Ctx)
 	defer app.pool.Put(ctx)
 
 	ctx.SetMetadata(meta...)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx.SetCtx(w, r)
-		ctxFnc(*ctx)
+		err := ctxFnc(*ctx)
+		if err != nil {
+			app.errorHandler(err, *ctx)
+		}
 	})
 }
 

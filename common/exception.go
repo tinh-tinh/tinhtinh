@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func Exception(w http.ResponseWriter, err error, statusCode int) {
+func Exception(w http.ResponseWriter, err error, statusCode int) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	errMsg := err.Error()
@@ -19,34 +19,35 @@ func Exception(w http.ResponseWriter, err error, statusCode int) {
 	}
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
 }
 
-func BadRequestException(w http.ResponseWriter, err string) {
-	Exception(w, errors.New(err), http.StatusBadRequest)
+func BadRequestException(w http.ResponseWriter, err string) error {
+	return Exception(w, errors.New(err), http.StatusBadRequest)
 }
 
-func UnauthorizedException(w http.ResponseWriter, err string) {
-	Exception(w, errors.New(err), http.StatusUnauthorized)
+func UnauthorizedException(w http.ResponseWriter, err string) error {
+	return Exception(w, errors.New(err), http.StatusUnauthorized)
 }
 
-func ForbiddenException(w http.ResponseWriter, err string) {
-	Exception(w, errors.New(err), http.StatusForbidden)
+func ForbiddenException(w http.ResponseWriter, err string) error {
+	return Exception(w, errors.New(err), http.StatusForbidden)
 }
 
-func NotFoundException(w http.ResponseWriter, err string) {
-	Exception(w, errors.New(err), http.StatusNotFound)
+func NotFoundException(w http.ResponseWriter, err string) error {
+	return Exception(w, errors.New(err), http.StatusNotFound)
 }
 
-func NotAllowedException(w http.ResponseWriter, err string) {
-	Exception(w, errors.New(err), http.StatusMethodNotAllowed)
+func NotAllowedException(w http.ResponseWriter, err string) error {
+	return Exception(w, errors.New(err), http.StatusMethodNotAllowed)
 }
 
-func ConflictException(w http.ResponseWriter, err string) {
-	Exception(w, errors.New(err), http.StatusConflict)
+func ConflictException(w http.ResponseWriter, err string) error {
+	return Exception(w, errors.New(err), http.StatusConflict)
 }
 
-func InternalServerException(w http.ResponseWriter, err string) {
-	Exception(w, errors.New(err), http.StatusInternalServerError)
+func InternalServerException(w http.ResponseWriter, err string) error {
+	return Exception(w, errors.New(err), http.StatusInternalServerError)
 }

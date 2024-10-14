@@ -43,29 +43,28 @@ type App struct {
 	// decoder is the decoder that the App uses to initialize itself.
 	decoder Decode
 	// session is the session that the App uses to initialize itself.
-	session *session.Config
+	session      *session.Config
+	errorHandler ErrorHandler
 }
 
 type ModuleParam func() *DynamicModule
 type AppOptions struct {
+	// Encoder is the encoder that the App uses to initialize itself.
 	Encoder Encode
+	// Decoder is the decoder that the App uses to initialize itself.
 	Decoder Decode
-	Session *session.Config
+	// Session is the session that the App uses to initialize itself.
+	Session      *session.Config
+	ErrorHandler ErrorHandler
 }
 
-// CreateFactory is a function that creates an App instance with a DynamicModule
-// and a specified prefix. The DynamicModule is created by calling the given
-// module function, and the prefix is set on the App instance. The App instance's
-// Mux is set to a new http.ServeMux, and the Module is initialized. The routes
-// on the Module are resolved and added to the Mux. The Mux is then set to
-// handle the root path with a handler that writes "API is running" to the
-// response writer. Finally, the App instance is returned.
 func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 	app := &App{
-		Module:  module(),
-		Mux:     http.NewServeMux(),
-		encoder: json.Marshal,
-		decoder: json.Unmarshal,
+		Module:       module(),
+		Mux:          http.NewServeMux(),
+		encoder:      json.Marshal,
+		decoder:      json.Unmarshal,
+		errorHandler: ErrorHandlerDefault,
 	}
 
 	app.pool = sync.Pool{
@@ -83,6 +82,9 @@ func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 		}
 		if opt[0].Session != nil {
 			app.session = opt[0].Session
+		}
+		if opt[0].ErrorHandler != nil {
+			app.errorHandler = opt[0].ErrorHandler
 		}
 	}
 
