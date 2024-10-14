@@ -73,6 +73,11 @@ func (v *Version) Get(r *http.Request) string {
 
 func (app *App) versionMiddleware(routers []*Router) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		existRoute := checkRouter(app, r)
+		if !existRoute {
+			ParseCtx(app, app.notFoundHandler)
+			return
+		}
 		var version string
 		if app.version != nil {
 			version = app.version.Get(r)

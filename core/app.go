@@ -43,8 +43,11 @@ type App struct {
 	// decoder is the decoder that the App uses to initialize itself.
 	decoder Decode
 	// session is the session that the App uses to initialize itself.
-	session      *session.Config
+	session *session.Config
+	// errorHandler is the error handler that the App uses to initialize itself.
 	errorHandler ErrorHandler
+	// notFoundHandler is the not found handler that the App uses to initialize itself.
+	notFoundHandler NotFoundHandler
 }
 
 type ModuleParam func() *DynamicModule
@@ -54,17 +57,21 @@ type AppOptions struct {
 	// Decoder is the decoder that the App uses to initialize itself.
 	Decoder Decode
 	// Session is the session that the App uses to initialize itself.
-	Session      *session.Config
+	Session *session.Config
+	// ErrorHandler is the error handler that the App uses to initialize itself.
 	ErrorHandler ErrorHandler
+	// NotFoundHandler is the not found handler that the App uses to initialize itself.
+	NotFoundHandler NotFoundHandler
 }
 
 func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 	app := &App{
-		Module:       module(),
-		Mux:          http.NewServeMux(),
-		encoder:      json.Marshal,
-		decoder:      json.Unmarshal,
-		errorHandler: ErrorHandlerDefault,
+		Module:          module(),
+		Mux:             http.NewServeMux(),
+		encoder:         json.Marshal,
+		decoder:         json.Unmarshal,
+		errorHandler:    ErrorHandlerDefault,
+		notFoundHandler: NotFoundHandlerDefault,
 	}
 
 	app.pool = sync.Pool{
@@ -85,6 +92,9 @@ func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 		}
 		if opt[0].ErrorHandler != nil {
 			app.errorHandler = opt[0].ErrorHandler
+		}
+		if opt[0].NotFoundHandler != nil {
+			app.notFoundHandler = opt[0].NotFoundHandler
 		}
 	}
 
