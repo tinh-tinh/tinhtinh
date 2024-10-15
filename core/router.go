@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"net/http"
 	"runtime"
 	"strings"
@@ -47,7 +46,6 @@ type Router struct {
 // the Router.
 func (r *Router) getHandler(app *App) http.Handler {
 	var mergeHandler http.Handler
-	fmt.Printf("Metadata in router %v\n", r.Metadata)
 	if r.httpHandler != nil {
 		mergeHandler = r.httpHandler
 	} else {
