@@ -149,7 +149,7 @@ func Test_Ctx_BodyParser(t *testing.T) {
 			var bodyData BodyData
 			err := ctx.BodyParser(&bodyData)
 			if err != nil {
-				common.InternalServerException(ctx.Res(), err.Error())
+				return common.InternalServerException(ctx.Res(), err.Error())
 			}
 			return ctx.JSON(Map{
 				"data": bodyData.Name,
@@ -545,7 +545,7 @@ func Test_QueryParser(t *testing.T) {
 			var queryData QueryData
 			err := ctx.QueryParse(&queryData)
 			if err != nil {
-				common.InternalServerException(ctx.Res(), err.Error())
+				return common.InternalServerException(ctx.Res(), err.Error())
 			}
 			return ctx.JSON(Map{
 				"data": queryData,
@@ -585,16 +585,17 @@ func Test_QueryParser(t *testing.T) {
 
 func Test_ParamParser(t *testing.T) {
 	type ParamData struct {
-		ID int `param:"id"`
+		ID     int  `param:"id"`
+		Export bool `param:"export"`
 	}
 	controller := func(module *DynamicModule) *DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("{id}", func(ctx Ctx) error {
+		ctrl.Get("{id}/{export}", func(ctx Ctx) error {
 			var queryData ParamData
 			err := ctx.ParamParse(&queryData)
 			if err != nil {
-				common.InternalServerException(ctx.Res(), err.Error())
+				return common.InternalServerException(ctx.Res(), err.Error())
 			}
 			return ctx.JSON(Map{
 				"data": queryData.ID,
@@ -619,7 +620,7 @@ func Test_ParamParser(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	resp, err := testClient.Get(testServer.URL + "/api/test/345")
+	resp, err := testClient.Get(testServer.URL + "/api/test/345/true")
 
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -806,7 +807,11 @@ func Test_SignedCookie(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	resp, err := testClient.Post(testServer.URL+"/api/test", "application/json", nil)
+	resp, err := testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Post(testServer.URL+"/api/test", "application/json", nil)
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 

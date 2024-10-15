@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/tinh-tinh/tinhtinh/common"
 	"github.com/tinh-tinh/tinhtinh/middleware/cookie"
 	"github.com/tinh-tinh/tinhtinh/middleware/storage"
 )
@@ -80,14 +79,11 @@ func (ctx *Ctx) SetCookie(key string, value string, maxAge int) {
 func (ctx *Ctx) SignedCookie(key string, val ...string) (string, error) {
 	s, ok := ctx.Get(cookie.SIGNED_COOKIE).(*cookie.SecureCookie)
 	if !ok {
-		common.InternalServerException(ctx.Res(), "failed to get signed cookie")
 		return "", errors.New("failed to get signed cookie")
 	}
 	if len(val) > 0 {
 		encoded, err := s.Encrypt(val[0])
 		if err != nil {
-			fmt.Println(err)
-			common.InternalServerException(ctx.Res(), "failed to encode signed cookie")
 			return "", errors.New("failed to encode signed cookie")
 		}
 		cookie := &http.Cookie{
@@ -103,12 +99,10 @@ func (ctx *Ctx) SignedCookie(key string, val ...string) (string, error) {
 
 	cookie, err := ctx.Req().Cookie(key)
 	if err != nil {
-		common.InternalServerException(ctx.Res(), "failed to get signed cookie")
 		return "", errors.New("failed to get signed cookie")
 	}
 	value, err := s.Decrypt(cookie.Value)
 	if err != nil {
-		common.InternalServerException(ctx.Res(), "failed to decode signed cookie")
 		return "", errors.New("failed to decode signed cookie")
 	}
 	return value, nil

@@ -10,6 +10,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_ParseCsv(t *testing.T) {
+	body := ParseCsv(nil, nil)
+	require.Empty(t, body)
+}
+
 func Test_Csv(t *testing.T) {
 	type User struct {
 		UserID   string
@@ -31,6 +36,10 @@ func Test_Csv(t *testing.T) {
 
 			fmt.Println(data)
 			return ctx.ExportCSV("users.csv", data)
+		})
+
+		ctrl.Post("", func(ctx Ctx) error {
+			return ctx.ExportCSV("data", nil)
 		})
 
 		return ctrl
@@ -59,4 +68,9 @@ func Test_Csv(t *testing.T) {
 	require.Nil(t, err)
 
 	require.Equal(t, "UserID,FullName,Email\n1,Jack Johnson,jack@hotmail.com\n2,Jill Smith,jill@hotmail.com\n3,James Murphy,james@hotmail.com\n", string(data))
+
+	resp, err = testClient.Post(testServer.URL+"/api/test", "application/json", nil)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
 }
