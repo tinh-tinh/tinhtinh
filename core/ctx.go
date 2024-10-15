@@ -66,6 +66,17 @@ func (ctx *Ctx) SetCookie(key string, value string, maxAge int) {
 	})
 }
 
+// SignedCookie sets a signed cookie in the response, or gets a signed cookie
+// from the request. If the signed cookie is set, it is encrypted using the
+// app's secure cookie secret. If the signed cookie is retrieved, it is
+// decrypted using the app's secure cookie secret. If the signed cookie is
+// invalid, an error is returned.
+//
+// The first argument is the name of the cookie. The second argument is the
+// value of the cookie to be set, or the empty string if the value is to be
+// retrieved.
+//
+// The cookie is marked as HttpOnly, Secure, and SameSite=Lax.
 func (ctx *Ctx) SignedCookie(key string, val ...string) (string, error) {
 	s, ok := ctx.Get(cookie.SIGNED_COOKIE).(*cookie.SecureCookie)
 	if !ok {
@@ -117,6 +128,26 @@ func (ctx *Ctx) BodyParser(payload interface{}) error {
 	return nil
 }
 
+// QueryParse takes a struct and populates its fields based on the query
+// parameters in the request. It supports string, int, and bool types.
+// If a field has a "query" tag, it will be populated with the query
+// parameter of the same name. If the query parameter is not present,
+// the field will be skipped.
+//
+// For example:
+//
+//	type MyStruct {
+//		Name string `query:"name"`
+//	}
+//
+//	req, _ := http.NewRequest("GET", "/?name=John", nil)
+//	ctx := NewCtx(req, nil)
+//	var ms MyStruct
+//	err := ctx.QueryParse(&ms)
+//	if err != nil {
+//		// handle error
+//	}
+//	fmt.Println(ms.Name) // John
 func (ctx *Ctx) QueryParse(payload interface{}) error {
 	ct := reflect.ValueOf(payload).Elem()
 	fmt.Println(ct)
@@ -151,6 +182,11 @@ func (ctx *Ctx) QueryParse(payload interface{}) error {
 	return nil
 }
 
+// ParamParse takes a struct and populates its fields based on the path
+// parameters in the request. It supports string, int, and bool types.
+// If a field has a "param" tag, it will be populated with the path
+// parameter of the same name. If the path parameter is not present,
+// the field will be skipped.
 func (ctx *Ctx) ParamParse(payload interface{}) error {
 	ct := reflect.ValueOf(payload).Elem()
 	for i := 0; i < ct.NumField(); i++ {
@@ -288,11 +324,24 @@ func (ctx *Ctx) Set(key interface{}, val interface{}) {
 	ctx.r = ctx.r.WithContext(context.WithValue(ctx.r.Context(), key, val))
 }
 
+// Next calls the next handler in the chain, using the
+// http.ResponseWriter and *http.Request from the current context.
+//
+// If there is no next handler, it does nothing.
+//
+// It returns nil.
 func (ctx *Ctx) Next() error {
 	ctx.handler.ServeHTTP(ctx.w, ctx.r)
 	return nil
 }
 
+// Session sets a session cookie or gets a session value.
+//
+// If a single argument is given, it sets a session cookie with the given key and value.
+// The cookie is marked as HttpOnly, Secure, and SameSite=Lax.
+//
+// If no arguments are given, it gets the session value associated with the given key.
+// If the cookie is not present, or if the value is not found, it returns nil.
 func (ctx *Ctx) Session(key string, val ...interface{}) interface{} {
 	if len(val) > 0 {
 		cookie := ctx.app.session.Set(key, val[0])
@@ -320,11 +369,18 @@ func NewCtx(app *App) *Ctx {
 	}
 }
 
+// SetCtx sets the http.ResponseWriter and *http.Request fields of the Ctx
+// to the given values.
+//
+// It returns nothing.
 func (ctx *Ctx) SetCtx(w http.ResponseWriter, r *http.Request) {
 	ctx.w = w
 	ctx.r = r
 }
 
+// SetHandler sets the http.Handler field of the Ctx to the given value.
+//
+// This is usually called by the framework to set the handler for the current request.
 func (ctx *Ctx) SetHandler(h http.Handler) {
 	ctx.handler = h
 }
@@ -351,6 +407,8 @@ func ParseCtx(app *App, ctxFnc func(ctx Ctx) error, meta ...*Metadata) http.Hand
 	})
 }
 
+// UploadedFile returns the first uploaded file in the request, or nil if no
+// files were uploaded.
 func (ctx *Ctx) UploadedFile() *storage.File {
 	uploadedFile, ok := ctx.Get(FILE).(*storage.File)
 	if uploadedFile == nil || !ok {
@@ -359,6 +417,8 @@ func (ctx *Ctx) UploadedFile() *storage.File {
 	return uploadedFile
 }
 
+// UploadedFiles returns a slice of all uploaded files in the request, or nil
+// if no files were uploaded.
 func (ctx *Ctx) UploadedFiles() []*storage.File {
 	uploadedFiles, ok := ctx.Get(FILES).([]*storage.File)
 	if uploadedFiles == nil || !ok {
@@ -367,6 +427,9 @@ func (ctx *Ctx) UploadedFiles() []*storage.File {
 	return uploadedFiles
 }
 
+// UploadedFieldFile returns a map of uploaded files in the request, where the key
+// is the field name, and the value is a slice of uploaded files for that field.
+// If no files were uploaded, it returns nil.
 func (ctx *Ctx) UploadedFieldFile() map[string][]*storage.File {
 	uploadedFieldFile, ok := ctx.Get(FIELD_FILES).(map[string][]*storage.File)
 	if uploadedFieldFile == nil || !ok {

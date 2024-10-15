@@ -6,6 +6,12 @@ import (
 	"net/http"
 )
 
+// Sse registers a new route with the given path and a Server-Sent Events broker.
+//
+// The broker is started and the route is registered with the controller's module.
+// The given function is called in a goroutine with the broker as an argument.
+// The function should write to the broker's message channel to send events to
+// the client.
 func (ctrl *DynamicController) Sse(path string, sseFnc SseFnc) {
 	b := &SseBroker{
 		make(map[chan string]bool),
@@ -42,6 +48,20 @@ type SseBroker struct {
 
 type SseFnc func(broker *SseBroker)
 
+// Start starts the Server-Sent Events broker.
+//
+// The broker will start a goroutine and will loop endlessly.
+// It will block until it receives from one of the three channels:
+// NewClients, DefunctClients, or Messages.
+//
+// If it receives from NewClients, it will add the new client to the set of
+// attached clients and start sending them messages.
+//
+// If it receives from DefunctClients, it will remove the client from the set of
+// attached clients and close the client's channel.
+//
+// If it receives from Messages, it will broadcast the message to all attached
+// clients.
 func (b *SseBroker) Start() {
 	// Start a goroutine
 	//
@@ -85,6 +105,16 @@ func (b *SseBroker) Start() {
 	}()
 }
 
+// ServeHTTP implements the http.Handler interface.
+//
+// It is an event-streaming endpoint which pushes messages to the client as they
+// are received. The client should set the `Accept` header to `text/event-stream`
+// and the `Cache-Control` header to `no-cache` to ensure that the browser does
+// not cache the response.
+//
+// The endpoint will loop endlessly, sending messages to the client as they are
+// received. The client should close the connection when it is finished listening
+// to events.
 func (b *SseBroker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Make sure that the writer supports flushing.

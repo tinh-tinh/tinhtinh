@@ -6,6 +6,9 @@ type Middleware func(ctx Ctx) error
 
 type middlewareRaw func(http.Handler) http.Handler
 
+// ParseCtxMiddleware wraps a Middleware function and returns a middlewareRaw
+// that can be used by http server. It provides a Ctx instance to the wrapped
+// middleware function and automatically sets the handler of the Ctx instance.
 func ParseCtxMiddleware(app *App, ctxMid Middleware) middlewareRaw {
 	ctx := app.pool.Get().(*Ctx)
 	defer app.pool.Put(ctx)
@@ -35,6 +38,14 @@ func (c *DynamicController) Use(middleware ...Middleware) *DynamicController {
 	return c
 }
 
+// Use appends the given middleware functions to the module's list of
+// middleware handlers. The middleware handlers are run in the order they are
+// added to the module. The middleware handlers are run before the module's
+// controllers. The module middleware handlers are run after the module's
+// parent middleware handlers. The module middleware handlers are run before
+// the module's controllers. The module middleware handlers are run before the
+// module's routers. The module middleware handlers are run before the module's
+// handlers.
 func (module *DynamicModule) Use(middlewares ...Middleware) *DynamicModule {
 	module.Middlewares = append(module.Middlewares, middlewares...)
 	for _, middleware := range middlewares {
