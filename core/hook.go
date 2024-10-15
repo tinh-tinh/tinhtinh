@@ -9,11 +9,17 @@ const (
 	AFTER_SHUTDOWN  RunAt = "AfterShutdown"
 )
 
+// Hook is a struct that contains the hook function and the run-at value.
 type Hook struct {
-	fnc   HookFnc
+	// fnc is the hook function.
+	fnc HookFnc
+	// RunAt is the run-at value.
+	// It can be BEFORE_SHUTDOWN or AFTER_SHUTDOWN.
 	RunAt RunAt
 }
 
+// HookModule is a function that registers the given hooks to be run when the module is initialized.
+// The hooks are run in the order they are added to the module.
 type HookModule func(module *DynamicModule)
 
 // OnInit registers the given hooks to be run when the module is initialized.

@@ -43,7 +43,8 @@ type App struct {
 	// decoder is the decoder that the App uses to initialize itself.
 	decoder Decode
 	// session is the session that the App uses to initialize itself.
-	session      *session.Config
+	session *session.Config
+	// errorHandler is the error handler that the App uses to initialize itself.
 	errorHandler ErrorHandler
 }
 
@@ -54,10 +55,25 @@ type AppOptions struct {
 	// Decoder is the decoder that the App uses to initialize itself.
 	Decoder Decode
 	// Session is the session that the App uses to initialize itself.
-	Session      *session.Config
+	Session *session.Config
+	// ErrorHandler is the error handler that the App uses to initialize itself.
 	ErrorHandler ErrorHandler
 }
 
+// CreateFactory creates a new App with the given module and options.
+//
+// The module is the module that the App uses to initialize itself.
+// The options are the options that the App uses to initialize itself.
+// The options can be used to override the default encoder, decoder, session, and
+// error handler.
+//
+// The App is created with a default encoder and decoder of json.Marshal and
+// json.Unmarshal respectively.
+// The App is created with a default session of nil.
+// The App is created with a default error handler of ErrorHandlerDefault.
+//
+// The App is initialized by calling the init method of the module.
+// The App is then returned.
 func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 	app := &App{
 		Module:       module(),

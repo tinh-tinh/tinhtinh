@@ -9,18 +9,26 @@ import (
 type Handler func(ctx Ctx) error
 
 type DynamicController struct {
+	// name of the controller. This is prefix when registry routes in controller
 	name string
 	// DEPRECATED: Use metadata in swagger package
-	tag            string
-	version        string
+	tag string
+	// Mark version
+	version string
+	// Use for apply metadata for all routes in controller
 	globalMetadata []*Metadata
-	metadata       []*Metadata
-	Dtos           []Pipe
+	// Use for apply metadata for each route
+	metadata []*Metadata
+	// Data validator of each routes
+	Dtos []Pipe
 	// DEPRECATED: Use metadata in swagger package
-	Security          []string
-	middlewares       []Middleware
+	Security []string
+	// Use for apply middlewares for each route
+	middlewares []Middleware
+	// Use for apply middlewares for all routes
 	globalMiddlewares []Middleware
-	module            *DynamicModule
+	// Parent module for this controller
+	module *DynamicModule
 }
 
 // NewController creates a new controller with the given name.
@@ -120,6 +128,16 @@ func (c *DynamicController) Delete(path string, handler Handler) {
 	c.registry("DELETE", path, handler)
 }
 
+// Handler registers a new route with the given path and handler.
+//
+// The route's middlewares are the combination of the controller's global
+// middlewares and the controller's current middlewares. The route's metadata
+// are the combination of the controller's global metadata and the
+// controller's current metadata. The route's dtos are the controller's dtos.
+// The route's version is the controller's version.
+//
+// The route is registered with the controller's module and the controller's
+// middlewares and metadata are cleared.
 func (c *DynamicController) Handler(path string, handler http.Handler) {
 	router := &Router{
 		Name:        c.name,
@@ -134,6 +152,16 @@ func (c *DynamicController) Handler(path string, handler http.Handler) {
 	c.free()
 }
 
+// registry registers a new route with the given method, path and handler.
+//
+// The route's middlewares are the combination of the controller's global
+// middlewares and the controller's current middlewares. The route's metadata
+// are the combination of the controller's global metadata and the
+// controller's current metadata. The route's dtos are the controller's dtos.
+// The route's version is the controller's version.
+//
+// The route is registered with the controller's module and the controller's
+// middlewares and metadata are cleared.
 func (c *DynamicController) registry(method string, path string, handler Handler) {
 	router := &Router{
 		Name:        c.name,
@@ -149,6 +177,13 @@ func (c *DynamicController) registry(method string, path string, handler Handler
 	c.free()
 }
 
+// free clears the controller's middlewares, dtos, security and metadata.
+// It is called after a route is registered with the controller's module.
+// It is useful when the controller is used as a sub-controller in another
+// controller. The global middlewares of the sub-controller are appended to
+// the middleware handlers of the parent controller, and the global middlewares
+// of the sub-controller are cleared. This ensures that the middleware handlers
+// of the sub-controller are not executed twice.
 func (c *DynamicController) free() {
 	c.middlewares = []Middleware{}
 	c.Dtos = nil
@@ -157,6 +192,8 @@ func (c *DynamicController) free() {
 	runtime.GC()
 }
 
+// Inject returns the value of the provider with the given name.
+// If the provider is not found, Inject returns nil.
 func (c *DynamicController) Inject(name Provide) interface{} {
 	return c.module.Ref(name)
 }

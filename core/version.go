@@ -31,6 +31,19 @@ type Version struct {
 	Extractor func(*http.Request) string
 }
 
+// EnableVersioning enables versioning on the API server. The passed in options are used
+// to configure the versioning middleware.
+//
+// The versioning middleware will extract the version from the request based on the
+// Type field of the options. The version will then be used to select the correct
+// router for the request.
+//
+// The following types are supported:
+//
+// - "uri": The version is extracted from the URI path.
+// - "header": The version is extracted from the specified header.
+// - "mediaType": The version is extracted from the specified media type.
+// - "custom": The version is extracted using the specified extractor function.
 func (app *App) EnableVersioning(opt VersionOptions) *App {
 	app.version = &Version{
 		Type: opt.Type,
@@ -48,6 +61,19 @@ func (app *App) EnableVersioning(opt VersionOptions) *App {
 	return app
 }
 
+// Get returns the version of the request. The version is extracted based on the
+// Type field of the Version object.
+//
+// The following methods are supported:
+//
+//   - HeaderVersion: The version is extracted from the header specified in the
+//     Header field.
+//   - MediaTypeVersion: The version is extracted from the media type specified in
+//     the Key field.
+//   - CustomVersion: The version is extracted using the extractor function specified
+//     in the Extractor field.
+//
+// If the type is not supported, an empty string is returned.
 func (v *Version) Get(r *http.Request) string {
 	switch v.Type {
 	case HeaderVersion:
@@ -71,6 +97,13 @@ func (v *Version) Get(r *http.Request) string {
 	}
 }
 
+// versionMiddleware returns a middleware that dispatches the request to the correct
+// router based on the version of the request. The version is determined by the
+// Version object of the App.
+//
+// If the version of the request is empty or there is only one router, the request
+// is dispatched to the first router. Otherwise, the router with the matching
+// version is selected. If no router matches the version, a 500 error is returned.
 func (app *App) versionMiddleware(routers []*Router) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var version string

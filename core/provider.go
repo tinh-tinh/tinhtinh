@@ -14,19 +14,31 @@ const (
 type Factory func(param ...interface{}) interface{}
 
 type DynamicProvider struct {
-	Scope   Scope
-	Status  ProvideStatus
-	Name    Provide
-	Value   interface{}
+	// Scope of the provider. Default is Global.
+	Scope Scope
+	// Status of the provider. Default is PRIVATE.
+	Status ProvideStatus
+	// Name of the provider.
+	Name Provide
+	// Value of the provider.
+	Value interface{}
+	// Factory function for retrieving the value of the other providers in the module.
 	factory Factory
-	inject  []Provide
+	// Providers that are injected with the provider.
+	inject []Provide
 }
 
 type ProviderOptions struct {
-	Name    Provide
-	Value   interface{}
+	// Name of the provider.
+	Name Provide
+	// Value of the provider.
+	Value interface{}
+	// Factory function for retrieving the value of the other providers in the module.
+	// If the factory function is nil, the value of the provider will be set to the
+	// given value.
 	Factory Factory
-	Inject  []Provide
+	// Providers that are injected with the provider.
+	Inject []Provide
 }
 
 // NewProvider creates a new provider with the given options.
@@ -93,6 +105,9 @@ func (module *DynamicModule) getRequest() []*DynamicProvider {
 	return reqs
 }
 
+// appendProvider appends the given providers to the module's list of providers.
+// If the provider already exists with the same name, it will override the existing
+// provider.
 func (module *DynamicModule) appendProvider(providers ...*DynamicProvider) {
 	for _, provider := range providers {
 		idx := module.findIdx(provider.Name)
