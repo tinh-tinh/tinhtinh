@@ -37,27 +37,23 @@ func PipeMiddleware(pipes ...Pipe) Middleware {
 			case InBody:
 				err := ctx.BodyParser(dto)
 				if err != nil {
-					common.BadRequestException(ctx.Res(), err.Error())
-					return err
+					return common.BadRequestException(ctx.Res(), err.Error())
 				}
 			case InQuery:
 				err := ctx.QueryParse(dto)
 				if err != nil {
-					common.BadRequestException(ctx.Res(), err.Error())
-					return err
+					return common.BadRequestException(ctx.Res(), err.Error())
 				}
 			case InPath:
 				err := ctx.ParamParse(dto)
 				if err != nil {
-					common.BadRequestException(ctx.Res(), err.Error())
-					return err
+					return common.BadRequestException(ctx.Res(), err.Error())
 				}
 			}
 
 			err := validator.Scanner(dto)
 			if err != nil {
-				common.BadRequestException(ctx.Res(), err.Error())
-				return err
+				return common.BadRequestException(ctx.Res(), err.Error())
 			}
 			ctx.Set(pipe.In, dto)
 		}
