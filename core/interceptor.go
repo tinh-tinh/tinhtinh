@@ -1,8 +1,6 @@
 package core
 
 import (
-	"errors"
-
 	"github.com/tinh-tinh/tinhtinh/common"
 	"github.com/tinh-tinh/tinhtinh/middleware/storage"
 )
@@ -75,12 +73,10 @@ func FileFieldsInterceptor(opt storage.UploadFileOption, fieldFiles ...storage.F
 	return func(ctx Ctx) error {
 		files, err := storage.HandlerFile(ctx.Req(), opt, fieldFiles...)
 		if err != nil {
-			common.BadRequestException(ctx.Res(), err.Error())
-			return err
+			return common.BadRequestException(ctx.Res(), err.Error())
 		}
 		if len(files) == 0 {
-			common.BadRequestException(ctx.Res(), "no file upload")
-			return errors.New("no file uploaded")
+			return common.BadRequestException(ctx.Res(), "no file upload")
 		}
 		mapFiles := make(map[string][]*storage.File)
 		for _, file := range files {
