@@ -291,7 +291,6 @@ func (ctx *Ctx) SetCallHandler(call CallHandler) {
 // If there is an error while encoding the data, it panics.
 func (ctx *Ctx) JSON(data Map) error {
 	ctx.w.Header().Set("Content-Type", "application/json")
-	fmt.Println(ctx.callHandler)
 	if ctx.callHandler != nil {
 		data = ctx.callHandler(data)
 	}

@@ -71,9 +71,8 @@ func Test_ParseGuardModule(t *testing.T) {
 	module := func() *DynamicModule {
 		appModule := NewModule(NewModuleOptions{
 			Controllers: []Controller{authCtrl},
+			Guards:      []AppGuard{guard},
 		})
-
-		appModule.Guard(guard)
 
 		return appModule
 	}
