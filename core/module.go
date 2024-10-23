@@ -25,6 +25,7 @@ type DynamicModule struct {
 	Middlewares   []Middleware
 	DataProviders []*DynamicProvider
 	hooks         []HookModule
+	interceptor   Interceptor
 }
 
 type Module func(module *DynamicModule) *DynamicModule
@@ -37,6 +38,9 @@ type NewModuleOptions struct {
 	Controllers []Controller
 	Providers   []Provider
 	Exports     []Provider
+	Guards      []AppGuard
+	Middlewares []Middleware
+	Interceptor Interceptor
 }
 
 // NewModule creates a new module with the given options.
@@ -84,6 +88,19 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 // the providers that are injected with the request to nil.
 func initModule(module *DynamicModule, opt NewModuleOptions) {
 	module.Scope = opt.Scope
+
+	// Parse middleware
+	module.Middlewares = append(module.Middlewares, opt.Middlewares...)
+
+	// Parse guards
+	for _, g := range opt.Guards {
+		mid := module.ParseGuard(g)
+		module.Middlewares = append(module.Middlewares, mid)
+	}
+
+	// Parse interceptor
+	module.interceptor = opt.Interceptor
+
 	// Providers
 	for _, p := range opt.Providers {
 		p(module)

@@ -37,6 +37,7 @@ func (module *DynamicModule) NewController(name string) *DynamicController {
 	return &DynamicController{
 		name:              strings.ToLower(name),
 		globalMiddlewares: module.Middlewares,
+		interceptor:       module.interceptor,
 		Dtos:              []Pipe{},
 		module:            module,
 		version:           "",
