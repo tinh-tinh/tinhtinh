@@ -14,8 +14,6 @@ type Router struct {
 	Name string
 	// Method of route
 	Method string
-	// DEPRECATED: Use metadata in swagger package
-	Tag string
 	// Path detail of route
 	Path string
 	// Metadata of route
@@ -26,12 +24,12 @@ type Router struct {
 	Middlewares []Middleware
 	// Pipes of route
 	Dtos []Pipe
-	// DEPRECATED: Use metadata in swagger package
-	Security []string
 	// Version of route
 	Version string
 	// Raw http handler
 	httpHandler http.Handler
+	// Interceptor
+	interceptor Interceptor
 }
 
 // getHandler returns a new http.Handler that combines the raw httpHandler
@@ -49,7 +47,7 @@ func (r *Router) getHandler(app *App) http.Handler {
 	if r.httpHandler != nil {
 		mergeHandler = r.httpHandler
 	} else {
-		mergeHandler = ParseCtx(app, r.Handler, r.Metadata...)
+		mergeHandler = ParseCtx(app, r)
 	}
 	for _, v := range r.Middlewares {
 		mid := ParseCtxMiddleware(app, v)
