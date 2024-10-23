@@ -14,11 +14,12 @@ import (
 )
 
 type Ctx struct {
-	r        *http.Request
-	w        http.ResponseWriter
-	handler  http.Handler
-	metadata []*Metadata
-	app      *App
+	r           *http.Request
+	w           http.ResponseWriter
+	handler     http.Handler
+	metadata    []*Metadata
+	callHandler CallHandler
+	app         *App
 }
 
 // Req returns the original http.Request from the client.
@@ -279,6 +280,10 @@ func (ctx *Ctx) Status(statusCode int) *Ctx {
 
 type Map map[string]interface{}
 
+func (ctx *Ctx) SetCallHandler(call CallHandler) {
+	ctx.callHandler = call
+}
+
 // JSON sends the given data as a JSON response.
 //
 // The Content-Type of the response is set to "application/json".
@@ -286,6 +291,10 @@ type Map map[string]interface{}
 // If there is an error while encoding the data, it panics.
 func (ctx *Ctx) JSON(data Map) error {
 	ctx.w.Header().Set("Content-Type", "application/json")
+	fmt.Println(ctx.callHandler)
+	if ctx.callHandler != nil {
+		data = ctx.callHandler(data)
+	}
 	res, err := ctx.app.encoder(data)
 	if err != nil {
 		return err
@@ -387,14 +396,17 @@ func (ctx *Ctx) SetHandler(h http.Handler) {
 // returns without doing anything else.
 //
 // The returned http.HandlerFunc can be used as a handler for an HTTP request.
-func ParseCtx(app *App, ctxFnc func(ctx Ctx) error, meta ...*Metadata) http.Handler {
+func ParseCtx(app *App, router *Router) http.Handler {
 	ctx := app.pool.Get().(*Ctx)
 	defer app.pool.Put(ctx)
 
-	ctx.SetMetadata(meta...)
+	ctx.SetMetadata(router.Metadata...)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx.SetCtx(w, r)
-		err := ctxFnc(*ctx)
+		if router.interceptor != nil {
+			ctx.SetCallHandler(router.interceptor(ctx))
+		}
+		err := router.Handler(*ctx)
 		if err != nil {
 			app.errorHandler(err, *ctx)
 		}

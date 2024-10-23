@@ -11,8 +11,6 @@ type Handler func(ctx Ctx) error
 type DynamicController struct {
 	// name of the controller. This is prefix when registry routes in controller
 	name string
-	// DEPRECATED: Use metadata in swagger package
-	tag string
 	// Mark version
 	version string
 	// Use for apply metadata for all routes in controller
@@ -21,14 +19,13 @@ type DynamicController struct {
 	metadata []*Metadata
 	// Data validator of each routes
 	Dtos []Pipe
-	// DEPRECATED: Use metadata in swagger package
-	Security []string
 	// Use for apply middlewares for each route
 	middlewares []Middleware
 	// Use for apply middlewares for all routes
 	globalMiddlewares []Middleware
 	// Parent module for this controller
-	module *DynamicModule
+	module      *DynamicModule
+	interceptor Interceptor
 }
 
 // NewController creates a new controller with the given name.
@@ -41,16 +38,9 @@ func (module *DynamicModule) NewController(name string) *DynamicController {
 		name:              strings.ToLower(name),
 		globalMiddlewares: module.Middlewares,
 		Dtos:              []Pipe{},
-		Security:          []string{},
 		module:            module,
 		version:           "",
 	}
-}
-
-// DEPRECATED: Use metadata in swagger package
-func (c *DynamicController) Tag(tag string) *DynamicController {
-	c.tag = tag
-	return c
 }
 
 // Version sets the version for the controller. The version is used to
@@ -77,12 +67,6 @@ func (c *DynamicController) Pipe(dtos ...Pipe) *DynamicController {
 	c.Dtos = append(c.Dtos, dtos...)
 	middleware := PipeMiddleware(dtos...)
 	c.middlewares = append(c.middlewares, middleware)
-	return c
-}
-
-// DEPRECATED: Use metadata in swagger package
-func (c *DynamicController) AddSecurity(security ...string) *DynamicController {
-	c.Security = append(c.Security, security...)
 	return c
 }
 
@@ -146,6 +130,7 @@ func (c *DynamicController) Handler(path string, handler http.Handler) {
 		Metadata:    append(c.globalMetadata, c.metadata...),
 		Dtos:        c.Dtos,
 		Version:     c.version,
+		interceptor: c.interceptor,
 		httpHandler: handler,
 	}
 	c.module.Routers = append(c.module.Routers, router)
@@ -172,6 +157,7 @@ func (c *DynamicController) registry(method string, path string, handler Handler
 		Handler:     handler,
 		Dtos:        c.Dtos,
 		Version:     c.version,
+		interceptor: c.interceptor,
 	}
 	c.module.Routers = append(c.module.Routers, router)
 	c.free()
@@ -187,7 +173,7 @@ func (c *DynamicController) registry(method string, path string, handler Handler
 func (c *DynamicController) free() {
 	c.middlewares = []Middleware{}
 	c.Dtos = nil
-	c.Security = nil
+	c.interceptor = nil
 	c.metadata = []*Metadata{}
 	runtime.GC()
 }

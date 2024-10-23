@@ -1,10 +1,6 @@
 package core
 
-import (
-	"net/http"
-)
-
-type Interceptor func(ctx Ctx) http.Handler
+// type Interceptor func(ctx Ctx) http.Handler
 
 type Encode func(v interface{}) ([]byte, error)
 
