@@ -2,7 +2,6 @@ package transform
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 )
@@ -53,8 +52,7 @@ func ToFloat(str interface{}) interface{} {
 		val, _ := strconv.ParseFloat(str.(string), 64)
 		return val
 	default:
-		log.Fatalf("cannot transform with type %v", v)
-		return 0
+		panic(fmt.Sprintf("cannot transform with type %v", v))
 	}
 }
 

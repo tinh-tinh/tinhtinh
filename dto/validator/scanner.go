@@ -2,7 +2,7 @@ package validator
 
 import (
 	"errors"
-	"log"
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -12,9 +12,11 @@ import (
 
 func Scanner(val interface{}) error {
 	var errMsg []string
+	if val == nil {
+		panic(fmt.Sprintf("%v should be not nil", val))
+	}
 	if reflect.TypeOf(val).Kind() == reflect.Struct {
-		log.Fatalf("%v should be a value not struct", val)
-		return nil
+		panic(fmt.Sprintf("%v should be a value not struct", val))
 	}
 
 	ct := reflect.ValueOf(val).Elem()
@@ -85,13 +87,13 @@ func Scanner(val interface{}) error {
 					}
 				}
 			case "isDateString":
-				if !IsDateString(value.(string)) {
+				if !IsDateString(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid date time")
 				} else {
 					ct.Field(i).Set(reflect.ValueOf(transform.StringToDate(value.(string))))
 				}
 			case "isBool":
-				if !IsBool(value.(string)) {
+				if !IsBool(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid bool")
 				} else {
 					ct.Field(i).Set(reflect.ValueOf(transform.ToBool(value)))

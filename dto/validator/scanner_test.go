@@ -3,14 +3,26 @@ package validator
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
 type UserDetail struct {
-	Name     string `validate:"required,isAlpha"`
-	Email    string `validate:"required,isEmail"`
-	Password string `validate:"isStrongPassword"`
+	ID       string    `validate:"isObjectId"`
+	Name     string    `validate:"required,isAlpha"`
+	Username string    `validate:"isAlphaNumeric"`
+	Email    string    `validate:"required,isEmail"`
+	Password string    `validate:"isStrongPassword"`
+	UserID   string    `validate:"isUUID"`
+	Point    string    `validate:"isFloat"`
+	Height   float64   `validate:"isFloat"`
+	Age      int       `validate:"isInt"`
+	Active   bool      `validate:"isBool"`
+	IsAdmin  string    `validate:"isBool"`
+	Birth    string    `validate:"isDateString"`
+	Total    int       `validate:"isNumber"`
+	Join     time.Time `validate:"isDate"`
 }
 
 type User struct {
@@ -72,6 +84,29 @@ func Test_Scanner(t *testing.T) {
 	err4 := Scanner(post)
 	require.NotNil(t, err4)
 	require.Equal(t, "Title is required", err4.Error())
+
+	userDetails3 := &UserDetail{
+		Name:     "haha",
+		Email:    "babaddok@gmail.com",
+		Password: "12345678@Tc",
+		UserID:   "1234",
+		Point:    "true",
+		ID:       "1234",
+		Username: "##$$",
+		Age:      1,
+		Active:   true,
+		Birth:    "true",
+		Height:   1.5,
+		Total:    1,
+		IsAdmin:  "abc",
+		Join:     time.Now(),
+	}
+	user3 := &User{
+		ID:     3,
+		Detail: userDetails3,
+	}
+	err5 := Scanner(user3)
+	require.NotNil(t, err5)
 }
 
 func Benchmark_Scanner(b *testing.B) {
@@ -97,4 +132,11 @@ func Benchmark_Scanner(b *testing.B) {
 			Users: userList,
 		}))
 	})
+}
+
+func Test_Scanner2(t *testing.T) {
+	t.Parallel()
+
+	require.Panics(t, func() { Scanner(UserDetail{}) })
+	require.Panics(t, func() { Scanner(nil) })
 }
