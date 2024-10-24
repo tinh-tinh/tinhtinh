@@ -78,7 +78,7 @@ func IsObjectId(str interface{}) bool {
 		return false
 	}
 
-	objectIdPattern := `/^[a-f\d]{24}$/i`
+	objectIdPattern := `^[a-f0-9]{24}$`
 	return IsRegexMatch(objectIdPattern, str)
 }
 
@@ -126,19 +126,23 @@ func IsNumber(str interface{}) bool {
 
 // Date time
 func IsDateString(str interface{}) bool {
-	if typeof(str) != "string" {
+	switch v := str.(type) {
+	case time.Time:
+		return true
+	case string:
+		_, err := time.Parse("2006-01-02", str.(string))
+		return err == nil
+	default:
+		fmt.Println(v)
 		return false
 	}
-	_, err := time.Parse("2006-01-02", str.(string))
-
-	return err == nil
 }
 
 // Boolean
 func IsBool(str interface{}) bool {
 	switch typeof(str) {
 	case "bool":
-		return str.(bool)
+		return true
 	case "string":
 		_, err := strconv.ParseBool(str.(string))
 
