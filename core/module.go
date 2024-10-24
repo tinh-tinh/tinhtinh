@@ -94,6 +94,9 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 
 	// Parse guards
 	for _, g := range opt.Guards {
+		if g == nil {
+			continue
+		}
 		mid := module.ParseGuard(g)
 		module.Middlewares = append(module.Middlewares, mid)
 	}
@@ -103,11 +106,17 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 
 	// Providers
 	for _, p := range opt.Providers {
+		if p == nil {
+			continue
+		}
 		p(module)
 	}
 
 	// Imports
 	for _, m := range opt.Imports {
+		if m == nil {
+			continue
+		}
 		mod := m(module)
 		utils.Log(
 			utils.Green("[TT] "),
@@ -153,11 +162,17 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 
 	// Controllers
 	for _, ct := range opt.Controllers {
+		if ct == nil {
+			continue
+		}
 		ct(module)
 	}
 
 	// Exports
 	for _, e := range opt.Exports {
+		if e == nil {
+			continue
+		}
 		provider := e(module)
 		provider.Status = PUBLIC
 	}

@@ -157,3 +157,21 @@ func Test_Controller(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, "Sub", res.Data)
 }
+
+func Test_Nil(t *testing.T) {
+	appModule := func() *DynamicModule {
+		module := NewModule(NewModuleOptions{
+			Controllers: []Controller{nil},
+			Providers:   []Provider{nil},
+			Imports:     []Module{nil},
+			Exports:     []Provider{nil},
+			Guards:      []AppGuard{nil},
+			Middlewares: []Middleware{nil},
+		})
+		return module
+	}
+
+	require.NotPanics(t, func() {
+		_ = CreateFactory(appModule)
+	})
+}
