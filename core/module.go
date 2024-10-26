@@ -88,6 +88,24 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 // the providers that are injected with the request to nil.
 func initModule(module *DynamicModule, opt NewModuleOptions) {
 	module.Scope = opt.Scope
+	// Imports
+	for _, m := range opt.Imports {
+		if m == nil {
+			continue
+		}
+		mod := m(module)
+		utils.Log(
+			utils.Green("[TT] "),
+			utils.White(time.Now().Format("2006-01-02 15:04:05")),
+			utils.Yellow(" [Module Initializer] "),
+			utils.Green(utils.GetFunctionName(m)+"\n"),
+		)
+
+		mod.init()
+		module.Routers = append(module.Routers, mod.Routers...)
+		module.appendProvider(mod.getExports()...)
+		mod.Routers = nil
+	}
 
 	// Parse middleware
 	module.Middlewares = append(module.Middlewares, opt.Middlewares...)
@@ -110,25 +128,6 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 			continue
 		}
 		p(module)
-	}
-
-	// Imports
-	for _, m := range opt.Imports {
-		if m == nil {
-			continue
-		}
-		mod := m(module)
-		utils.Log(
-			utils.Green("[TT] "),
-			utils.White(time.Now().Format("2006-01-02 15:04:05")),
-			utils.Yellow(" [Module Initializer] "),
-			utils.Green(utils.GetFunctionName(m)+"\n"),
-		)
-
-		mod.init()
-		module.Routers = append(module.Routers, mod.Routers...)
-		module.appendProvider(mod.getExports()...)
-		mod.Routers = nil
 	}
 
 	if module.Scope == Request {

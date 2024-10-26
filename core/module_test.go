@@ -175,3 +175,52 @@ func Test_Nil(t *testing.T) {
 		_ = CreateFactory(appModule)
 	})
 }
+func Test_Import(t *testing.T) {
+	const SUB_PROVIDER Provide = "sub"
+	subModule := func(module *DynamicModule) *DynamicModule {
+		sub := module.New(NewModuleOptions{})
+		sub.NewProvider(ProviderOptions{
+			Name:  SUB_PROVIDER,
+			Value: "haha",
+		})
+		sub.Export(SUB_PROVIDER)
+
+		return sub
+	}
+
+	const PARENT_SERVICE Provide = "parent"
+	parentService := func(module *DynamicModule) *DynamicProvider {
+		s := module.NewProvider(ProviderOptions{
+			Name: PARENT_SERVICE,
+			Factory: func(param ...interface{}) interface{} {
+				sub := param[0].(string)
+				return sub + "hihi"
+			},
+			Inject: []Provide{SUB_PROVIDER},
+		})
+		return s
+	}
+
+	parentModule := func(module *DynamicModule) *DynamicModule {
+		parent := module.New(NewModuleOptions{
+			Imports:   []Module{subModule},
+			Providers: []Provider{parentService},
+			Exports:   []Provider{parentService},
+		})
+
+		return parent
+	}
+
+	appModule := func() *DynamicModule {
+		module := NewModule(NewModuleOptions{
+			Imports: []Module{parentModule},
+		})
+
+		return module
+	}
+
+	require.NotPanics(t, func() {
+		app := CreateFactory(appModule)
+		app.SetGlobalPrefix("api")
+	})
+}
