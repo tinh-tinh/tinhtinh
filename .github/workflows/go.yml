@@ -32,3 +32,6 @@ jobs:
 
     - name: Test
       run: go test -cover ./...
+
+    - name: Remove temp file
+      run: rm -rf middleware/logger/logs

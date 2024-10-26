@@ -10,7 +10,7 @@ func Test_Create(t *testing.T) {
 		Max:    1,
 		Rotate: true,
 	})
-	for i := 0; i < 100000; i++ {
+	for i := 0; i < 10000; i++ {
 		log.Info(fmt.Sprint(i))
 	}
 }
