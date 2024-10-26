@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/tinh-tinh/tinhtinh/common"
-	"github.com/tinh-tinh/tinhtinh/utils"
+	"github.com/tinh-tinh/tinhtinh/common/era"
 )
 
 type item struct {
@@ -35,7 +35,7 @@ func New(opt Options) *Store {
 		ttl:  opt.Ttl,
 		max:  opt.Max,
 	}
-	utils.StartTimeStampUpdater()
+	era.StartTimeStampUpdater()
 	go store.gc(1 * time.Second)
 	return store
 }
@@ -45,7 +45,7 @@ func (m *Store) Get(key string) interface{} {
 	v, ok := m.data[key]
 	m.RUnlock()
 
-	if !ok || v.e != 0 && v.e <= utils.Timestamp() {
+	if !ok || v.e != 0 && v.e <= era.Timestamp() {
 		return nil
 	}
 	return v.v
@@ -54,9 +54,9 @@ func (m *Store) Get(key string) interface{} {
 func (m *Store) Set(key string, val interface{}, ttl ...time.Duration) {
 	var exp uint32
 	if len(ttl) > 0 {
-		exp = uint32(ttl[0].Seconds()) + utils.Timestamp()
+		exp = uint32(ttl[0].Seconds()) + era.Timestamp()
 	} else {
-		exp = uint32(m.ttl.Seconds()) + utils.Timestamp()
+		exp = uint32(m.ttl.Seconds()) + era.Timestamp()
 	}
 	i := item{e: exp, v: val}
 	for m.Count()+1 > m.max {
@@ -115,7 +115,7 @@ func (m *Store) gc(sleep time.Duration) {
 	var expired []string
 
 	for range ticker.C {
-		ts := utils.Timestamp()
+		ts := era.Timestamp()
 		expired = expired[:0]
 		m.RLock()
 		for key, v := range m.data {

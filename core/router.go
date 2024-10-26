@@ -1,12 +1,13 @@
 package core
 
 import (
+	"fmt"
 	"net/http"
 	"runtime"
 	"strings"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/utils"
+	"github.com/tinh-tinh/tinhtinh/common/color"
 )
 
 type Router struct {
@@ -83,11 +84,11 @@ func (app *App) registerRoutes() {
 		if app.Prefix != "" {
 			route.SetPrefix(app.Prefix)
 		}
-		utils.Log(
-			utils.Green("[TT] "),
-			utils.White(time.Now().Format("2006-01-02 15:04:05")),
-			utils.Yellow(" [RoutesResolver] "),
-			utils.Green(route.GetPath()+"\n"),
+		fmt.Printf("%s %s %s %s\n",
+			color.Green("[TT]"),
+			color.White(time.Now().Format("2006-01-02 15:04:05")),
+			color.Yellow("[RoutesResolver]"),
+			color.Green(route.GetPath()),
 		)
 		if routes[route.GetPath()] != nil {
 			routes[route.GetPath()] = append(routes[route.GetPath()], r)
