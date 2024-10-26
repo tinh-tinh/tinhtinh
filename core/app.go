@@ -14,9 +14,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/tinh-tinh/tinhtinh/common"
+	"github.com/tinh-tinh/tinhtinh/common/color"
 	"github.com/tinh-tinh/tinhtinh/middleware/cors"
 	"github.com/tinh-tinh/tinhtinh/middleware/session"
-	"github.com/tinh-tinh/tinhtinh/utils"
 )
 
 type App struct {
@@ -104,11 +105,11 @@ func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 		}
 	}
 
-	utils.Log(
-		utils.Green("[TT] "),
-		utils.White(time.Now().Format("2006-01-02 15:04:05")),
-		utils.Yellow(" [Module Initializer] "),
-		utils.Green(utils.GetFunctionName(module)+"\n"),
+	fmt.Printf("%s %s %s %s\n",
+		color.Green("[TT]"),
+		color.White(time.Now().Format("2006-01-02 15:04:05")),
+		color.Yellow("[Module Initializer]"),
+		color.Green(common.GetFunctionName(module)),
 	)
 	app.Module.init()
 	return app
