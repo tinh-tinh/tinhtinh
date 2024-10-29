@@ -1,15 +1,19 @@
 package core
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
 func Transform(ctx *Ctx) CallHandler {
+	fmt.Println("Before ...")
+	now := time.Now()
 	return func(data Map) Map {
 		res := make(Map)
 		for key, val := range data {
@@ -17,6 +21,7 @@ func Transform(ctx *Ctx) CallHandler {
 				res[key] = val
 			}
 		}
+		fmt.Printf("After ...%vns\n", time.Since(now).Nanoseconds())
 		return res
 	}
 }

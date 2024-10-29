@@ -158,8 +158,6 @@ func IsNil(val interface{}) bool {
 		return len(v) == 0
 	case []string:
 		return len(v) == 0
-	case []*interface{}:
-		return len(v) == 0
 	case []interface{}:
 		return len(v) == 0
 	case map[string]interface{}:

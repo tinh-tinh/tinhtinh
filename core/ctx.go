@@ -405,7 +405,14 @@ func ParseCtx(app *App, router *Router) http.Handler {
 		if router.interceptor != nil {
 			ctx.SetCallHandler(router.interceptor(ctx))
 		}
-		err := router.Handler(*ctx)
+		var err error
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("%v", r)
+				app.errorHandler(err, *ctx)
+			}
+		}()
+		err = router.Handler(*ctx)
 		if err != nil {
 			app.errorHandler(err, *ctx)
 		}
