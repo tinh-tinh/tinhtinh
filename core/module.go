@@ -133,32 +133,7 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 	}
 
 	if module.Scope == Request {
-		module.Use(func(ctx Ctx) error {
-			module.NewProvider(ProviderOptions{
-				Name:  REQUEST,
-				Value: ctx.Req(),
-			})
-			for _, p := range module.getRequest() {
-				if p.Value == nil {
-					var values []interface{}
-					for _, p := range p.inject {
-						values = append(values, module.Ref(p))
-					}
-
-					p.Value = p.factory(values...)
-				}
-			}
-			err := ctx.Next()
-			if err != nil {
-				return err
-			}
-			for _, p := range module.getRequest() {
-				if p.Value != nil {
-					p.Value = nil
-				}
-			}
-			return nil
-		})
+		module.Use(requestMiddleware(module))
 	}
 
 	// Controllers
@@ -223,4 +198,33 @@ func (m *DynamicModule) Export(name Provide) *DynamicProvider {
 	})
 	m.DataProviders[idx].Status = PUBLIC
 	return m.DataProviders[idx]
+}
+
+func requestMiddleware(module *DynamicModule) Middleware {
+	return func(ctx Ctx) error {
+		module.NewProvider(ProviderOptions{
+			Name:  REQUEST,
+			Value: ctx.Req(),
+		})
+		for _, p := range module.getRequest() {
+			if p.Value == nil {
+				var values []interface{}
+				for _, p := range p.inject {
+					values = append(values, module.Ref(p))
+				}
+
+				p.Value = p.factory(values...)
+			}
+		}
+		err := ctx.Next()
+		if err != nil {
+			return err
+		}
+		for _, p := range module.getRequest() {
+			if p.Value != nil {
+				p.Value = nil
+			}
+		}
+		return nil
+	}
 }

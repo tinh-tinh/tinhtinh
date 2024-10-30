@@ -1,5 +1,9 @@
 package core
 
+import (
+	"slices"
+)
+
 type Provide string
 
 const REQUEST Provide = "REQUEST"
@@ -62,6 +66,16 @@ func (module *DynamicModule) NewProvider(opt ProviderOptions) *DynamicProvider {
 		}
 		module.DataProviders = append(module.DataProviders, provider)
 	}
+	if len(opt.Inject) > 0 {
+		reqIdx := slices.IndexFunc(opt.Inject, func(e Provide) bool {
+			return e == REQUEST
+		})
+		if reqIdx != -1 {
+			module.Scope = Request
+			module.Use(requestMiddleware(module))
+			provider.Scope = Request
+		}
+	}
 	if provider.Scope == Request {
 		provider.inject = opt.Inject
 		provider.factory = opt.Factory
@@ -113,7 +127,7 @@ func (module *DynamicModule) appendProvider(providers ...*DynamicProvider) {
 		idx := module.findIdx(provider.Name)
 		if idx == -1 {
 			module.DataProviders = append(module.DataProviders, provider)
-			return
+			continue
 		}
 		module.DataProviders[idx] = provider
 	}
