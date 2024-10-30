@@ -107,9 +107,7 @@ func Test_getExports(t *testing.T) {
 
 func Test_getRequest(t *testing.T) {
 	reqModule := func(module *DynamicModule) *DynamicModule {
-		req := module.New(NewModuleOptions{
-			Scope: Request,
-		})
+		req := module.New(NewModuleOptions{})
 		req.NewProvider(ProviderOptions{
 			Name: "req",
 			Factory: func(param ...interface{}) interface{} {
@@ -118,6 +116,13 @@ func Test_getRequest(t *testing.T) {
 			Inject: []Provide{REQUEST},
 		})
 		req.Export("req")
+		req.NewProvider(ProviderOptions{
+			Name:  "req2",
+			Value: 3,
+		})
+		req.Export("req2")
+
+		fmt.Println(req.getExports())
 		return req
 	}
 
@@ -138,8 +143,8 @@ func Test_getRequest(t *testing.T) {
 		Imports: []Module{reqModule, globalModule},
 	})
 	providers := module.getRequest()
-	fmt.Println(providers, module.DataProviders)
-	require.Equal(t, 1, len(providers))
+	fmt.Println(providers)
+	require.Equal(t, 2, len(providers))
 	require.Equal(t, Provide("req"), providers[0].Name)
 }
 
