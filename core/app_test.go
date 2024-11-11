@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tinh-tinh/tinhtinh/common"
@@ -188,4 +189,41 @@ func Benchmark_App(b *testing.B) {
 		require.Nil(b, err)
 		require.Equal(b, http.StatusOK, resp.StatusCode)
 	}
+}
+
+func Test_Timeout(t *testing.T) {
+	appController := func(module *DynamicModule) *DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx Ctx) error {
+			time.Sleep(3 * time.Second)
+			return ctx.JSON(Map{
+				"data": "data",
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *DynamicModule {
+		appModule := NewModule(NewModuleOptions{
+			Controllers: []Controller{appController},
+		})
+
+		return appModule
+	}
+
+	app := CreateFactory(module, AppOptions{
+		Timeout: 1 * time.Second,
+	})
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 }
