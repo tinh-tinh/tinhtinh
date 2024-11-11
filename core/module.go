@@ -132,7 +132,11 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 		p(module)
 	}
 
-	if module.Scope == Request {
+	isRequest := slices.ContainsFunc(module.DataProviders, func(e *DynamicProvider) bool {
+		return e.Scope == Request
+	})
+
+	if module.Scope == Request || isRequest {
 		module.Use(requestMiddleware(module))
 	}
 
