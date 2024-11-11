@@ -831,3 +831,64 @@ func Test_SignedCookie(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, "val", res.Data)
 }
+
+func Test_Redirect(t *testing.T) {
+	controller := func(module *DynamicModule) *DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("/redirect", func(ctx Ctx) error {
+			return ctx.JSON(Map{
+				"data": "ok",
+			})
+		})
+
+		ctrl.Get("/fail", func(ctx Ctx) error {
+			return ctx.Redirect("!@#$%^&**&^%$#redirect")
+		})
+
+		ctrl.Get("/out", func(ctx Ctx) error {
+			return ctx.Redirect("https://www.google.com")
+		})
+
+		ctrl.Get("", func(ctx Ctx) error {
+			return ctx.Redirect("/redirect")
+		})
+
+		return ctrl
+	}
+
+	module := func() *DynamicModule {
+		appModule := NewModule(NewModuleOptions{
+			Controllers: []Controller{controller},
+		})
+
+		return appModule
+	}
+
+	app := CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	var res Response
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, "ok", res.Data)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/fail")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/out")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}

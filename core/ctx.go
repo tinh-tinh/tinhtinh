@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/tinh-tinh/tinhtinh/middleware/cookie"
 	"github.com/tinh-tinh/tinhtinh/middleware/storage"
@@ -448,4 +450,23 @@ func (ctx *Ctx) UploadedFieldFile() map[string][]*storage.File {
 		return nil
 	}
 	return uploadedFieldFile
+}
+
+func (ctx *Ctx) Redirect(uri string) error {
+	if !strings.HasPrefix(uri, "http://") && !strings.HasPrefix(uri, "https://") {
+		var scheme string
+		if ctx.Req().TLS != nil {
+			scheme = "https://"
+		} else {
+			scheme = "http://"
+		}
+		uri = scheme + ctx.Req().Host + ctx.Req().URL.String() + uri
+	}
+	fullUrl, err := url.Parse(uri)
+	if err != nil {
+		return err
+	}
+	fmt.Println(fullUrl.String())
+	http.Redirect(ctx.Res(), ctx.Req(), fullUrl.String(), http.StatusFound)
+	return nil
 }
