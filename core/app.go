@@ -47,6 +47,7 @@ type App struct {
 	session *session.Config
 	// errorHandler is the error handler that the App uses to initialize itself.
 	errorHandler ErrorHandler
+	timeout      time.Duration
 }
 
 type ModuleParam func() *DynamicModule
@@ -59,6 +60,7 @@ type AppOptions struct {
 	Session *session.Config
 	// ErrorHandler is the error handler that the App uses to initialize itself.
 	ErrorHandler ErrorHandler
+	Timeout      time.Duration
 }
 
 // CreateFactory creates a new App with the given module and options.
@@ -102,6 +104,9 @@ func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 		}
 		if opt[0].ErrorHandler != nil {
 			app.errorHandler = opt[0].ErrorHandler
+		}
+		if opt[0].Timeout != 0 {
+			app.timeout = opt[0].Timeout
 		}
 	}
 
@@ -172,6 +177,10 @@ func (app *App) PrepareBeforeListen() http.Handler {
 		for _, m := range app.Middleware {
 			handler = m(handler)
 		}
+	}
+
+	if app.timeout != 0 {
+		handler = http.TimeoutHandler(handler, app.timeout, "timeout")
 	}
 
 	return handler
