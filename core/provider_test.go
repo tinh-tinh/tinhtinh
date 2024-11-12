@@ -109,7 +109,8 @@ func Test_getRequest(t *testing.T) {
 	reqModule := func(module *DynamicModule) *DynamicModule {
 		req := module.New(NewModuleOptions{})
 		req.NewProvider(ProviderOptions{
-			Name: "req",
+			Scope: Request,
+			Name:  "req",
 			Factory: func(param ...interface{}) interface{} {
 				return param[0]
 			},
@@ -144,7 +145,7 @@ func Test_getRequest(t *testing.T) {
 	})
 	providers := module.getRequest()
 	fmt.Println(providers)
-	require.Equal(t, 2, len(providers))
+	require.Equal(t, 1, len(providers))
 	require.Equal(t, Provide("req"), providers[0].Name)
 }
 
@@ -197,4 +198,103 @@ func Test_FactoryProvider(t *testing.T) {
 	})
 
 	require.Equal(t, "rootChild", module.Ref("child"))
+}
+
+func Test_RequestProvider(t *testing.T) {
+	const (
+		TENANT  Provide = "TENANT"
+		SERVICE Provide = "SERVICE"
+	)
+	type RequestProvider struct {
+		Name string
+	}
+	service := func(module *DynamicModule) *DynamicProvider {
+		prd := module.NewProvider(ProviderOptions{
+			Scope: Request,
+			Name:  SERVICE,
+			Factory: func(param ...interface{}) interface{} {
+				return &RequestProvider{
+					Name: "model" + param[0].(string),
+				}
+			},
+			Inject: []Provide{TENANT},
+		})
+
+		return prd
+	}
+
+	controller := func(module *DynamicModule) *DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("/", func(ctx Ctx) error {
+			service := module.Ref(SERVICE).(*RequestProvider)
+			return ctx.JSON(Map{
+				"data": service.Name,
+			})
+		})
+
+		return ctrl
+	}
+
+	tenantModule := func(module *DynamicModule) *DynamicModule {
+		tenant := module.New(NewModuleOptions{
+			Scope: Global,
+		})
+
+		tenant.NewProvider(ProviderOptions{
+			Name: TENANT,
+			Factory: func(param ...interface{}) interface{} {
+				return param[0].(*http.Request).Header.Get("x-tenant")
+			},
+			Inject: []Provide{REQUEST},
+		})
+		tenant.Export(TENANT)
+
+		return tenant
+	}
+
+	appModule := func() *DynamicModule {
+		module := NewModule(NewModuleOptions{
+			Imports:     []Module{tenantModule},
+			Controllers: []Controller{controller},
+			Providers:   []Provider{service},
+		})
+
+		return module
+	}
+
+	app := CreateFactory(appModule)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	req, err := http.NewRequest("GET", testServer.URL+"/api/test/", nil)
+	require.Nil(t, err)
+	req.Header.Set("x-tenant", "test")
+	resp, err := testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	var res Response
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, "modeltest", res.Data)
+
+	req.Header.Set("x-tenant", "test2")
+	resp2, err := testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp2.StatusCode)
+
+	data2, err := io.ReadAll(resp2.Body)
+	require.Nil(t, err)
+
+	var res2 Response
+	err = json.Unmarshal(data2, &res2)
+	require.Nil(t, err)
+	require.Equal(t, "modeltest2", res2.Data)
 }

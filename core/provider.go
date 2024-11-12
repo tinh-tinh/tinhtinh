@@ -1,8 +1,6 @@
 package core
 
-import (
-	"slices"
-)
+import "slices"
 
 type Provide string
 
@@ -33,6 +31,8 @@ type DynamicProvider struct {
 }
 
 type ProviderOptions struct {
+	// Scope of the provider. Default is Global.
+	Scope Scope
 	// Name of the provider.
 	Name Provide
 	// Value of the provider.
@@ -62,19 +62,18 @@ func (module *DynamicModule) NewProvider(opt ProviderOptions) *DynamicProvider {
 		provider = &DynamicProvider{
 			Name:   opt.Name,
 			Status: PRIVATE,
-			Scope:  module.Scope,
+			Scope:  opt.Scope,
 		}
 		module.DataProviders = append(module.DataProviders, provider)
 	}
-	if len(opt.Inject) > 0 {
-		reqIdx := slices.IndexFunc(opt.Inject, func(e Provide) bool {
-			return e == REQUEST
-		})
-		if reqIdx != -1 {
-			module.Scope = Request
-			module.Use(requestMiddleware(module))
-			provider.Scope = Request
-		}
+	reqInject := slices.ContainsFunc(opt.Inject, func(p Provide) bool {
+		return p == REQUEST
+	})
+	if reqInject {
+		provider.Scope = Request
+	}
+	if provider.Scope == "" {
+		provider.Scope = module.Scope
 	}
 	if provider.Scope == Request {
 		provider.inject = opt.Inject
