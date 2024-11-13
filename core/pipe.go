@@ -1,6 +1,9 @@
 package core
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/tinh-tinh/tinhtinh/common"
 	"github.com/tinh-tinh/tinhtinh/dto/validator"
 )
@@ -33,6 +36,9 @@ func PipeMiddleware(pipes ...Pipe) Middleware {
 	return func(ctx Ctx) error {
 		for _, pipe := range pipes {
 			dto := pipe.Dto
+			// Clear old value in dto
+			p := reflect.ValueOf(dto).Elem()
+			p.Set(reflect.Zero(p.Type()))
 			switch pipe.In {
 			case InBody:
 				err := ctx.BodyParser(dto)
@@ -51,6 +57,7 @@ func PipeMiddleware(pipes ...Pipe) Middleware {
 				}
 			}
 
+			fmt.Println(dto)
 			err := validator.Scanner(dto)
 			if err != nil {
 				return common.BadRequestException(ctx.Res(), err.Error())
