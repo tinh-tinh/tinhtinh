@@ -147,7 +147,6 @@ func (ctx *Ctx) BodyParser(payload interface{}) error {
 //	fmt.Println(ms.Name) // John
 func (ctx *Ctx) QueryParse(payload interface{}) error {
 	ct := reflect.ValueOf(payload).Elem()
-	fmt.Println(ct)
 	for i := 0; i < ct.NumField(); i++ {
 		field := ct.Type().Field(i)
 		tagVal := field.Tag.Get("query")
