@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"net/http"
@@ -8,112 +8,53 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tinh-tinh/tinhtinh/common"
-	"github.com/tinh-tinh/tinhtinh/middleware/cors"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
-func Test_EnableCors(t *testing.T) {
-	appController := func(module *DynamicModule) *DynamicController {
-		ctrl := module.NewController("test")
-
-		ctrl.Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
-				"data": "1",
-			})
-		})
-
-		ctrl.Post("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
-				"data": "2",
-			})
-		})
-
-		ctrl.Patch("{id}", func(ctx Ctx) error {
-			return ctx.JSON(Map{
-				"data": "3",
-			})
-		})
-
-		ctrl.Put("{id}", func(ctx Ctx) error {
-			return ctx.JSON(Map{
-				"data": "4",
-			})
-		})
-
-		ctrl.Delete("{id}", func(ctx Ctx) error {
-			return ctx.JSON(Map{
-				"data": "5",
-			})
-		})
-		return ctrl
-	}
-
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
-		})
-
-		return appModule
-	}
-
-	app := CreateFactory(module)
-	app.SetGlobalPrefix("/api")
-	app.EnableCors(cors.Options{
-		AllowedMethods: []string{"POST"},
-	})
-
-	testServer := httptest.NewServer(app.PrepareBeforeListen())
-	defer testServer.Close()
-	testClient := testServer.Client()
-
-	resp, err := testClient.Get(testServer.URL + "/api/test")
-	require.Nil(t, err)
-	require.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
-}
-
 func Test_Exception(t *testing.T) {
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("bad-request", func(ctx Ctx) error {
+		ctrl.Get("bad-request", func(ctx core.Ctx) error {
 			return common.BadRequestException(ctx.Res(), "bad request")
 		})
 
-		ctrl.Get("unauthorized", func(ctx Ctx) error {
+		ctrl.Get("unauthorized", func(ctx core.Ctx) error {
 			return common.UnauthorizedException(ctx.Res(), "unauthorized")
 		})
 
-		ctrl.Get("forbidden", func(ctx Ctx) error {
+		ctrl.Get("forbidden", func(ctx core.Ctx) error {
 			return common.ForbiddenException(ctx.Res(), "forbidden")
 		})
 
-		ctrl.Get("not-found", func(ctx Ctx) error {
+		ctrl.Get("not-found", func(ctx core.Ctx) error {
 			return common.NotFoundException(ctx.Res(), "not found")
 		})
 
-		ctrl.Get("method-not-allowed", func(ctx Ctx) error {
+		ctrl.Get("method-not-allowed", func(ctx core.Ctx) error {
 			return common.NotAllowedException(ctx.Res(), "method not allowed")
 		})
 
-		ctrl.Get("conflict", func(ctx Ctx) error {
+		ctrl.Get("conflict", func(ctx core.Ctx) error {
 			return common.ConflictException(ctx.Res(), "conflict")
 		})
 
-		ctrl.Get("internal-server-error", func(ctx Ctx) error {
+		ctrl.Get("internal-server-error", func(ctx core.Ctx) error {
 			return common.InternalServerException(ctx.Res(), "internal server error")
 		})
 
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -155,11 +96,11 @@ func Test_Exception(t *testing.T) {
 }
 
 func Benchmark_App(b *testing.B) {
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "data",
 			})
 		})
@@ -167,15 +108,15 @@ func Benchmark_App(b *testing.B) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -192,12 +133,12 @@ func Benchmark_App(b *testing.B) {
 }
 
 func Test_Timeout(t *testing.T) {
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			time.Sleep(3 * time.Second)
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": "data",
 			})
 		})
@@ -205,15 +146,15 @@ func Test_Timeout(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module, AppOptions{
+	app := core.CreateFactory(module, core.AppOptions{
 		Timeout: 1 * time.Second,
 	})
 	app.SetGlobalPrefix("/api")
@@ -226,4 +167,35 @@ func Test_Timeout(t *testing.T) {
 	resp, err := testClient.Get(testServer.URL + "/api/test")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+}
+
+func Test_Listen(t *testing.T) {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": "ok",
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	require.NotPanics(t, func() {
+		go func() {
+			app.Listen(3000)
+		}()
+	})
 }

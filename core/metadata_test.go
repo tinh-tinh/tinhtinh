@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"fmt"
@@ -8,18 +8,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func Test_Metadata(t *testing.T) {
 	const role_key = "roles"
 
-	roleFnc := func(roles ...string) *Metadata {
-		return SetMetadata(role_key, roles)
+	roleFnc := func(roles ...string) *core.Metadata {
+		return core.SetMetadata(role_key, roles)
 	}
 
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test").Guard(
-			func(ctrl *DynamicController, ctx *Ctx) bool {
+			func(ctrl *core.DynamicController, ctx *core.Ctx) bool {
 				roles, ok := ctx.GetMetadata(role_key).([]string)
 				fmt.Println(roles)
 				if !ok || len(roles) == 0 {
@@ -31,14 +32,14 @@ func Test_Metadata(t *testing.T) {
 				return isRole != -1
 			}).Registry()
 
-		ctrl.Metadata(roleFnc("admin")).Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Metadata(roleFnc("admin")).Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})
 
-		ctrl.Get("abc", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("abc", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})
@@ -46,15 +47,15 @@ func Test_Metadata(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		mod := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		mod := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return mod
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())

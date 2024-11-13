@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"encoding/json"
@@ -9,67 +9,68 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func Test_RequestModule(t *testing.T) {
-	tenantModule := func(module *DynamicModule) *DynamicModule {
-		tenant := module.New(NewModuleOptions{
-			Scope: Request,
+	tenantModule := func(module *core.DynamicModule) *core.DynamicModule {
+		tenant := module.New(core.NewModuleOptions{
+			Scope: core.Request,
 		})
 
-		tenant.NewProvider(ProviderOptions{
+		tenant.NewProvider(core.ProviderOptions{
 			Name: "tenant",
 			Factory: func(param ...interface{}) interface{} {
 				req := param[0].(*http.Request)
 				return req.Header.Get("x-tenant")
 			},
-			Inject: []Provide{REQUEST},
+			Inject: []core.Provide{core.REQUEST},
 		})
 		tenant.Export("tenant")
 		return tenant
 	}
 
-	userProvider := func(module *DynamicModule) *DynamicProvider {
-		provider := module.NewProvider(ProviderOptions{
+	userProvider := func(module *core.DynamicModule) *core.DynamicProvider {
+		provider := module.NewProvider(core.ProviderOptions{
 			Name: "user",
 			Factory: func(param ...interface{}) interface{} {
 				return fmt.Sprintf("%vUser", param[0])
 			},
-			Inject: []Provide{Provide("tenant")},
+			Inject: []core.Provide{core.Provide("tenant")},
 		})
 		return provider
 	}
 
-	userController := func(module *DynamicModule) *DynamicController {
+	userController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("user")
 
-		ctrl.Get("", func(ctx Ctx) error {
-			data := ctrl.Inject(Provide("user"))
-			return ctx.JSON(Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			data := ctrl.Inject(core.Provide("user"))
+			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 		return ctrl
 	}
 
-	userModule := func(module *DynamicModule) *DynamicModule {
-		user := module.New(NewModuleOptions{
-			Scope:       Request,
-			Controllers: []Controller{userController},
-			Providers:   []Provider{userProvider},
+	userModule := func(module *core.DynamicModule) *core.DynamicModule {
+		user := module.New(core.NewModuleOptions{
+			Scope:       core.Request,
+			Controllers: []core.Controller{userController},
+			Providers:   []core.Provider{userProvider},
 		})
 		return user
 	}
 
-	appModule := func() *DynamicModule {
-		app := NewModule(NewModuleOptions{
-			Imports: []Module{tenantModule, userModule},
+	appModule := func() *core.DynamicModule {
+		app := core.NewModule(core.NewModuleOptions{
+			Imports: []core.Module{tenantModule, userModule},
 		})
 
 		return app
 	}
 
-	app := CreateFactory(appModule)
+	app := core.CreateFactory(appModule)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -109,20 +110,20 @@ func Test_RequestModule(t *testing.T) {
 }
 
 func Test_Controller(t *testing.T) {
-	provider := func(module *DynamicModule) *DynamicProvider {
-		provider := module.NewProvider(ProviderOptions{
+	provider := func(module *core.DynamicModule) *core.DynamicProvider {
+		provider := module.NewProvider(core.ProviderOptions{
 			Name:  "sub",
 			Value: "Sub",
 		})
 		return provider
 	}
 
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("sub")
 
-		ctrl.Get("", func(ctx Ctx) error {
-			data := ctrl.Inject(Provide("sub"))
-			return ctx.JSON(Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			data := ctrl.Inject(core.Provide("sub"))
+			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
@@ -130,15 +131,15 @@ func Test_Controller(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		module := NewModule(NewModuleOptions{})
+	module := func() *core.DynamicModule {
+		module := core.NewModule(core.NewModuleOptions{})
 		module.Controllers(controller)
 		module.Providers(provider)
 
 		return module
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -159,27 +160,27 @@ func Test_Controller(t *testing.T) {
 }
 
 func Test_Nil(t *testing.T) {
-	appModule := func() *DynamicModule {
-		module := NewModule(NewModuleOptions{
-			Controllers: []Controller{nil},
-			Providers:   []Provider{nil},
-			Imports:     []Module{nil},
-			Exports:     []Provider{nil},
-			Guards:      []AppGuard{nil},
-			Middlewares: []Middleware{nil},
+	appModule := func() *core.DynamicModule {
+		module := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{nil},
+			Providers:   []core.Provider{nil},
+			Imports:     []core.Module{nil},
+			Exports:     []core.Provider{nil},
+			Guards:      []core.AppGuard{nil},
+			Middlewares: []core.Middleware{nil},
 		})
 		return module
 	}
 
 	require.NotPanics(t, func() {
-		_ = CreateFactory(appModule)
+		_ = core.CreateFactory(appModule)
 	})
 }
 func Test_Import(t *testing.T) {
-	const SUB_PROVIDER Provide = "sub"
-	subModule := func(module *DynamicModule) *DynamicModule {
-		sub := module.New(NewModuleOptions{})
-		sub.NewProvider(ProviderOptions{
+	const SUB_PROVIDER core.Provide = "sub"
+	subModule := func(module *core.DynamicModule) *core.DynamicModule {
+		sub := module.New(core.NewModuleOptions{})
+		sub.NewProvider(core.ProviderOptions{
 			Name:  SUB_PROVIDER,
 			Value: "haha",
 		})
@@ -188,39 +189,39 @@ func Test_Import(t *testing.T) {
 		return sub
 	}
 
-	const PARENT_SERVICE Provide = "parent"
-	parentService := func(module *DynamicModule) *DynamicProvider {
-		s := module.NewProvider(ProviderOptions{
+	const PARENT_SERVICE core.Provide = "parent"
+	parentService := func(module *core.DynamicModule) *core.DynamicProvider {
+		s := module.NewProvider(core.ProviderOptions{
 			Name: PARENT_SERVICE,
 			Factory: func(param ...interface{}) interface{} {
 				sub := param[0].(string)
 				return sub + "hihi"
 			},
-			Inject: []Provide{SUB_PROVIDER},
+			Inject: []core.Provide{SUB_PROVIDER},
 		})
 		return s
 	}
 
-	parentModule := func(module *DynamicModule) *DynamicModule {
-		parent := module.New(NewModuleOptions{
-			Imports:   []Module{subModule},
-			Providers: []Provider{parentService},
-			Exports:   []Provider{parentService},
+	parentModule := func(module *core.DynamicModule) *core.DynamicModule {
+		parent := module.New(core.NewModuleOptions{
+			Imports:   []core.Module{subModule},
+			Providers: []core.Provider{parentService},
+			Exports:   []core.Provider{parentService},
 		})
 
 		return parent
 	}
 
-	appModule := func() *DynamicModule {
-		module := NewModule(NewModuleOptions{
-			Imports: []Module{parentModule},
+	appModule := func() *core.DynamicModule {
+		module := core.NewModule(core.NewModuleOptions{
+			Imports: []core.Module{parentModule},
 		})
 
 		return module
 	}
 
 	require.NotPanics(t, func() {
-		app := CreateFactory(appModule)
+		app := core.CreateFactory(appModule)
 		app.SetGlobalPrefix("api")
 	})
 }

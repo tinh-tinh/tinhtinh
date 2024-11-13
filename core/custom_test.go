@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"encoding/json"
@@ -8,26 +8,27 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func Test_CustomCtx(t *testing.T) {
-	tenant := CreateWrapper(func(data bool, ctx Ctx) string {
+	tenant := core.CreateWrapper(func(data bool, ctx core.Ctx) string {
 		if data {
 			return "master"
 		}
 		return ctx.Req().Header.Get("x-tenant-id")
 	})
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", tenant.Handler(true, func(wCtx WrappedCtx[string]) error {
-			return wCtx.JSON(Map{
+		ctrl.Get("", tenant.Handler(true, func(wCtx core.WrappedCtx[string]) error {
+			return wCtx.JSON(core.Map{
 				"data": wCtx.Data,
 			})
 		}))
 
-		ctrl.Get("tenant", tenant.Handler(false, func(wCtx WrappedCtx[string]) error {
-			return wCtx.JSON(Map{
+		ctrl.Get("tenant", tenant.Handler(false, func(wCtx core.WrappedCtx[string]) error {
+			return wCtx.JSON(core.Map{
 				"data": wCtx.Data,
 			})
 		}))
@@ -35,15 +36,15 @@ func Test_CustomCtx(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -85,28 +86,28 @@ func Test_CustomCtx(t *testing.T) {
 }
 
 func Test_Middleware_CustomCtx(t *testing.T) {
-	tenant := CreateWrapper(func(data bool, ctx Ctx) string {
+	tenant := core.CreateWrapper(func(data bool, ctx core.Ctx) string {
 		if data {
 			return "master"
 		}
 		return ctx.Req().Header.Get("x-tenant-id")
 	})
 
-	guard := func(ctrl *DynamicController, ctx *Ctx) bool {
+	guard := func(ctrl *core.DynamicController, ctx *core.Ctx) bool {
 		return ctx.Query("key") == "value"
 	}
 
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Guard(guard).Get("", tenant.Handler(true, func(wCtx WrappedCtx[string]) error {
-			return wCtx.JSON(Map{
+		ctrl.Guard(guard).Get("", tenant.Handler(true, func(wCtx core.WrappedCtx[string]) error {
+			return wCtx.JSON(core.Map{
 				"data": wCtx.Data,
 			})
 		}))
 
-		ctrl.Get("tenant", tenant.Handler(false, func(wCtx WrappedCtx[string]) error {
-			return wCtx.JSON(Map{
+		ctrl.Get("tenant", tenant.Handler(false, func(wCtx core.WrappedCtx[string]) error {
+			return wCtx.JSON(core.Map{
 				"data": wCtx.Data,
 			})
 		}))
@@ -114,15 +115,15 @@ func Test_Middleware_CustomCtx(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())

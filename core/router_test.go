@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"net/http"
@@ -6,76 +6,77 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func Test_Route(t *testing.T) {
-	route := ParseRoute("GET /test")
+	route := core.ParseRoute("GET /test")
 
 	route.SetPrefix("api")
 	require.Equal(t, "GET /api/test", route.GetPath())
 
-	route = ParseRoute("GET /user/{id}")
+	route = core.ParseRoute("GET /user/{id}")
 	require.Equal(t, "GET /user/{id}", route.GetPath())
 
-	route = ParseRoute("GET /user/{id}/edit")
+	route = core.ParseRoute("GET /user/{id}/edit")
 	route.SetPrefix("admin")
 	require.Equal(t, "GET /admin/user/{id}/edit", route.GetPath())
 }
 
 func Test_IfSlashPrefixString(t *testing.T) {
-	require.Equal(t, "", IfSlashPrefixString(""))
-	require.Equal(t, "/", IfSlashPrefixString("/"))
-	require.Equal(t, "/api", IfSlashPrefixString("api"))
-	require.Equal(t, "/api", IfSlashPrefixString("/api"))
-	require.Equal(t, "/api", IfSlashPrefixString("API"))
-	require.Equal(t, "/api", IfSlashPrefixString("a pi"))
+	require.Equal(t, "", core.IfSlashPrefixString(""))
+	require.Equal(t, "/", core.IfSlashPrefixString("/"))
+	require.Equal(t, "/api", core.IfSlashPrefixString("api"))
+	require.Equal(t, "/api", core.IfSlashPrefixString("/api"))
+	require.Equal(t, "/api", core.IfSlashPrefixString("API"))
+	require.Equal(t, "/api", core.IfSlashPrefixString("a pi"))
 }
 
 func Test_registerRoutes(t *testing.T) {
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "1",
 			})
 		})
 
-		ctrl.Post("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Post("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "2",
 			})
 		})
 
-		ctrl.Patch("{id}", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Patch("{id}", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "3",
 			})
 		})
 
-		ctrl.Put("{id}", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Put("{id}", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "4",
 			})
 		})
 
-		ctrl.Delete("{id}", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Delete("{id}", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "5",
 			})
 		})
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())

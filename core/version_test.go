@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"encoding/json"
@@ -8,38 +8,39 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 type Response struct {
 	Data interface{} `json:"data"`
 }
 
-func AppVersionModule() ModuleParam {
-	appController1 := func(module *DynamicModule) *DynamicController {
+func AppVersionModule() core.ModuleParam {
+	appController1 := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test").Version("1")
 
-		ctrl.Get("/", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("/", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "1",
 			})
 		})
 		return ctrl
 	}
 
-	appController2 := func(module *DynamicModule) *DynamicController {
+	appController2 := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test").Version("2")
 
-		ctrl.Get("/", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("/", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "2",
 			})
 		})
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController1, appController2},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController1, appController2},
 		})
 
 		return appModule
@@ -49,10 +50,10 @@ func AppVersionModule() ModuleParam {
 }
 
 func Test_VersionURI(t *testing.T) {
-	app := CreateFactory(AppVersionModule())
+	app := core.CreateFactory(AppVersionModule())
 	app.SetGlobalPrefix("/api")
-	app.EnableVersioning(VersionOptions{
-		Type: URIVersion,
+	app.EnableVersioning(core.VersionOptions{
+		Type: core.URIVersion,
 	})
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -85,10 +86,10 @@ func Test_VersionURI(t *testing.T) {
 }
 
 func Test_VersionHeader(t *testing.T) {
-	app := CreateFactory(AppVersionModule())
+	app := core.CreateFactory(AppVersionModule())
 	app.SetGlobalPrefix("/api")
-	app.EnableVersioning(VersionOptions{
-		Type:   HeaderVersion,
+	app.EnableVersioning(core.VersionOptions{
+		Type:   core.HeaderVersion,
 		Header: "X-Version",
 	})
 
@@ -132,10 +133,10 @@ func Test_VersionHeader(t *testing.T) {
 }
 
 func Test_VersionMedia(t *testing.T) {
-	app := CreateFactory(AppVersionModule())
+	app := core.CreateFactory(AppVersionModule())
 	app.SetGlobalPrefix("/api")
-	app.EnableVersioning(VersionOptions{
-		Type: MediaTypeVersion,
+	app.EnableVersioning(core.VersionOptions{
+		Type: core.MediaTypeVersion,
 		Key:  "v=",
 	})
 
@@ -174,10 +175,10 @@ func Test_VersionMedia(t *testing.T) {
 }
 
 func Test_VersionCustom(t *testing.T) {
-	app := CreateFactory(AppVersionModule())
+	app := core.CreateFactory(AppVersionModule())
 	app.SetGlobalPrefix("/api")
-	app.EnableVersioning(VersionOptions{
-		Type: CustomVersion,
+	app.EnableVersioning(core.VersionOptions{
+		Type: core.CustomVersion,
 		Extractor: func(r *http.Request) string {
 			return r.URL.Query().Get("version")
 		},

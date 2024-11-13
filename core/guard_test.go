@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"encoding/json"
@@ -8,18 +8,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func Test_ParseGuardCtrl(t *testing.T) {
-	guard := func(ctrl *DynamicController, ctx *Ctx) bool {
+	guard := func(ctrl *core.DynamicController, ctx *core.Ctx) bool {
 		return ctx.Query("key") == "value"
 	}
 
-	authCtrl := func(module *DynamicModule) *DynamicController {
+	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Guard(guard).Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Guard(guard).Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "1",
 			})
 		})
@@ -27,15 +28,15 @@ func Test_ParseGuardCtrl(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{authCtrl},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{authCtrl},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -52,15 +53,15 @@ func Test_ParseGuardCtrl(t *testing.T) {
 }
 
 func Test_ParseGuardModule(t *testing.T) {
-	guard := func(module *DynamicModule, ctx Ctx) bool {
+	guard := func(module *core.DynamicModule, ctx core.Ctx) bool {
 		return ctx.Query("key") == "value"
 	}
 
-	authCtrl := func(module *DynamicModule) *DynamicController {
+	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "1",
 			})
 		})
@@ -68,16 +69,16 @@ func Test_ParseGuardModule(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{authCtrl},
-			Guards:      []AppGuard{guard},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{authCtrl},
+			Guards:      []core.AppGuard{guard},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -93,19 +94,19 @@ func Test_ParseGuardModule(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
-const Key CtxKey = "key"
+const Key core.CtxKey = "key"
 
 func Test_Ctx_Guard(t *testing.T) {
-	guard := func(ctrl *DynamicController, ctx *Ctx) bool {
+	guard := func(ctrl *core.DynamicController, ctx *core.Ctx) bool {
 		ctx.Set(Key, "value")
 		return true
 	}
 
-	authCtrl := func(module *DynamicModule) *DynamicController {
+	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Guard(guard).Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Guard(guard).Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": ctx.Get(Key),
 			})
 		})
@@ -113,15 +114,15 @@ func Test_Ctx_Guard(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{authCtrl},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{authCtrl},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
