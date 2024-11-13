@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"encoding/json"
@@ -11,16 +11,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tinh-tinh/tinhtinh/common"
+	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/middleware/cookie"
 	"github.com/tinh-tinh/tinhtinh/middleware/session"
 )
 
 func Test_Ctx_Req(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": ctx.Req().Host,
 			})
 		})
@@ -28,15 +29,15 @@ func Test_Ctx_Req(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -57,12 +58,12 @@ func Test_Ctx_Req(t *testing.T) {
 }
 
 func Test_Ctx_Res(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			ctx.Res().Header().Set("key", "value")
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})
@@ -70,15 +71,15 @@ func Test_Ctx_Res(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -93,11 +94,11 @@ func Test_Ctx_Res(t *testing.T) {
 }
 
 func Test_Ctx_Headers(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": ctx.Headers("x-key"),
 			})
 		})
@@ -105,15 +106,15 @@ func Test_Ctx_Headers(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -142,16 +143,16 @@ func Test_Ctx_BodyParser(t *testing.T) {
 	type BodyData struct {
 		Name string `json:"name"`
 	}
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Post("", func(ctx Ctx) error {
+		ctrl.Post("", func(ctx core.Ctx) error {
 			var bodyData BodyData
 			err := ctx.BodyParser(&bodyData)
 			if err != nil {
 				return common.InternalServerException(ctx.Res(), err.Error())
 			}
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": bodyData.Name,
 			})
 		})
@@ -159,15 +160,15 @@ func Test_Ctx_BodyParser(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -192,12 +193,12 @@ func Test_Ctx_Body(t *testing.T) {
 	type BodyData struct {
 		Name string `json:"name"`
 	}
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Body(&BodyData{})).Post("", func(ctx Ctx) error {
+		ctrl.Pipe(core.Body(&BodyData{})).Post("", func(ctx core.Ctx) error {
 			data := ctx.Body().(*BodyData)
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": data.Name,
 			})
 		})
@@ -205,15 +206,15 @@ func Test_Ctx_Body(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -238,12 +239,12 @@ func Test_Ctx_Params(t *testing.T) {
 	type ID struct {
 		ID string `param:"id"`
 	}
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Param(&ID{})).Get("/{id}", func(ctx Ctx) error {
+		ctrl.Pipe(core.Param(&ID{})).Get("/{id}", func(ctx core.Ctx) error {
 			data := ctx.Params().(*ID)
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": data.ID,
 			})
 		})
@@ -251,15 +252,15 @@ func Test_Ctx_Params(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -283,12 +284,12 @@ func Test_Ctx_Queries(t *testing.T) {
 	type QueryData struct {
 		Name string `query:"name"`
 	}
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Query(&QueryData{})).Get("", func(ctx Ctx) error {
+		ctrl.Pipe(core.Query(&QueryData{})).Get("", func(ctx core.Ctx) error {
 			data := ctx.Queries().(*QueryData)
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": data.Name,
 			})
 		})
@@ -296,15 +297,15 @@ func Test_Ctx_Queries(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -325,12 +326,12 @@ func Test_Ctx_Queries(t *testing.T) {
 }
 
 func Test_Ctx_Param(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("/{id}", func(ctx Ctx) error {
+		ctrl.Get("/{id}", func(ctx core.Ctx) error {
 			data := ctx.Param("id")
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
@@ -338,15 +339,15 @@ func Test_Ctx_Param(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -367,12 +368,12 @@ func Test_Ctx_Param(t *testing.T) {
 }
 
 func Test_Ctx_Query(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			data := ctx.Query("name")
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
@@ -380,15 +381,15 @@ func Test_Ctx_Query(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -409,12 +410,12 @@ func Test_Ctx_Query(t *testing.T) {
 }
 
 func Test_Ctx_QueryInt(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			data := ctx.QueryInt("name")
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
@@ -422,15 +423,15 @@ func Test_Ctx_QueryInt(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -455,12 +456,12 @@ func Test_Ctx_QueryInt(t *testing.T) {
 }
 
 func Test_Ctx_QueryBool(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			data := ctx.QueryBool("name")
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
@@ -468,15 +469,15 @@ func Test_Ctx_QueryBool(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -501,11 +502,11 @@ func Test_Ctx_QueryBool(t *testing.T) {
 }
 
 func Test_Ctx_Status(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
-			return ctx.Status(http.StatusNotFound).JSON(Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.Status(http.StatusNotFound).JSON(core.Map{
 				"data": "ok",
 			})
 		})
@@ -513,15 +514,15 @@ func Test_Ctx_Status(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -538,16 +539,16 @@ func Test_QueryParser(t *testing.T) {
 		Age    int  `query:"age"`
 		Format bool `query:"format"`
 	}
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			var queryData QueryData
 			err := ctx.QueryParse(&queryData)
 			if err != nil {
 				return common.InternalServerException(ctx.Res(), err.Error())
 			}
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": queryData,
 			})
 		})
@@ -555,15 +556,15 @@ func Test_QueryParser(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -588,16 +589,16 @@ func Test_ParamParser(t *testing.T) {
 		ID     int  `param:"id"`
 		Export bool `param:"export"`
 	}
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("{id}/{export}", func(ctx Ctx) error {
+		ctrl.Get("{id}/{export}", func(ctx core.Ctx) error {
 			var queryData ParamData
 			err := ctx.ParamParse(&queryData)
 			if err != nil {
 				return common.InternalServerException(ctx.Res(), err.Error())
 			}
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": queryData.ID,
 			})
 		})
@@ -605,15 +606,15 @@ func Test_ParamParser(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -635,21 +636,21 @@ func Test_ParamParser(t *testing.T) {
 }
 
 func Test_Ctx_Session(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Post("", func(ctx Ctx) error {
+		ctrl.Post("", func(ctx core.Ctx) error {
 			ctx.Session("key", "val")
 
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			data := ctx.Session("key")
 			fmt.Print(data)
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
@@ -657,9 +658,9 @@ func Test_Ctx_Session(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
@@ -668,7 +669,7 @@ func Test_Ctx_Session(t *testing.T) {
 	session := session.New(session.Options{
 		Secret: "secret",
 	})
-	app := CreateFactory(module, AppOptions{
+	app := core.CreateFactory(module, core.AppOptions{
 		Session: session,
 	})
 	app.SetGlobalPrefix("/api")
@@ -703,21 +704,21 @@ func Test_Ctx_Session(t *testing.T) {
 }
 
 func Test_Cookie(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Post("", func(ctx Ctx) error {
+		ctrl.Post("", func(ctx core.Ctx) error {
 			ctx.SetCookie("key", "val", 3600)
 
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			data := ctx.Cookies("key").Value
 			fmt.Print(data)
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
@@ -725,15 +726,15 @@ func Test_Cookie(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -762,26 +763,26 @@ func Test_Cookie(t *testing.T) {
 }
 
 func Test_SignedCookie(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Post("", func(ctx Ctx) error {
+		ctrl.Post("", func(ctx core.Ctx) error {
 			_, err := ctx.SignedCookie("key", "val")
 			if err != nil {
 				return common.InternalServerException(ctx.Res(), err.Error())
 			}
 
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			data, err := ctx.SignedCookie("key")
 			if err != nil {
 				return common.InternalServerException(ctx.Res(), err.Error())
 			}
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
@@ -789,15 +790,15 @@ func Test_SignedCookie(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 	app.Use(cookie.Handler(cookie.Options{
 		Key: "abc&1*~#^2^#s0^=)^^7%b34",
@@ -833,39 +834,39 @@ func Test_SignedCookie(t *testing.T) {
 }
 
 func Test_Redirect(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("/redirect", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("/redirect", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "ok",
 			})
 		})
 
-		ctrl.Get("/fail", func(ctx Ctx) error {
+		ctrl.Get("/fail", func(ctx core.Ctx) error {
 			return ctx.Redirect("!@#$%^&**&^%$#redirect")
 		})
 
-		ctrl.Get("/out", func(ctx Ctx) error {
+		ctrl.Get("/out", func(ctx core.Ctx) error {
 			return ctx.Redirect("https://www.google.com")
 		})
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			return ctx.Redirect("/redirect")
 		})
 
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())

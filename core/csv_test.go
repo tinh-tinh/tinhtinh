@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"fmt"
@@ -8,10 +8,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func Test_ParseCsv(t *testing.T) {
-	body := ParseCsv(nil, nil)
+	body := core.ParseCsv(nil, nil)
 	require.Empty(t, body)
 }
 
@@ -22,38 +23,38 @@ func Test_Csv(t *testing.T) {
 		Email    string
 	}
 
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			user1 := &User{"1", "Jack Johnson", "jack@hotmail.com"}
 			user2 := &User{"2", "Jill Smith", "jill@hotmail.com"}
 			user3 := &User{"3", "James Murphy", "james@hotmail.com"}
 
 			users := []*User{user1, user2, user3}
 
-			data := ParseCsv(users, []string{"UserID", "FullName", "Email"})
+			data := core.ParseCsv(users, []string{"UserID", "FullName", "Email"})
 
 			fmt.Println(data)
 			return ctx.ExportCSV("users.csv", data)
 		})
 
-		ctrl.Post("", func(ctx Ctx) error {
+		ctrl.Post("", func(ctx core.Ctx) error {
 			return ctx.ExportCSV("data", nil)
 		})
 
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())

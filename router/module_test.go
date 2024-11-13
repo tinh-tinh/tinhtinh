@@ -1,4 +1,4 @@
-package router
+package router_test
 
 import (
 	"net/http"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/router"
 )
 
 func Test_Module(t *testing.T) {
@@ -53,10 +54,10 @@ func Test_Module(t *testing.T) {
 	appModule := func() *core.DynamicModule {
 		app := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Module{
-				Register(
-					Options{
+				router.Register(
+					router.Options{
 						Path: "setting",
-						Children: []*RouteChildren{
+						Children: []*router.RouteChildren{
 							{
 								Module: userModule,
 							},
@@ -65,7 +66,7 @@ func Test_Module(t *testing.T) {
 							},
 						},
 					},
-					Options{
+					router.Options{
 						Path:   "newnews",
 						Module: postModule,
 					},

@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"errors"
@@ -9,28 +9,29 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func Test_DefaultErrorHandler(t *testing.T) {
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			panic(errors.New("Error"))
 		})
 
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -49,27 +50,27 @@ func Test_DefaultErrorHandler(t *testing.T) {
 }
 
 func Test_ErrorHandler(t *testing.T) {
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			return errors.New("Error")
 		})
 
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module, AppOptions{
-		ErrorHandler: func(err error, ctx Ctx) error {
-			return ctx.Status(http.StatusInternalServerError).JSON(Map{
+	app := core.CreateFactory(module, core.AppOptions{
+		ErrorHandler: func(err error, ctx core.Ctx) error {
+			return ctx.Status(http.StatusInternalServerError).JSON(core.Map{
 				"message": err.Error(),
 			})
 		},

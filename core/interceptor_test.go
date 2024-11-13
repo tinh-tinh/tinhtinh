@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"fmt"
@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
-func Transform(ctx *Ctx) CallHandler {
+func Transform(ctx *core.Ctx) core.CallHandler {
 	fmt.Println("Before ...")
 	now := time.Now()
-	return func(data Map) Map {
-		res := make(Map)
+	return func(data core.Map) core.Map {
+		res := make(core.Map)
 		for key, val := range data {
 			if val != nil {
 				res[key] = val
@@ -27,11 +28,11 @@ func Transform(ctx *Ctx) CallHandler {
 }
 
 func Test_Interceptor(t *testing.T) {
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Interceptor(Transform).Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Interceptor(Transform).Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data":    "ok",
 				"total":   10,
 				"message": nil,
@@ -41,15 +42,15 @@ func Test_Interceptor(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -66,11 +67,11 @@ func Test_Interceptor(t *testing.T) {
 }
 
 func Test_ParseInterceptorModule(t *testing.T) {
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data":    "ok",
 				"total":   10,
 				"message": nil,
@@ -80,16 +81,16 @@ func Test_ParseInterceptorModule(t *testing.T) {
 		return ctrl
 	}
 
-	appModule := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	appModule := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 			Interceptor: Transform,
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(appModule)
+	app := core.CreateFactory(appModule)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())

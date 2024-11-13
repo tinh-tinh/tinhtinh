@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"encoding/json"
@@ -8,20 +8,21 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func Test_CtxContext(t *testing.T) {
-	const key CtxKey = "key"
+	const key core.CtxKey = "key"
 
-	middleware := func(ctx Ctx) error {
+	middleware := func(ctx core.Ctx) error {
 		ctx.Set(key, "value")
 		return ctx.Next()
 	}
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Use(middleware).Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Use(middleware).Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": ctx.Get(key),
 			})
 		})
@@ -29,15 +30,15 @@ func Test_CtxContext(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -58,17 +59,17 @@ func Test_CtxContext(t *testing.T) {
 }
 
 func Test_Middleware(t *testing.T) {
-	const key CtxKey = "key"
+	const key core.CtxKey = "key"
 
-	middleware := func(ctx Ctx) error {
+	middleware := func(ctx core.Ctx) error {
 		ctx.Set(key, "value")
 		return ctx.Next()
 	}
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": ctx.Get(key),
 			})
 		})
@@ -76,15 +77,15 @@ func Test_Middleware(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		}).Use(middleware)
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())

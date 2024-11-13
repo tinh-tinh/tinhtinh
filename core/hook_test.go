@@ -1,21 +1,23 @@
-package core
+package core_test
 
 import (
 	"net/http/httptest"
 	"testing"
+
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func Test_OnInit(t *testing.T) {
-	appModule := func() *DynamicModule {
-		module := NewModule(NewModuleOptions{})
+	appModule := func() *core.DynamicModule {
+		module := core.NewModule(core.NewModuleOptions{})
 
-		module.OnInit(func(module *DynamicModule) {
+		module.OnInit(func(module *core.DynamicModule) {
 			t.Log("OnInit")
 		})
 		return module
 	}
 
-	app := CreateFactory(appModule)
+	app := core.CreateFactory(appModule)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -23,13 +25,13 @@ func Test_OnInit(t *testing.T) {
 }
 
 func Test_BeforeShutdown(t *testing.T) {
-	appModule := func() *DynamicModule {
-		module := NewModule(NewModuleOptions{})
+	appModule := func() *core.DynamicModule {
+		module := core.NewModule(core.NewModuleOptions{})
 
 		return module
 	}
 
-	app := CreateFactory(appModule)
+	app := core.CreateFactory(appModule)
 	app.SetGlobalPrefix("/api")
 	app.BeforeShutdown(func() {
 		t.Log("BeforeShutdown")

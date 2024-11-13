@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/middleware/storage"
 )
 
@@ -28,14 +29,14 @@ func Test_FileInterceptor(t *testing.T) {
 		},
 	}
 
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Use(FileInterceptor(storage.UploadFileOption{
+		ctrl.Use(core.FileInterceptor(storage.UploadFileOption{
 			Storage: store,
-		})).Post("happy", func(ctx Ctx) error {
+		})).Post("happy", func(ctx core.Ctx) error {
 
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": ctx.UploadedFile().OriginalName,
 			})
 		})
@@ -43,15 +44,15 @@ func Test_FileInterceptor(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -131,16 +132,16 @@ func Test_FilesInterceptor(t *testing.T) {
 		},
 	}
 
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Use(FilesInterceptor(storage.UploadFileOption{
+		ctrl.Use(core.FilesInterceptor(storage.UploadFileOption{
 			Storage: store,
-		})).Post("", func(ctx Ctx) error {
+		})).Post("", func(ctx core.Ctx) error {
 			files := ctx.UploadedFiles()
 
 			fmt.Printf("file is %v", files)
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": len(files),
 			})
 		})
@@ -148,15 +149,15 @@ func Test_FilesInterceptor(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -237,11 +238,11 @@ func Test_FieldFileInterceptor(t *testing.T) {
 		},
 	}
 
-	controller := func(module *DynamicModule) *DynamicController {
+	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
 		ctrl.Use(
-			FileFieldsInterceptor(storage.UploadFileOption{
+			core.FileFieldsInterceptor(storage.UploadFileOption{
 				Storage: store,
 			}, storage.FieldFile{
 				Name:     "file1",
@@ -250,7 +251,7 @@ func Test_FieldFileInterceptor(t *testing.T) {
 				Name:     "file2",
 				MaxCount: 2,
 			}),
-		).Post("", func(ctx Ctx) error {
+		).Post("", func(ctx core.Ctx) error {
 			files := ctx.UploadedFieldFile()
 
 			idx := 0
@@ -261,7 +262,7 @@ func Test_FieldFileInterceptor(t *testing.T) {
 				}
 			}
 
-			return ctx.JSON(Map{
+			return ctx.JSON(core.Map{
 				"data": idx,
 			})
 		})
@@ -269,15 +270,15 @@ func Test_FieldFileInterceptor(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{controller},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())

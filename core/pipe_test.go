@@ -1,4 +1,4 @@
-package core
+package core_test
 
 import (
 	"net/http"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/core"
 )
 
 func Test_PipeMiddleware(t *testing.T) {
@@ -16,11 +17,11 @@ func Test_PipeMiddleware(t *testing.T) {
 		Password string `validate:"isStrongPassword"`
 		Age      int    `validate:"isInt"`
 	}
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Body(&SignUpDto{})).Post("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Pipe(core.Body(&SignUpDto{})).Post("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "2",
 			})
 		})
@@ -28,15 +29,15 @@ func Test_PipeMiddleware(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -66,11 +67,11 @@ func Test_Query(t *testing.T) {
 		Email string `validate:"required,isEmail" query:"email"`
 		Age   int    `validate:"isInt" query:"age"`
 	}
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Query(&FilterDto{})).Get("", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Pipe(core.Query(&FilterDto{})).Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "2",
 			})
 		})
@@ -78,15 +79,15 @@ func Test_Query(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -114,11 +115,11 @@ func Test_Param(t *testing.T) {
 	type ParamDto struct {
 		ID int `validate:"required,isInt" param:"id"`
 	}
-	appController := func(module *DynamicModule) *DynamicController {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(Param(&ParamDto{})).Get("{id}", func(ctx Ctx) error {
-			return ctx.JSON(Map{
+		ctrl.Pipe(core.Param(&ParamDto{})).Get("{id}", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
 				"data": "2",
 			})
 		})
@@ -126,15 +127,15 @@ func Test_Param(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *DynamicModule {
-		appModule := NewModule(NewModuleOptions{
-			Controllers: []Controller{appController},
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
 		})
 
 		return appModule
 	}
 
-	app := CreateFactory(module)
+	app := core.CreateFactory(module)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
