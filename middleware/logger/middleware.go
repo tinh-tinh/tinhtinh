@@ -8,8 +8,9 @@ import (
 )
 
 type MiddlewareOptions struct {
-	Path   string
-	Rotate bool
+	Path               string
+	Rotate             bool
+	SeparateBaseStatus bool
 	// Max Size in MB of each file log. Default is infinity.
 	Max    int64
 	Format string
@@ -19,6 +20,11 @@ type MiddlewareOptions struct {
 type wrappedWriter struct {
 	http.ResponseWriter
 	statusCode int
+}
+
+func (w *wrappedWriter) WriteHeader(statusCode int) {
+	w.ResponseWriter.WriteHeader(statusCode)
+	w.statusCode = statusCode
 }
 
 // Handler returns a middleware that logs the request and response.
@@ -50,6 +56,7 @@ func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 		Rotate: opt.Rotate,
 		Max:    opt.Max,
 	})
+	level := opt.Level
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +84,22 @@ func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 					content = strings.Replace(content, "${latency}", elapsed.String(), 1)
 				}
 			}
-			logger.Log(opt.Level, content)
+			if opt.SeparateBaseStatus {
+				level = SeparateBaseStatus(wrapped.statusCode)
+			}
+			logger.Log(level, content)
 		})
+	}
+}
+
+func SeparateBaseStatus(statusCode int) Level {
+	if statusCode < 300 {
+		return LevelInfo
+	} else if statusCode < 400 {
+		return LevelWarn
+	} else if statusCode < 500 {
+		return LevelError
+	} else {
+		return LevelFatal
 	}
 }
