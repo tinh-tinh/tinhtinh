@@ -1,4 +1,4 @@
-package test
+package compression_test
 
 import (
 	"net/http"
