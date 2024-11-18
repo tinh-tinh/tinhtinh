@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/common"
 	"github.com/tinh-tinh/tinhtinh/common/era"
 )
 
@@ -15,25 +14,27 @@ type item struct {
 }
 
 type Store struct {
-	max  int
+	// Deprecated
+	// max  int
 	ttl  time.Duration
 	data map[string]item
 	sync.RWMutex
 }
 
 type Options struct {
+	// Deprecated
 	Max int
 	Ttl time.Duration
 }
 
 func New(opt Options) *Store {
-	if opt.Max == 0 {
-		opt.Max = common.MaxInt
-	}
+	// if opt.Max == 0 {
+	// 	opt.Max = common.MaxInt
+	// }
 	store := &Store{
 		data: make(map[string]item),
 		ttl:  opt.Ttl,
-		max:  opt.Max,
+		// max:  opt.Max,
 	}
 	era.StartTimeStampUpdater()
 	go store.gc(1 * time.Second)
@@ -59,9 +60,9 @@ func (m *Store) Set(key string, val interface{}, ttl ...time.Duration) {
 		exp = uint32(m.ttl.Seconds()) + era.Timestamp()
 	}
 	i := item{e: exp, v: val}
-	for m.Count()+1 > m.max {
-		m.removeOldEle()
-	}
+	// for m.Count()+1 > m.max {
+	// 	m.removeOldEle()
+	// }
 	m.Lock()
 	m.data[key] = i
 	m.Unlock()
@@ -79,18 +80,18 @@ func (m *Store) Count() int {
 	return len(m.Keys())
 }
 
-func (m *Store) removeOldEle() {
-	smallest := ^uint32(0)
-	var key string
-	for k, v := range m.data {
-		if v.e < smallest {
-			smallest = v.e
-			key = k
-		}
-	}
+// func (m *Store) removeOldEle() {
+// 	smallest := ^uint32(0)
+// 	var key string
+// 	for k, v := range m.data {
+// 		if v.e < smallest {
+// 			smallest = v.e
+// 			key = k
+// 		}
+// 	}
 
-	m.Delete(key)
-}
+// 	m.Delete(key)
+// }
 
 func (m *Store) Has(key string) bool {
 	return slices.Contains(m.Keys(), key)

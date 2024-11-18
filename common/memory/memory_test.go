@@ -1,18 +1,17 @@
-package memory
+package memory_test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/common/memory"
 )
 
 func Test_NewInMemory(t *testing.T) {
 	t.Parallel()
 
-	store := New(Options{
-		Max: 100,
+	store := memory.New(memory.Options{
 		Ttl: 1 * time.Hour,
 	})
 
@@ -74,16 +73,19 @@ func Test_NewInMemory(t *testing.T) {
 	require.Len(t, store.Keys(), 0)
 }
 
-func Test_Options(t *testing.T) {
-
-	store := New(Options{
-		Max: 10,
-		Ttl: 1 * time.Hour,
+func BenchmarkMemory(b *testing.B) {
+	store := memory.New(memory.Options{
+		Ttl: 10 * time.Second,
 	})
 
-	for i := 0; i < 15; i++ {
-		store.Set(fmt.Sprintf("john-%d", i), []byte("doe"))
-	}
-
-	require.Equal(t, 10, store.Count())
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			val := store.Get("ip")
+			if val == nil {
+				store.Set("ip", 1)
+			} else {
+				store.Set("ip", val.(int)+1)
+			}
+		}
+	})
 }
