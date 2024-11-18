@@ -30,6 +30,11 @@ func Scanner(val interface{}) error {
 		validators := strings.Split(tagVal, ",")
 		value := ct.Field(i).Interface()
 
+		defaultVal := field.Tag.Get("default")
+		if defaultVal != "" && reflect.ValueOf(value).IsZero() {
+			value = defaultVal
+		}
+
 		required := slices.IndexFunc(validators, func(v string) bool { return v == "required" })
 		if required == -1 && value == "" {
 			continue

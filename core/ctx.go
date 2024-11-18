@@ -509,7 +509,6 @@ func (ctx *Ctx) Redirect(uri string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(fullUrl.String())
 	http.Redirect(ctx.Res(), ctx.Req(), fullUrl.String(), http.StatusFound)
 	return nil
 }
