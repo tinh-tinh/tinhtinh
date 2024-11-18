@@ -7,6 +7,12 @@ import (
 	"time"
 )
 
+const (
+	Dev      string = "${ip} - ${method} ${path} ${status} ${latency}"
+	Common   string = "${ip}:${date} - '${method} ${path} ${http-version}' ${status} ${content-length}"
+	Combined string = "${ip}:${date} - '${method} ${path} ${http-version}' ${status} ${content-length} ${latency} - ${referer}:${user-agent}"
+)
+
 type MiddlewareOptions struct {
 	Path               string
 	Rotate             bool
@@ -27,29 +33,33 @@ func (w *wrappedWriter) WriteHeader(statusCode int) {
 	w.statusCode = statusCode
 }
 
-// Handler returns a middleware that logs the request and response.
+// Handler returns a middleware that logs the request and response with the
+// given options.
 //
-// The middleware will log the request method, path, remote address, response status
-// and latency. The format of the log message is configurable with the Format
-// option. The format string can contain the following placeholders:
-// - ${method}: the request method
-// - ${path}: the request path
-// - ${ip}: the remote address
-// - ${status}: the response status
-// - ${latency}: the latency of the request
+// The level of the log message is determined by the StatusCode of the response.
+// If SeparateBaseStatus is true, the level is determined by the base status
+// (100-500) of the response. Otherwise, the level is set to the given level.
 //
-// The Path option specifies the path of the log files. The Rotate option specifies
-// whether the log files should be rotated. The Max option specifies the maximum
-// size of each log file. The unit of the size is MB. The default value is
-// infinity. The Level option specifies the level of the log messages. The level
-// can be one of the following:
-// - LevelFatal: log messages with a fatal level
-// - LevelError: log messages with an error level
-// - LevelWarn: log messages with a warning level
-// - LevelInfo: log messages with an info level
-// - LevelDebug: log messages with a debug level
+// The format of the log message can be customized with the Format option. The
+// following formats are available:
 //
-// The middleware will log the request and response with the specified level.
+// - dev: ${ip} - ${method} ${path} ${status} ${latency}
+// - common: ${ip}:${date} - '${method} ${path} ${http-version}' ${status} ${content-length}
+// - combined: ${ip}:${date} - '${method} ${path} ${http-version}' ${status} ${content-length} ${latency} - ${referer}:${user-agent}
+//
+// The format can be customized with variables in the format string. The
+// following variables are available:
+//
+// - ${http-version}: the HTTP version of the request
+// - ${user-agent}: the User-Agent header of the request
+// - ${referer}: the Referer header of the request
+// - ${status}: the StatusCode of the response
+// - ${method}: the method of the request
+// - ${path}: the path of the request
+// - ${ip}: the IP address of the client
+// - ${content-length}: the Content-Length header of the response
+// - ${latency}: the latency of the request in milliseconds
+// - ${date}: the current date and time in the format 2006-01-02 15:04:05
 func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 	logger := Create(Options{
 		Path:   opt.Path,
@@ -67,10 +77,20 @@ func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 				statusCode:     http.StatusOK,
 			}
 			next.ServeHTTP(wrapped, r)
-			content := opt.Format
-			specs := extractAllContent(opt.Format)
+			format := opt.Format
+			if format == "" {
+				format = Dev
+			}
+			content := format
+			specs := extractAllContent(format)
 			for _, spec := range specs {
 				switch spec {
+				case "http-version":
+					content = strings.Replace(content, "${http-version}", r.Proto, 1)
+				case "user-agent":
+					content = strings.Replace(content, "${user-agent}", r.UserAgent(), 1)
+				case "referer":
+					content = strings.Replace(content, "${referer}", r.Referer(), 1)
 				case "status":
 					content = strings.Replace(content, "${status}", fmt.Sprint(wrapped.statusCode), 1)
 				case "method":
@@ -79,9 +99,13 @@ func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 					content = strings.Replace(content, "${path}", r.URL.Path, 1)
 				case "ip":
 					content = strings.Replace(content, "${ip}", r.RemoteAddr, 1)
+				case "content-length":
+					content = strings.Replace(content, "${content-length}", fmt.Sprint(wrapped.Header().Get("Content-Length")), 1)
 				case "latency":
 					elapsed := time.Since(start)
 					content = strings.Replace(content, "${latency}", elapsed.String(), 1)
+				case "date":
+					content = strings.Replace(content, "${date}", time.Now().Format("2006-01-02 15:04:05"), 1)
 				}
 			}
 			if opt.SeparateBaseStatus {
