@@ -1,4 +1,4 @@
-package test
+package cors_test
 
 import (
 	"net/http"
