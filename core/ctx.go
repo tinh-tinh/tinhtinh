@@ -238,6 +238,39 @@ func (ctx *Ctx) Param(key string) string {
 	return val
 }
 
+// ParamInt returns the value of the route parameter with the given key as an integer.
+// If the parameter is not present, it panics.
+func (ctx *Ctx) ParamInt(key string) int {
+	val := ctx.r.PathValue(key)
+	intVal, err := strconv.Atoi(val)
+	if err != nil {
+		panic(err)
+	}
+	return intVal
+}
+
+// ParamFloat returns the value of the route parameter with the given key as a float64.
+// If the parameter is not present, it panics.
+func (ctx *Ctx) ParamFloat(key string) float64 {
+	val := ctx.r.PathValue(key)
+	floatVal, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		panic(err)
+	}
+	return floatVal
+}
+
+// ParamBool returns the value of the route parameter with the given key as a boolean.
+// If the parameter is not present, it panics.
+func (ctx *Ctx) ParamBool(key string) bool {
+	val := ctx.r.PathValue(key)
+	boolVal, err := strconv.ParseBool(val)
+	if err != nil {
+		panic(err)
+	}
+	return boolVal
+}
+
 // Query returns the value of the query string parameter with the given key.
 // If the parameter is not present, it returns an empty string.
 func (ctx *Ctx) Query(key string) string {
@@ -254,6 +287,17 @@ func (ctx *Ctx) QueryInt(key string) int {
 		panic(err)
 	}
 	return intVal
+}
+
+// QueryFloat returns the value of the query string parameter with the given key as a float.
+// If the parameter is not present, it panics.
+func (ctx *Ctx) QueryFloat(key string) float64 {
+	val := ctx.r.URL.Query().Get(key)
+	floatVal, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		panic(err)
+	}
+	return floatVal
 }
 
 // QueryBool returns the value of the query string parameter with the given key as a boolean.
