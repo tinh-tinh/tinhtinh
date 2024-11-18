@@ -336,6 +336,27 @@ func Test_Ctx_Param(t *testing.T) {
 			})
 		})
 
+		ctrl.Get("key/{key}", func(ctx core.Ctx) error {
+			data := ctx.ParamInt("key")
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("key2/{key}", func(ctx core.Ctx) error {
+			data := ctx.ParamFloat("key")
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("key3/{key}", func(ctx core.Ctx) error {
+			data := ctx.ParamBool("key")
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
 		return ctrl
 	}
 
@@ -365,6 +386,54 @@ func Test_Ctx_Param(t *testing.T) {
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, "123", res.Data)
+
+	// Case ParamInt
+	resp2, err := testClient.Get(testServer.URL + "/api/test/key/456")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp2.StatusCode)
+
+	data2, err := io.ReadAll(resp2.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data2, &res)
+	require.Nil(t, err)
+	require.Equal(t, float64(456), res.Data)
+
+	resp2, err = testClient.Get(testServer.URL + "/api/test/key/abc")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp2.StatusCode)
+
+	// Case ParamFloat
+	resp3, err := testClient.Get(testServer.URL + "/api/test/key2/10.84573984573984")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp3.StatusCode)
+
+	data3, err := io.ReadAll(resp3.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data3, &res)
+	require.Nil(t, err)
+	require.Equal(t, 10.84573984573984, res.Data)
+
+	resp3, err = testClient.Get(testServer.URL + "/api/test/key2/abc")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp3.StatusCode)
+
+	// Case ParamBool
+	resp4, err := testClient.Get(testServer.URL + "/api/test/key3/true")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp4.StatusCode)
+
+	data4, err := io.ReadAll(resp4.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data4, &res)
+	require.Nil(t, err)
+	require.Equal(t, true, res.Data)
+
+	resp4, err = testClient.Get(testServer.URL + "/api/test/key3/abc")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp4.StatusCode)
 }
 
 func Test_Ctx_Query(t *testing.T) {
@@ -373,6 +442,27 @@ func Test_Ctx_Query(t *testing.T) {
 
 		ctrl.Get("", func(ctx core.Ctx) error {
 			data := ctx.Query("name")
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("key", func(ctx core.Ctx) error {
+			data := ctx.QueryInt("key")
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("key2", func(ctx core.Ctx) error {
+			data := ctx.QueryFloat("key")
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("key3", func(ctx core.Ctx) error {
+			data := ctx.QueryBool("key")
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
@@ -407,6 +497,50 @@ func Test_Ctx_Query(t *testing.T) {
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, "test", res.Data)
+
+	// Case QueryInt
+	resp2, err := testClient.Get(testServer.URL + "/api/test/key?key=123")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp2.StatusCode)
+
+	data2, err := io.ReadAll(resp2.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data2, &res)
+	require.Nil(t, err)
+	require.Equal(t, float64(123), res.Data)
+
+	resp2, err = testClient.Get(testServer.URL + "/api/test/key?key=abc")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp2.StatusCode)
+
+	// Case QueryFloat
+	resp3, err := testClient.Get(testServer.URL + "/api/test/key2?key=10.84573984573984")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp3.StatusCode)
+
+	data3, err := io.ReadAll(resp3.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data3, &res)
+	require.Nil(t, err)
+	require.Equal(t, 10.84573984573984, res.Data)
+
+	// Case QueryBool
+	resp4, err := testClient.Get(testServer.URL + "/api/test/key3?key=true")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp4.StatusCode)
+
+	data4, err := io.ReadAll(resp4.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data4, &res)
+	require.Nil(t, err)
+	require.Equal(t, true, res.Data)
+
+	resp4, err = testClient.Get(testServer.URL + "/api/test/key3?key=abc")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp4.StatusCode)
 }
 
 func Test_Ctx_QueryInt(t *testing.T) {
