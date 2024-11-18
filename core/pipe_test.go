@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -149,4 +150,47 @@ func Test_Param(t *testing.T) {
 	resp, err = testClient.Get(testServer.URL + "/api/test/123")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestDefaultDto(t *testing.T) {
+	type Pagination struct {
+		Page  int `validate:"isInt" default:"1"`
+		Limit int `validate:"isInt" default:"10"`
+	}
+
+	appController := func(module *core.DynamicModule) *core.DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Pipe(core.Query(&Pagination{})).Get("", func(ctx core.Ctx) error {
+			pagin := ctx.Queries().(*Pagination)
+			return ctx.JSON(core.Map{
+				"data": pagin.Page,
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":1}`, string(data))
 }

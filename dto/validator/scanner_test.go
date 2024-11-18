@@ -140,3 +140,20 @@ func Test_Scanner2(t *testing.T) {
 	require.Panics(t, func() { Scanner(UserDetail{}) })
 	require.Panics(t, func() { Scanner(nil) })
 }
+
+func TestDefault(t *testing.T) {
+	type Pagination struct {
+		Page  int `validate:"isInt" default:"1"`
+		Limit int `validate:"isInt" default:"10"`
+	}
+
+	pagin := &Pagination{}
+	require.Nil(t, Scanner(pagin))
+	require.Equal(t, 1, pagin.Page)
+	require.Equal(t, 10, pagin.Limit)
+
+	pagin2 := &Pagination{Page: 4, Limit: 20}
+	require.Nil(t, Scanner(pagin2))
+	require.Equal(t, 4, pagin2.Page)
+	require.Equal(t, 20, pagin2.Limit)
+}

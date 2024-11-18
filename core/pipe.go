@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/tinh-tinh/tinhtinh/common"
@@ -57,7 +56,6 @@ func PipeMiddleware(pipes ...Pipe) Middleware {
 				}
 			}
 
-			fmt.Println(dto)
 			err := validator.Scanner(dto)
 			if err != nil {
 				return common.BadRequestException(ctx.Res(), err.Error())
