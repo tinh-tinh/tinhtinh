@@ -1,8 +1,9 @@
 package core
 
 import (
-	"net/http"
 	"time"
+
+	"github.com/tinh-tinh/tinhtinh/common/exception"
 )
 
 type ErrorHandler func(err error, ctx Ctx) error
@@ -15,12 +16,16 @@ type ErrorHandler func(err error, ctx Ctx) error
 // If the error is nil, it will return nil without doing anything.
 func ErrorHandlerDefault(err error, ctx Ctx) error {
 	if err != nil {
+		instance := exception.AdapterHttpError(err)
+
 		res := Map{
-			"statusCode": http.StatusInternalServerError,
+			"statusCode": instance.Status,
+			"error":      instance.Msg,
 			"timestamp":  time.Now().Format(time.RFC3339),
 			"path":       ctx.Req().URL.Path,
 		}
-		return ctx.Status(http.StatusInternalServerError).JSON(res)
+
+		return ctx.Status(res["statusCode"].(int)).JSON(res)
 	}
 	return nil
 }

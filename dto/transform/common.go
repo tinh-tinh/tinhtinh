@@ -40,6 +40,11 @@ func StringToInt64(str string) int64 {
 	return val
 }
 
+func StringToInt(str string) int {
+	val, _ := strconv.Atoi(str)
+	return val
+}
+
 func ToFloat(str interface{}) interface{} {
 	switch v := str.(type) {
 	case float32:

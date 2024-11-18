@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/common/exception"
 	"github.com/tinh-tinh/tinhtinh/core"
 )
 
@@ -17,7 +18,7 @@ func Test_DefaultErrorHandler(t *testing.T) {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			panic(errors.New("Error"))
+			panic(exception.Throw("test", http.StatusInternalServerError))
 		})
 
 		return ctrl
