@@ -196,7 +196,7 @@ func Test_Ctx_Body(t *testing.T) {
 	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(core.Body(&BodyData{})).Post("", func(ctx core.Ctx) error {
+		ctrl.Pipe(core.Body(BodyData{})).Post("", func(ctx core.Ctx) error {
 			data := ctx.Body().(*BodyData)
 			return ctx.JSON(core.Map{
 				"data": data.Name,
@@ -242,7 +242,7 @@ func Test_Ctx_Params(t *testing.T) {
 	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(core.Param(&ID{})).Get("/{id}", func(ctx core.Ctx) error {
+		ctrl.Pipe(core.Param(ID{})).Get("/{id}", func(ctx core.Ctx) error {
 			data := ctx.Params().(*ID)
 			return ctx.JSON(core.Map{
 				"data": data.ID,
@@ -287,7 +287,7 @@ func Test_Ctx_Queries(t *testing.T) {
 	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(core.Query(&QueryData{})).Get("", func(ctx core.Ctx) error {
+		ctrl.Pipe(core.Query(QueryData{})).Get("", func(ctx core.Ctx) error {
 			data := ctx.Queries().(*QueryData)
 			return ctx.JSON(core.Map{
 				"data": data.Name,

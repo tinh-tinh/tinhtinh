@@ -10,7 +10,7 @@ import (
 )
 
 type DocRoute struct {
-	Dto      []Pipe
+	Dto      []PipeDto
 	Security []string
 }
 

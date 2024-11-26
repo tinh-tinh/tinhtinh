@@ -21,9 +21,9 @@ func Test_PipeMiddleware(t *testing.T) {
 	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(core.Body(&SignUpDto{})).Post("", func(ctx core.Ctx) error {
+		ctrl.Pipe(core.Body(SignUpDto{})).Post("", func(ctx core.Ctx) error {
 			return ctx.JSON(core.Map{
-				"data": "2",
+				"data": ctx.Body().(*SignUpDto),
 			})
 		})
 
@@ -53,6 +53,10 @@ func Test_PipeMiddleware(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":{"Name":"test","Email":"test@gmail.com","Password":"Test@1234546","Age":0}}`, string(data))
+
 	resp, err = testClient.Post(testServer.URL+"/api/test", "application/json", strings.NewReader(`{"name":"test", "email":"test@gmail.com", "password":"Test@1234546", "age": "haha"}`))
 	require.Nil(t, err)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
@@ -60,6 +64,10 @@ func Test_PipeMiddleware(t *testing.T) {
 	resp, err = testClient.Post(testServer.URL+"/api/test", "application/json", strings.NewReader(`{"name":"test", "email":"test@gmail.com", "password":"Test@1234546", "age":333}`))
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":{"Name":"test","Email":"test@gmail.com","Password":"Test@1234546","Age":333}}`, string(data))
 }
 
 func Test_Query(t *testing.T) {
@@ -71,7 +79,7 @@ func Test_Query(t *testing.T) {
 	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(core.Query(&FilterDto{})).Get("", func(ctx core.Ctx) error {
+		ctrl.Pipe(core.Query(FilterDto{})).Get("", func(ctx core.Ctx) error {
 			return ctx.JSON(core.Map{
 				"data": "2",
 			})
@@ -119,7 +127,7 @@ func Test_Param(t *testing.T) {
 	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(core.Param(&ParamDto{})).Get("{id}", func(ctx core.Ctx) error {
+		ctrl.Pipe(core.Param(ParamDto{})).Get("{id}", func(ctx core.Ctx) error {
 			return ctx.JSON(core.Map{
 				"data": "2",
 			})
@@ -161,7 +169,7 @@ func TestDefaultDto(t *testing.T) {
 	appController := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Pipe(core.Query(&Pagination{})).Get("", func(ctx core.Ctx) error {
+		ctrl.Pipe(core.Query(Pagination{})).Get("", func(ctx core.Ctx) error {
 			pagin := ctx.Queries().(*Pagination)
 			return ctx.JSON(core.Map{
 				"data": pagin.Page,
@@ -193,4 +201,47 @@ func TestDefaultDto(t *testing.T) {
 	data, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
 	require.Equal(t, `{"data":1}`, string(data))
+}
+
+func BenchmarkPipe(b *testing.B) {
+	type SignUpDto struct {
+		Name     string `validate:"required"`
+		Email    string `validate:"required,isEmail"`
+		Password string `validate:"isStrongPassword"`
+		Age      int    `validate:"isInt"`
+	}
+	appController := func(module *core.DynamicModule) *core.DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Pipe(core.Body(SignUpDto{})).Post("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": ctx.Body().(*SignUpDto),
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			testClient := testServer.Client()
+			resp, err := testClient.Post(testServer.URL+"/api/test", "application/json", strings.NewReader(`{"name":"test","email":"test@mailinator.com","password":"12345678@Test","age":1}`))
+			require.Nil(b, err)
+			require.Equal(b, http.StatusOK, resp.StatusCode)
+		}
+	})
 }

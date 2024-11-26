@@ -1,8 +1,6 @@
 package core
 
 import (
-	"reflect"
-
 	"github.com/tinh-tinh/tinhtinh/common"
 	"github.com/tinh-tinh/tinhtinh/dto/validator"
 )
@@ -17,11 +15,14 @@ const (
 	InPath  InDto = "path"
 )
 
-type Pipe struct {
-	// Dto is the data that will be parsed and validated.
-	Dto interface{}
+type Pipe[P any] struct {
 	// In is the InDto of the Pipe. It can be one of InBody, InQuery, InPath.
 	In InDto
+}
+
+type PipeDto interface {
+	GetLocation() InDto
+	GetValue() interface{}
 }
 
 // PipeMiddleware returns a middleware that parse and validate the given Pipes.
@@ -31,14 +32,14 @@ type Pipe struct {
 // a 400 status code with the error message. If the validation is successful, it
 // will set the Dto to the ctx with the key being the In field of the Pipe and
 // call the next middleware in the chain.
-func PipeMiddleware(pipes ...Pipe) Middleware {
+func PipeMiddleware(pipes ...PipeDto) Middleware {
 	return func(ctx Ctx) error {
 		for _, pipe := range pipes {
-			dto := pipe.Dto
+			dto := pipe.GetValue()
 			// Clear old value in dto
-			p := reflect.ValueOf(dto).Elem()
-			p.Set(reflect.Zero(p.Type()))
-			switch pipe.In {
+			// p := reflect.ValueOf(dto).Elem()
+			// p.Set(reflect.Zero(p.Type()))
+			switch pipe.GetLocation() {
 			case InBody:
 				err := ctx.BodyParser(dto)
 				if err != nil {
@@ -60,10 +61,19 @@ func PipeMiddleware(pipes ...Pipe) Middleware {
 			if err != nil {
 				return common.BadRequestException(ctx.Res(), err.Error())
 			}
-			ctx.Set(pipe.In, dto)
+			ctx.Set(pipe.GetLocation(), dto)
 		}
 		return ctx.Next()
 	}
+}
+
+func (p Pipe[P]) GetLocation() InDto {
+	return p.In
+}
+
+func (p Pipe[P]) GetValue() interface{} {
+	var payload P
+	return &payload
 }
 
 // Body returns a Pipe that parses the request body into the given Dto.
@@ -73,10 +83,9 @@ func PipeMiddleware(pipes ...Pipe) Middleware {
 // If the parsing fails, it will return a 400 status code with the error message.
 //
 // If the parsing is successful, it will set the Dto to the ctx with the key being InBody and call the next middleware in the chain.
-func Body(dto interface{}) Pipe {
-	return Pipe{
-		Dto: dto,
-		In:  InBody,
+func Body[P any](dto P) PipeDto {
+	return &Pipe[P]{
+		In: InBody,
 	}
 }
 
@@ -85,10 +94,9 @@ func Body(dto interface{}) Pipe {
 // If the parsing fails, it will return a 400 status code with the error message.
 //
 // If the parsing is successful, it will set the Dto to the ctx with the key being InQuery and call the next middleware in the chain.
-func Query(dto interface{}) Pipe {
-	return Pipe{
-		Dto: dto,
-		In:  InQuery,
+func Query[P any](dto P) PipeDto {
+	return Pipe[P]{
+		In: InQuery,
 	}
 }
 
@@ -97,9 +105,8 @@ func Query(dto interface{}) Pipe {
 // If the parsing fails, it will return a 400 status code with the error message.
 //
 // If the parsing is successful, it will set the Dto to the ctx with the key being InPath and call the next middleware in the chain.
-func Param(dto interface{}) Pipe {
-	return Pipe{
-		Dto: dto,
-		In:  InPath,
+func Param[P any](dto P) PipeDto {
+	return &Pipe[P]{
+		In: InPath,
 	}
 }

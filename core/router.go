@@ -24,7 +24,7 @@ type Router struct {
 	// Middlewares of route
 	Middlewares []Middleware
 	// Pipes of route
-	Dtos []Pipe
+	Dtos []PipeDto
 	// Version of route
 	Version string
 	// Raw http handler
