@@ -26,7 +26,7 @@ func Test_Compose(t *testing.T) {
 		return core.SetMetadata(role_key, roles)
 	}
 
-	composite := core.Composition().Guard(guard).Pipe(core.Query(&FilterDto{})).Metadata(roleFnc("admin"))
+	composite := core.Composition().Guard(guard).Pipe(core.Query(FilterDto{})).Metadata(roleFnc("admin"))
 	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 

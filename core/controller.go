@@ -18,7 +18,7 @@ type DynamicController struct {
 	// Use for apply metadata for each route
 	metadata []*Metadata
 	// Data validator of each routes
-	Dtos []Pipe
+	Dtos []PipeDto
 	// Use for apply middlewares for each route
 	middlewares []Middleware
 	// Use for apply middlewares for all routes
@@ -38,7 +38,7 @@ func (module *DynamicModule) NewController(name string) *DynamicController {
 		name:              strings.ToLower(name),
 		globalMiddlewares: module.Middlewares,
 		interceptor:       module.interceptor,
-		Dtos:              []Pipe{},
+		Dtos:              []PipeDto{},
 		module:            module,
 		version:           "",
 	}
@@ -64,7 +64,7 @@ func (c *DynamicController) Version(version string) *DynamicController {
 // before the module's controllers. The controller's dtos are run before
 // the controller's handlers. If any of the dtos return an error, the
 // request will be rejected with the error.
-func (c *DynamicController) Pipe(dtos ...Pipe) *DynamicController {
+func (c *DynamicController) Pipe(dtos ...PipeDto) *DynamicController {
 	c.Dtos = append(c.Dtos, dtos...)
 	middleware := PipeMiddleware(dtos...)
 	c.middlewares = append(c.middlewares, middleware)
