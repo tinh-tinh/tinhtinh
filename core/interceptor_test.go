@@ -105,3 +105,59 @@ func Test_ParseInterceptorModule(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, `{"data":"ok","total":10}`, string(data))
 }
+
+func Test_InterceptorMultiApi(t *testing.T) {
+	appController := func(module *core.DynamicModule) *core.DynamicController {
+		ctrl := module.NewController("test").Interceptor(Transform).Registry()
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data":    "ok",
+				"total":   10,
+				"message": nil,
+			})
+		})
+
+		ctrl.Post("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data":    "ok",
+				"total":   10,
+				"message": nil,
+			})
+		})
+
+		return ctrl
+	}
+
+	appModule := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{appController},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(appModule)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"ok","total":10}`, string(data))
+
+	resp, err = testClient.Post(testServer.URL+"/api/test", "application/json", nil)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"ok","total":10}`, string(data))
+}

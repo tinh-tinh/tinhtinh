@@ -24,8 +24,9 @@ type DynamicController struct {
 	// Use for apply middlewares for all routes
 	globalMiddlewares []Middleware
 	// Parent module for this controller
-	module      *DynamicModule
-	interceptor Interceptor
+	module            *DynamicModule
+	globalInterceptor Interceptor
+	interceptor       Interceptor
 }
 
 // NewController creates a new controller with the given name.
@@ -37,7 +38,7 @@ func (module *DynamicModule) NewController(name string) *DynamicController {
 	return &DynamicController{
 		name:              strings.ToLower(name),
 		globalMiddlewares: module.Middlewares,
-		interceptor:       module.interceptor,
+		globalInterceptor: module.interceptor,
 		Dtos:              []PipeDto{},
 		module:            module,
 		version:           "",
@@ -83,6 +84,7 @@ func (c *DynamicController) Registry() *DynamicController {
 	c.globalMiddlewares = append(c.globalMiddlewares, c.middlewares...)
 	c.middlewares = []Middleware{}
 	c.globalMetadata = append(c.globalMetadata, c.metadata...)
+	c.globalInterceptor = c.interceptor
 	c.metadata = []*Metadata{}
 
 	return c
@@ -158,7 +160,11 @@ func (c *DynamicController) registry(method string, path string, handler Handler
 		Handler:     handler,
 		Dtos:        c.Dtos,
 		Version:     c.version,
-		interceptor: c.interceptor,
+	}
+	if c.interceptor != nil {
+		router.interceptor = c.interceptor
+	} else {
+		router.interceptor = c.globalInterceptor
 	}
 	c.module.Routers = append(c.module.Routers, router)
 	c.free()
