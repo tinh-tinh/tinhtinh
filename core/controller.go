@@ -179,8 +179,11 @@ func (c *DynamicController) free() {
 	runtime.GC()
 }
 
-// Inject returns the value of the provider with the given name.
-// If the provider is not found, Inject returns nil.
+// DEPRECATED
 func (c *DynamicController) Inject(name Provide) interface{} {
+	return c.module.Ref(name)
+}
+
+func (c *DynamicController) Ref(name Provide) interface{} {
 	return c.module.Ref(name)
 }
