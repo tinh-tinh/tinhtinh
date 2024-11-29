@@ -90,6 +90,21 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 // the providers that are injected with the request to nil.
 func initModule(module *DynamicModule, opt NewModuleOptions) {
 	module.Scope = opt.Scope
+	// Parse middleware
+	module.Middlewares = append(module.Middlewares, opt.Middlewares...)
+
+	// Parse guards
+	for _, g := range opt.Guards {
+		if g == nil {
+			continue
+		}
+		mid := module.ParseGuard(g)
+		module.Middlewares = append(module.Middlewares, mid)
+	}
+
+	// Parse interceptor
+	module.interceptor = opt.Interceptor
+
 	// Imports
 	for _, m := range opt.Imports {
 		if m == nil {
@@ -108,21 +123,6 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 		module.appendProvider(mod.getExports()...)
 		mod.Routers = nil
 	}
-
-	// Parse middleware
-	module.Middlewares = append(module.Middlewares, opt.Middlewares...)
-
-	// Parse guards
-	for _, g := range opt.Guards {
-		if g == nil {
-			continue
-		}
-		mid := module.ParseGuard(g)
-		module.Middlewares = append(module.Middlewares, mid)
-	}
-
-	// Parse interceptor
-	module.interceptor = opt.Interceptor
 
 	// Providers
 	for _, p := range opt.Providers {
