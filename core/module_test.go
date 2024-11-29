@@ -287,3 +287,73 @@ func Test_LifecycleModule(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, "1", res.Data)
 }
+
+func Test_PassMiddlewareModule(t *testing.T) {
+	const Tenant core.CtxKey = "tenant"
+	tenantMiddleware := func(ctx core.Ctx) error {
+		tenant := ctx.Headers("x-tenant-id")
+		if tenant != "" {
+			ctx.Set(Tenant, tenant)
+		}
+		return ctx.Next()
+	}
+
+	tenantGuard := func(module *core.DynamicModule, ctx core.Ctx) bool {
+		return ctx.Get(Tenant) != nil
+	}
+
+	userController := func(module *core.DynamicModule) *core.DynamicController {
+		ctrl := module.NewController("user")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": ctx.Get(Tenant),
+			})
+		})
+
+		return ctrl
+	}
+
+	userModule := func(module *core.DynamicModule) *core.DynamicModule {
+		user := module.New(core.NewModuleOptions{
+			Controllers: []core.Controller{userController},
+		})
+
+		return user
+	}
+
+	appModule := func() *core.DynamicModule {
+		return core.NewModule(core.NewModuleOptions{
+			Imports:     []core.Module{userModule},
+			Middlewares: []core.Middleware{tenantMiddleware},
+			Guards:      []core.AppGuard{tenantGuard},
+		})
+	}
+
+	app := core.CreateFactory(appModule)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/user")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+
+	req, err := http.NewRequest("GET", testServer.URL+"/api/user", nil)
+	require.Nil(t, err)
+	req.Header.Set("X-Tenant-Id", "1")
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	var res Response
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, "1", res.Data)
+}
