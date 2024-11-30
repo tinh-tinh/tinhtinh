@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +18,69 @@ import (
 	"github.com/tinh-tinh/tinhtinh/core"
 	"github.com/tinh-tinh/tinhtinh/middleware/storage"
 )
+
+func uploadFile(name string) (*bytes.Buffer, string, string) {
+	// Add multiple files to the form
+	tempFile, err := os.CreateTemp("", name)
+	if err != nil {
+		panic(err)
+	}
+	defer os.Remove(tempFile.Name())
+
+	content := []byte("This is a test file content")
+	if _, err := tempFile.Write(content); err != nil {
+		panic(err)
+	}
+	tempFile.Close()
+
+	// Create a multipart form
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, err := writer.CreateFormFile("file", filepath.Base(tempFile.Name()))
+	if err != nil {
+		panic(err)
+	}
+	file, err := os.Open(tempFile.Name())
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	_, err = io.Copy(part, file)
+	if err != nil {
+		panic(err)
+	}
+	writer.Close()
+	return body, writer.FormDataContentType(), filepath.Base(tempFile.Name())
+}
+
+type testFile struct {
+	fieldName string
+	fileName  string
+	content   string
+}
+
+func uploadFiles(tempFiles []testFile) (*bytes.Buffer, *multipart.Writer) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	for _, file := range tempFiles {
+		part, err := writer.CreateFormFile(file.fieldName, file.fileName)
+		if err != nil {
+			panic(err)
+		}
+		_, err = io.Copy(part, bytes.NewBufferString(file.content))
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err := writer.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	return body, writer
+}
 
 func Test_FileInterceptor(t *testing.T) {
 	store := &storage.DiskOptions{
@@ -34,10 +98,19 @@ func Test_FileInterceptor(t *testing.T) {
 
 		ctrl.Use(core.FileInterceptor(storage.UploadFileOption{
 			Storage: store,
+			FileFilter: func(r *http.Request, file *multipart.FileHeader) bool {
+				return strings.HasPrefix(file.Filename, "test")
+			},
 		})).Post("happy", func(ctx core.Ctx) error {
 
 			return ctx.JSON(core.Map{
 				"data": ctx.UploadedFile().OriginalName,
+			})
+		})
+
+		ctrl.Post("badluck", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": ctx.UploadedFile(),
 			})
 		})
 
@@ -59,41 +132,12 @@ func Test_FileInterceptor(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	// Prepare test file
-	tempFile, err := os.CreateTemp("", "test-upload-*.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(tempFile.Name())
+	// Case 1: Happy Case
+	body, contentType, fileName := uploadFile("test-upload-*.txt")
 
-	content := []byte("This is a test file content")
-	if _, err := tempFile.Write(content); err != nil {
-		t.Fatal(err)
-	}
-	tempFile.Close()
-
-	// Create a multipart form
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-	part, err := writer.CreateFormFile("file", filepath.Base(tempFile.Name()))
-	if err != nil {
-		t.Fatal(err)
-	}
-	file, err := os.Open(tempFile.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-	_, err = io.Copy(part, file)
-	if err != nil {
-		t.Fatal(err)
-	}
-	writer.Close()
-
-	// Happy case
 	req, err := http.NewRequest("POST", testServer.URL+"/api/test/happy", body)
 	require.Nil(t, err)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Content-Type", contentType)
 
 	resp, err := testClient.Do(req)
 	require.Nil(t, err)
@@ -105,7 +149,48 @@ func Test_FileInterceptor(t *testing.T) {
 	var res Response
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
-	require.Equal(t, filepath.Base(tempFile.Name()), res.Data)
+	require.Equal(t, fileName, res.Data)
+
+	// Case 2: Not use middleware
+	resp, err = testClient.Post(testServer.URL+"/api/test/badluck", "application/json", nil)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":null}`, string(data))
+
+	// Case 3: Filter Failed
+	body3, contentType3, _ := uploadFile("upload-*.txt")
+
+	req, err = http.NewRequest("POST", testServer.URL+"/api/test/happy", body3)
+	require.Nil(t, err)
+	req.Header.Set("Content-Type", contentType3)
+
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, fmt.Sprintln(`{"error":"file filter failed"}`), string(data))
+
+	// Case 4: Not File Upload
+	body4 := &bytes.Buffer{}
+	writer4 := multipart.NewWriter(body4)
+	writer4.Close()
+
+	req, err = http.NewRequest("POST", testServer.URL+"/api/test/happy", body4)
+	require.Nil(t, err)
+	req.Header.Set("Content-Type", writer4.FormDataContentType())
+
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, fmt.Sprintln(`{"error":"no file uploaded"}`), string(data))
 
 	// Remove all file after test
 	files, er := os.Open("./upload")
@@ -137,12 +222,20 @@ func Test_FilesInterceptor(t *testing.T) {
 
 		ctrl.Use(core.FilesInterceptor(storage.UploadFileOption{
 			Storage: store,
+			FileFilter: func(r *http.Request, file *multipart.FileHeader) bool {
+				return strings.HasPrefix(file.Filename, "test")
+			},
 		})).Post("", func(ctx core.Ctx) error {
 			files := ctx.UploadedFiles()
 
-			fmt.Printf("file is %v", files)
 			return ctx.JSON(core.Map{
 				"data": len(files),
+			})
+		})
+
+		ctrl.Post("badluck", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": ctx.UploadedFiles(),
 			})
 		})
 
@@ -164,38 +257,12 @@ func Test_FilesInterceptor(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	// Prepare test file
-	// Prepare the multipart form data
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	// Add multiple files to the form
-	tempFiles := []struct {
-		fieldName string
-		fileName  string
-		content   string
-	}{
+	// Case 1: Happy case
+	body, writer := uploadFiles([]testFile{
 		{"file", "test1.txt", "Hello, World!"},
 		{"file", "test2.txt", "Another test file"},
-	}
+	})
 
-	for _, file := range tempFiles {
-		part, err := writer.CreateFormFile(file.fieldName, file.fileName)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = io.Copy(part, bytes.NewBufferString(file.content))
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	err := writer.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Happy case
 	req, err := http.NewRequest("POST", testServer.URL+"/api/test", body)
 	require.Nil(t, err)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -212,6 +279,50 @@ func Test_FilesInterceptor(t *testing.T) {
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, float64(2), res.Data)
+
+	// Case 2: Not use middleware
+	resp, err = testClient.Post(testServer.URL+"/api/test/badluck", "application/json", nil)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":null}`, string(data))
+
+	// Case 3: Filter Failed
+	body3, writer3 := uploadFiles([]testFile{
+		{"file", "1.txt", "Hello, World!"},
+		{"file", "2.txt", "Another test file"},
+	})
+
+	req, err = http.NewRequest("POST", testServer.URL+"/api/test", body3)
+	require.Nil(t, err)
+	req.Header.Set("Content-Type", writer3.FormDataContentType())
+
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, fmt.Sprintln(`{"error":"file filter failed"}`), string(data))
+
+	// Case 4: Not File Upload
+	body4 := &bytes.Buffer{}
+	writer4 := multipart.NewWriter(body4)
+	writer4.Close()
+
+	req, err = http.NewRequest("POST", testServer.URL+"/api/test", body4)
+	require.Nil(t, err)
+	req.Header.Set("Content-Type", writer4.FormDataContentType())
+
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, fmt.Sprintln(`{"error":"no file uploaded"}`), string(data))
 
 	// Remove all file after test
 	files, er := os.Open("./upload")
@@ -257,13 +368,19 @@ func Test_FieldFileInterceptor(t *testing.T) {
 			idx := 0
 			for k, v := range files {
 				for _, file := range v {
-					fmt.Printf("Filed %s with file %v\n", k, file.FileName)
+					fmt.Printf("Field %s with file %v\n", k, file.FileName)
 					idx++
 				}
 			}
 
 			return ctx.JSON(core.Map{
 				"data": idx,
+			})
+		})
+
+		ctrl.Post("badluck", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": ctx.UploadedFieldFile(),
 			})
 		})
 
@@ -285,38 +402,12 @@ func Test_FieldFileInterceptor(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	// Prepare test file
-	// Prepare the multipart form data
-	body := &bytes.Buffer{}
-	writer := multipart.NewWriter(body)
-
-	// Add multiple files to the form
-	tempFiles := []struct {
-		fieldName string
-		fileName  string
-		content   string
-	}{
+	body, writer := uploadFiles([]testFile{
 		{"file1", "test1.txt", "Hello, World!"},
 		{"file2", "test2.txt", "Another test file"},
-	}
+	})
 
-	for _, file := range tempFiles {
-		part, err := writer.CreateFormFile(file.fieldName, file.fileName)
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, err = io.Copy(part, bytes.NewBufferString(file.content))
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	err := writer.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Happy case
+	// Case 1: Happy case
 	req, err := http.NewRequest("POST", testServer.URL+"/api/test", body)
 	require.Nil(t, err)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -333,6 +424,52 @@ func Test_FieldFileInterceptor(t *testing.T) {
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, float64(2), res.Data)
+
+	// Case 2: Not use middleware
+	resp, err = testClient.Post(testServer.URL+"/api/test/badluck", "application/json", nil)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":null}`, string(data))
+
+	// Case 3: Limited Failed
+	body2, writer2 := uploadFiles([]testFile{
+		{"file1", "test1.txt", "Hello, World!"},
+		{"file2", "test2.txt", "Another test file"},
+		{"file1", "test2.txt", "Hello, World!"},
+		{"file1", "test3.txt", "Hello, World!"},
+	})
+
+	req, err = http.NewRequest("POST", testServer.URL+"/api/test", body2)
+	require.Nil(t, err)
+	req.Header.Set("Content-Type", writer2.FormDataContentType())
+
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, fmt.Sprintln(`{"error":"number of field file1 exceeds limit 2"}`), string(data))
+
+	// Case 4: Not File Upload
+	body4 := &bytes.Buffer{}
+	writer4 := multipart.NewWriter(body4)
+	writer4.Close()
+
+	req, err = http.NewRequest("POST", testServer.URL+"/api/test", body4)
+	require.Nil(t, err)
+	req.Header.Set("Content-Type", writer4.FormDataContentType())
+
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, fmt.Sprintln(`{"error":"no file uploaded"}`), string(data))
 
 	// Remove all file after test
 	files, er := os.Open("./upload")
