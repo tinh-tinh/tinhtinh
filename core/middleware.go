@@ -1,6 +1,9 @@
 package core
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+)
 
 type Middleware func(ctx Ctx) error
 
@@ -16,8 +19,16 @@ func ParseCtxMiddleware(app *App, ctxMid Middleware) middlewareRaw {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx.SetCtx(w, r)
 			ctx.SetHandler(h)
-			err := ctxMid(*ctx)
+			var err error
+			defer func() {
+				if r := recover(); r != nil {
+					err = fmt.Errorf("%v", r)
+					app.errorHandler(err, *ctx)
+				}
+			}()
+			err = ctxMid(*ctx)
 			if err != nil {
+				app.errorHandler(err, *ctx)
 				return
 			}
 		})
