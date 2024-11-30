@@ -104,3 +104,51 @@ func Test_Middleware(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, "value", res.Data)
 }
+
+func Test_ExceptionMiddleware(t *testing.T) {
+	middleware := func(ctx core.Ctx) error {
+		panic("error")
+	}
+	controller := func(module *core.DynamicModule) *core.DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": "ok",
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{controller},
+		}).Use(middleware)
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	type ErrorResponse struct {
+		Error interface{} `json:"error"`
+		Path  string      `json:"path"`
+	}
+	var res ErrorResponse
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, "error", res.Error)
+}
