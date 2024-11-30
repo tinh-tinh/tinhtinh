@@ -76,7 +76,7 @@ func FileFieldsInterceptor(opt storage.UploadFileOption, fieldFiles ...storage.F
 			return common.BadRequestException(ctx.Res(), err.Error())
 		}
 		if len(files) == 0 {
-			return common.BadRequestException(ctx.Res(), "no file upload")
+			return common.BadRequestException(ctx.Res(), "no file uploaded")
 		}
 		mapFiles := make(map[string][]*storage.File)
 		for _, file := range files {

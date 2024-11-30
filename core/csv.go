@@ -26,7 +26,7 @@ func ParseCsv(data interface{}, headers []string) [][]string {
 	}
 	parseBody = append(parseBody, headers)
 
-	if reflect.TypeOf(data).Kind() != reflect.Slice {
+	if data == nil || reflect.TypeOf(data).Kind() != reflect.Slice {
 		return parseBody
 	}
 

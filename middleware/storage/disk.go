@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"mime"
 	"mime/multipart"
 	"net/http"
@@ -24,11 +25,11 @@ type DiskOptions struct {
 }
 
 type UploadFileLimit struct {
-	// Default 1MB
+	// Max of each file in upload
 	FieldSize int64
-	// Infinite
+	// Number of fields
 	Fields int
-	// Infinite
+	// Max of file
 	FileSize int64
 }
 
@@ -80,7 +81,8 @@ func HandlerFile(r *http.Request, opt UploadFileOption, fieldFiles ...FieldFile)
 		if opt.Limit.Fields > 0 {
 			numFields := len(r.MultipartForm.File)
 			if numFields > opt.Limit.Fields {
-				return nil, errors.New("number of fields exceeds limit" + strconv.Itoa(opt.Limit.Fields))
+				errStr := fmt.Sprintf("number of fields exceeds limit %d", opt.Limit.Fields)
+				return nil, errors.New(errStr)
 			}
 		}
 	}
@@ -95,7 +97,8 @@ func HandlerFile(r *http.Request, opt UploadFileOption, fieldFiles ...FieldFile)
 				return e.Name == field
 			})
 			if len(files) > fieldFiles[matchField].MaxCount {
-				return nil, errors.New("number of fields exceeds limit" + strconv.Itoa(fieldFiles[matchField].MaxCount))
+				errStr := fmt.Sprintf("number of field %s exceeds limit %d", fieldFiles[matchField].Name, fieldFiles[matchField].MaxCount)
+				return nil, errors.New(errStr)
 			}
 		}
 		for _, fileHeader := range files {
@@ -103,7 +106,7 @@ func HandlerFile(r *http.Request, opt UploadFileOption, fieldFiles ...FieldFile)
 				return nil, errors.New("file filter failed")
 			}
 
-			if opt.Limit != nil && fileHeader.Size > opt.Limit.FieldSize {
+			if opt.Limit != nil && opt.Limit.FieldSize > 0 && fileHeader.Size > opt.Limit.FieldSize {
 				return nil, errors.New("file size exceeds limit" + strconv.FormatInt(opt.Limit.FieldSize, 10))
 			}
 

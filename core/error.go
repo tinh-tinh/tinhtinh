@@ -15,17 +15,14 @@ type ErrorHandler func(err error, ctx Ctx) error
 //
 // If the error is nil, it will return nil without doing anything.
 func ErrorHandlerDefault(err error, ctx Ctx) error {
-	if err != nil {
-		instance := exception.AdapterHttpError(err)
+	instance := exception.AdapterHttpError(err)
 
-		res := Map{
-			"statusCode": instance.Status,
-			"error":      instance.Msg,
-			"timestamp":  time.Now().Format(time.RFC3339),
-			"path":       ctx.Req().URL.Path,
-		}
-
-		return ctx.Status(res["statusCode"].(int)).JSON(res)
+	res := Map{
+		"statusCode": instance.Status,
+		"error":      instance.Msg,
+		"timestamp":  time.Now().Format(time.RFC3339),
+		"path":       ctx.Req().URL.Path,
 	}
-	return nil
+
+	return ctx.Status(res["statusCode"].(int)).JSON(res)
 }

@@ -39,6 +39,12 @@ func Test_Csv(t *testing.T) {
 			return ctx.ExportCSV("users.csv", data)
 		})
 
+		ctrl.Get("error", func(ctx core.Ctx) error {
+			data := core.ParseCsv(3, []string{"UserID", "FullName", "Email"})
+
+			return ctx.ExportCSV("users.csv", data)
+		})
+
 		ctrl.Post("", func(ctx core.Ctx) error {
 			return ctx.ExportCSV("data", nil)
 		})
@@ -73,5 +79,14 @@ func Test_Csv(t *testing.T) {
 	resp, err = testClient.Post(testServer.URL+"/api/test", "application/json", nil)
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/error")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	require.Equal(t, "UserID,FullName,Email\n", string(data))
 
 }
