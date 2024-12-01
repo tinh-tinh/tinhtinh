@@ -405,6 +405,7 @@ func Test_FieldFileInterceptor(t *testing.T) {
 	body, writer := uploadFiles([]testFile{
 		{"file1", "test1.txt", "Hello, World!"},
 		{"file2", "test2.txt", "Another test file"},
+		{"file1", "test2.txt", "Hello, World!"},
 	})
 
 	// Case 1: Happy case
@@ -423,7 +424,7 @@ func Test_FieldFileInterceptor(t *testing.T) {
 
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
-	require.Equal(t, float64(2), res.Data)
+	require.Equal(t, float64(3), res.Data)
 
 	// Case 2: Not use middleware
 	resp, err = testClient.Post(testServer.URL+"/api/test/badluck", "application/json", nil)

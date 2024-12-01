@@ -105,6 +105,12 @@ func (b *SseBroker) Start() {
 	}()
 }
 
+func (b *SseBroker) Close() {
+	for s := range b.Clients {
+		close(s)
+	}
+}
+
 // ServeHTTP implements the http.Handler interface.
 //
 // It is an event-streaming endpoint which pushes messages to the client as they

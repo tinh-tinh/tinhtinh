@@ -1,4 +1,4 @@
-package validator
+package validator_test
 
 import (
 	"fmt"
@@ -6,110 +6,127 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/dto/validator"
 )
 
-type UserDetail struct {
-	ID       string    `validate:"isObjectId"`
-	Name     string    `validate:"required,isAlpha"`
-	Username string    `validate:"isAlphaNumeric"`
-	Email    string    `validate:"required,isEmail"`
-	Password string    `validate:"isStrongPassword"`
-	UserID   string    `validate:"isUUID"`
-	Point    string    `validate:"isFloat"`
-	Height   float64   `validate:"isFloat"`
-	Age      int       `validate:"isInt"`
-	Active   bool      `validate:"isBool"`
-	IsAdmin  string    `validate:"isBool"`
-	Birth    string    `validate:"isDateString"`
-	Total    int       `validate:"isNumber"`
-	Join     time.Time `validate:"isDate"`
-}
-
-type User struct {
-	ID     int         `validate:"required,isInt"`
-	Detail *UserDetail `validate:"nested"`
-	Banner string      `validate:"isAlpha"`
-}
-
-type UserList struct {
-	Users []*User `validate:"nested"`
-}
-
-type Post struct {
-	Author *User  `validate:"nested"`
-	Title  string `validate:"required"`
-}
-
 func Test_Scanner(t *testing.T) {
-	t.Parallel()
+	require.Panics(t, func() {
+		_ = validator.Scanner(nil)
+	})
+	type Nested struct {
+		IsAlpha string `validate:"isAlpha"`
+	}
+	type Input struct {
+		Required         string    `validate:"required"`
+		IsAlpha          string    `validate:"isAlpha"`
+		IsAlphanumeric   string    `validate:"isAlphaNumeric"`
+		IsEmail          string    `validate:"isEmail"`
+		IsStrongPassword string    `validate:"isStrongPassword"`
+		IsUUID           string    `validate:"isUUID"`
+		IsFloat          float64   `validate:"isFloat"`
+		IsInt            int       `validate:"isInt"`
+		IsBool           bool      `validate:"isBool"`
+		IsDateString     time.Time `validate:"isDateString"`
+		IsNumber         int       `validate:"isNumber"`
+		IsNumber2        float64   `validate:"isNumber"`
+		IsObjectId       string    `validate:"isObjectId"`
+		Nested           *Nested   `validate:"nested"`
+		Slice            []*Nested `validate:"nested"`
+		Lala             string    `validate:"isAlpha"`
+	}
+	require.Panics(t, func() {
+		_ = validator.Scanner(Input{})
+	})
 
-	userDetails1 := &UserDetail{
-		Email:    "tinh@gmail.com",
-		Password: "12345678@Tc",
-	}
-	user1 := &User{
-		ID:     1,
-		Detail: userDetails1,
-		Banner: "true",
-	}
-
-	err1 := Scanner(user1)
-	require.NotNil(t, err1)
-	require.Equal(t, "Name is required\nName is not a valid alpha", err1.Error())
-
-	userDetails2 := &UserDetail{
-		Name:     "haha",
-		Email:    "babaddok@gmail.com",
-		Password: "12345678@Tc",
-	}
-	user2 := &User{
-		ID:     2,
-		Detail: userDetails2,
+	happyCase := &Input{
+		Required:         "required",
+		IsAlpha:          "abc",
+		IsAlphanumeric:   "abc123",
+		IsEmail:          "0K9oE@example.com",
+		IsStrongPassword: "12345678@Tc",
+		IsUUID:           "550e8400-e29b-41d4-a716-446655440000",
+		IsFloat:          123.123,
+		IsInt:            123,
+		IsBool:           true,
+		IsDateString:     time.Now(),
+		IsNumber:         123,
+		IsNumber2:        39.49,
+		IsObjectId:       "5e9bf1f6d3d2d3d3d3d3d3d3",
+		Nested: &Nested{
+			IsAlpha: "abc",
+		},
+		Slice: []*Nested{
+			{IsAlpha: "avc"},
+		},
 	}
 
-	err2 := Scanner(user2)
-	require.Nil(t, err2)
+	err := validator.Scanner(happyCase)
+	require.Nil(t, err)
 
-	userList := &UserList{
-		Users: []*User{user1, user2},
+	badCaseStr := &Input{
+		IsAlpha:          "$#%",
+		IsAlphanumeric:   "#$%#^^%$",
+		IsEmail:          "abc",
+		IsStrongPassword: "mno",
+		IsUUID:           "abc",
+		IsObjectId:       "fvddf",
+		Nested:           &Nested{IsAlpha: "757557"},
+		Slice: []*Nested{{
+			IsAlpha: "455455445",
+		}},
 	}
-	err3 := Scanner(userList)
-	require.NotNil(t, err3)
-	require.Equal(t, "Name is required\nName is not a valid alpha", err3.Error())
+	err = validator.Scanner(badCaseStr)
+	require.NotNil(t, err)
+	require.Equal(t, "Required is required\nIsAlpha is not a valid alpha\nIsAlphanumeric is not a valid alpha numeric\nIsEmail is not a valid email\nIsStrongPassword is not a valid strong password\nIsUUID is not a valid UUID\nIsObjectId is not a valid ObjectID\nIsAlpha is not a valid alpha\nIsAlpha is not a valid alpha", err.Error())
 
-	post := &Post{
-		Author: user2,
-		Title:  "",
+	type BadCase struct {
+		IsFloat      interface{} `validate:"isFloat"`
+		IsInt        interface{} `validate:"isInt"`
+		IsBool       interface{} `validate:"isBool"`
+		IsDateString interface{} `validate:"isDateString"`
+		IsNumber     interface{} `validate:"isNumber"`
 	}
-	err4 := Scanner(post)
-	require.NotNil(t, err4)
-	require.Equal(t, "Title is required", err4.Error())
 
-	userDetails3 := &UserDetail{
-		Name:     "haha",
-		Email:    "babaddok@gmail.com",
-		Password: "12345678@Tc",
-		UserID:   "1234",
-		Point:    "true",
-		ID:       "1234",
-		Username: "##$$",
-		Age:      1,
-		Active:   true,
-		Birth:    "true",
-		Height:   1.5,
-		Total:    1,
-		IsAdmin:  "abc",
-		Join:     time.Now(),
+	badCaseNum := &BadCase{
+		IsFloat:      true,
+		IsInt:        "Abc",
+		IsBool:       23,
+		IsDateString: "33",
+		IsNumber:     "fff",
 	}
-	user3 := &User{
-		ID:     3,
-		Detail: userDetails3,
-	}
-	err5 := Scanner(user3)
-	require.NotNil(t, err5)
+	err = validator.Scanner(badCaseNum)
+	require.NotNil(t, err)
+	require.Equal(t, "IsFloat is not a valid float\nIsInt is not a valid int\nIsBool is not a valid bool\nIsDateString is not a valid date time\nIsNumber is not a valid number", err.Error())
 }
 
 func Benchmark_Scanner(b *testing.B) {
+
+	type UserDetail struct {
+		ID       string    `validate:"isObjectId"`
+		Name     string    `validate:"required,isAlpha"`
+		Username string    `validate:"isAlphaNumeric"`
+		Email    string    `validate:"required,isEmail"`
+		Password string    `validate:"isStrongPassword"`
+		UserID   string    `validate:"isUUID"`
+		Point    string    `validate:"isFloat"`
+		Height   float64   `validate:"isFloat"`
+		Age      int       `validate:"isInt"`
+		Active   bool      `validate:"isBool"`
+		IsAdmin  string    `validate:"isBool"`
+		Birth    string    `validate:"isDateString"`
+		Total    int       `validate:"isNumber"`
+		Join     time.Time `validate:"isDate"`
+	}
+
+	type User struct {
+		ID     int         `validate:"required,isInt"`
+		Detail *UserDetail `validate:"nested"`
+		Banner string      `validate:"isAlpha"`
+	}
+
+	type UserList struct {
+		Users []*User `validate:"nested"`
+	}
 	b.Run("test_validator", func(b *testing.B) {
 		var userList []*User
 		count := b.N
@@ -124,21 +141,14 @@ func Benchmark_Scanner(b *testing.B) {
 				ID:     n,
 				Detail: userDetail,
 			}
-			require.Nil(b, Scanner(user))
+			require.Nil(b, validator.Scanner(user))
 			userList = append(userList, user)
 		}
 
-		require.Nil(b, Scanner(&UserList{
+		require.Nil(b, validator.Scanner(&UserList{
 			Users: userList,
 		}))
 	})
-}
-
-func Test_Scanner2(t *testing.T) {
-	t.Parallel()
-
-	require.Panics(t, func() { Scanner(UserDetail{}) })
-	require.Panics(t, func() { Scanner(nil) })
 }
 
 func TestDefault(t *testing.T) {
@@ -148,12 +158,12 @@ func TestDefault(t *testing.T) {
 	}
 
 	pagin := &Pagination{}
-	require.Nil(t, Scanner(pagin))
+	require.Nil(t, validator.Scanner(pagin))
 	require.Equal(t, 1, pagin.Page)
 	require.Equal(t, 10, pagin.Limit)
 
 	pagin2 := &Pagination{Page: 4, Limit: 20}
-	require.Nil(t, Scanner(pagin2))
+	require.Nil(t, validator.Scanner(pagin2))
 	require.Equal(t, 4, pagin2.Page)
 	require.Equal(t, 20, pagin2.Limit)
 }

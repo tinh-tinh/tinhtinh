@@ -95,7 +95,7 @@ func Scanner(val interface{}) error {
 				if !IsDateString(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid date time")
 				} else {
-					ct.Field(i).Set(reflect.ValueOf(transform.StringToDate(value.(string))))
+					ct.Field(i).Set(reflect.ValueOf(transform.ToDate(value)))
 				}
 			case "isBool":
 				if !IsBool(value) {
