@@ -172,6 +172,10 @@ func Test_Nil(t *testing.T) {
 		return module
 	}
 
+	app := appModule()
+	prd := app.Ref("abc")
+	require.Nil(t, prd)
+
 	require.NotPanics(t, func() {
 		_ = core.CreateFactory(appModule)
 	})

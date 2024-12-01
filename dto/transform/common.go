@@ -61,6 +61,18 @@ func ToFloat(str interface{}) interface{} {
 	}
 }
 
+func ToDate(str interface{}) time.Time {
+	switch v := str.(type) {
+	case time.Time:
+		return str.(time.Time)
+	case string:
+		date, _ := time.Parse("2006-01-02", str.(string))
+		return date
+	default:
+		panic(fmt.Sprintf("cannot transform with type %v", v))
+	}
+}
+
 func StringToDate(str string) time.Time {
 	date, _ := time.Parse("2006-01-02", str)
 	return date

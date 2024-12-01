@@ -220,10 +220,7 @@ func requestMiddleware(module *DynamicModule) Middleware {
 				p.Value = p.factory(values...)
 			}
 		}
-		err := ctx.Next()
-		if err != nil {
-			return err
-		}
+		ctx.Next()
 		for _, p := range module.getRequest() {
 			if p.Value != nil {
 				p.Value = nil
