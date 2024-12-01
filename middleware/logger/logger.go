@@ -90,9 +90,8 @@ func (log *Logger) write(level Level, msg string) {
 
 	if log.Max > 0 && currentSize > log.Max*1000*1000 {
 		if !log.Rotate {
-			fmt.Println("Size log is hit limited storage")
 			file.Close()
-			return
+			panic("Size log is hit limited storage")
 		} else {
 			idx := 1
 			for idx > 0 {

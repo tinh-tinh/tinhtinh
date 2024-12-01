@@ -138,8 +138,6 @@ func (cors Cors) Handler(h http.Handler) http.Handler {
 			cors.handlePreflight(w, r)
 			if cors.optionPassthrough {
 				h.ServeHTTP(w, r)
-			} else {
-				w.WriteHeader(http.StatusOK)
 			}
 		} else {
 			pass := cors.handleActualReq(w, r)
@@ -202,11 +200,11 @@ func (cors *Cors) handlePreflight(w http.ResponseWriter, r *http.Request) {
 		headers["Access-Control-Allow-Origin"] = r.Header["Origin"]
 	}
 
-	// Validate and set method
-	if r.Method != http.MethodOptions {
-		common.NotAllowedException(w, "Method not allowed")
-		return
-	}
+	// // Validate and set method
+	// if r.Method != http.MethodOptions {
+	// 	common.NotAllowedException(w, "Method not allowed")
+	// 	return
+	// }
 
 	method := r.Header.Get("Access-Control-Request-Method")
 	if !cors.isMethodAllowed(method) {
