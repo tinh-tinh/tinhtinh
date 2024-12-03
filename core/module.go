@@ -177,12 +177,22 @@ func (m *DynamicModule) Providers(providers ...Provider) {
 
 // Ref returns the value of the provider with the given name.
 // If the provider is not found, Ref returns nil.
-func (m *DynamicModule) Ref(name Provide) interface{} {
+func (m *DynamicModule) Ref(name Provide, ctx ...Ctx) interface{} {
+	if name == REQUEST {
+		return ctx[0].Req()
+	}
 	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
 		return e.Name == name
 	})
 	if idx == -1 {
 		return nil
+	}
+
+	if m.DataProviders[idx].Scope == Request {
+		if len(ctx) == 0 {
+			panic("request provider need ctx as parameters")
+		}
+		return ctx[0].Get(name)
 	}
 	return m.DataProviders[idx].Value
 }
@@ -206,26 +216,17 @@ func (m *DynamicModule) Export(name Provide) *DynamicProvider {
 
 func requestMiddleware(module *DynamicModule) Middleware {
 	return func(ctx Ctx) error {
-		module.NewProvider(ProviderOptions{
-			Name:  REQUEST,
-			Value: ctx.Req(),
-		})
 		for _, p := range module.getRequest() {
 			if p.Value == nil {
 				var values []interface{}
 				for _, p := range p.inject {
-					values = append(values, module.Ref(p))
+					values = append(values, module.Ref(p, ctx))
 				}
 
-				p.Value = p.factory(values...)
+				value := p.factory(values...)
+				ctx.Set(p.Name, value)
 			}
 		}
-		ctx.Next()
-		for _, p := range module.getRequest() {
-			if p.Value != nil {
-				p.Value = nil
-			}
-		}
-		return nil
+		return ctx.Next()
 	}
 }

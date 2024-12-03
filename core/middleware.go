@@ -9,7 +9,7 @@ type Middleware func(ctx Ctx) error
 type MiddlewareRef func(ref RefProvider, ctx Ctx) error
 
 type RefProvider interface {
-	Ref(name Provide) interface{}
+	Ref(name Provide, ctx ...Ctx) interface{}
 }
 
 type middlewareRaw func(http.Handler) http.Handler

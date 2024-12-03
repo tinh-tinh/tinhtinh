@@ -45,7 +45,14 @@ func Test_RequestModule(t *testing.T) {
 		ctrl := module.NewController("user")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			data := ctrl.Inject(core.Provide("user"))
+			data := ctrl.Ref(core.Provide("user"), ctx)
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("panic", func(ctx core.Ctx) error {
+			data := ctrl.Ref(core.Provide("user"))
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
@@ -107,6 +114,14 @@ func Test_RequestModule(t *testing.T) {
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, "2User", res.Data)
+
+	req, err = http.NewRequest("GET", testServer.URL+"/api/user/panic", nil)
+	require.Nil(t, err)
+	req.Header.Set("x-tenant", "3")
+
+	resp, err = testClient.Do(req)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 }
 
 func Test_Controller(t *testing.T) {

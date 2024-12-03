@@ -190,6 +190,6 @@ func (c *DynamicController) Inject(name Provide) interface{} {
 	return c.module.Ref(name)
 }
 
-func (c *DynamicController) Ref(name Provide) interface{} {
-	return c.module.Ref(name)
+func (c *DynamicController) Ref(name Provide, ctx ...Ctx) interface{} {
+	return c.module.Ref(name, ctx...)
 }

@@ -72,98 +72,6 @@ func Test_NewProvider(t *testing.T) {
 	require.Equal(t, "child", res.Data)
 }
 
-// func Test_getExports(t *testing.T) {
-// 	childPrivateProvider := func(module *core.DynamicModule) *core.DynamicProvider {
-// 		provider := module.NewProvider(core.ProviderOptions{
-// 			Name:  "private",
-// 			Value: "private",
-// 		})
-// 		return provider
-// 	}
-
-// 	childPublicProvider := func(module *core.DynamicModule) *core.DynamicProvider {
-// 		provider := module.NewProvider(core.ProviderOptions{
-// 			Name:  "public",
-// 			Value: "public",
-// 		})
-// 		return provider
-// 	}
-
-// 	childModule := func(module *core.DynamicModule) *core.DynamicModule {
-// 		childModule := module.New(core.NewModuleOptions{
-// 			Providers: []core.Provider{childPrivateProvider, childPublicProvider},
-// 			Exports:   []core.Provider{childPublicProvider},
-// 		})
-
-// 		return childModule
-// 	}
-
-// 	module := core.NewModule(core.NewModuleOptions{
-// 		Imports: []core.Module{childModule},
-// 	})
-// 	providers := module.getExports()
-// 	require.Equal(t, 1, len(providers))
-// 	require.Equal(t, core.Provide("public"), providers[0].Name)
-// }
-
-// func Test_getRequest(t *testing.T) {
-// 	reqModule := func(module *core.DynamicModule) *core.DynamicModule {
-// 		req := module.New(core.NewModuleOptions{})
-// 		req.NewProvider(core.ProviderOptions{
-// 			Scope: core.Request,
-// 			Name:  "req",
-// 			Factory: func(param ...interface{}) interface{} {
-// 				return param[0]
-// 			},
-// 			Inject: []core.Provide{core.REQUEST},
-// 		})
-// 		req.Export("req")
-// 		req.NewProvider(core.ProviderOptions{
-// 			Name:  "req2",
-// 			Value: 3,
-// 		})
-// 		req.Export("req2")
-
-// 		fmt.Println(req.getExports())
-// 		return req
-// 	}
-
-// 	globalModule := func(module *core.DynamicModule) *core.DynamicModule {
-// 		global := module.New(core.NewModuleOptions{
-// 			Scope: core.Global,
-// 		})
-// 		global.NewProvider(core.ProviderOptions{
-// 			Name:  "global",
-// 			Value: "global",
-// 		})
-
-// 		global.Export("global")
-// 		return global
-// 	}
-
-// 	module := core.NewModule(core.NewModuleOptions{
-// 		Imports: []core.Module{reqModule, globalModule},
-// 	})
-// 	providers := module.getRequest()
-// 	fmt.Println(providers)
-// 	require.Equal(t, 1, len(providers))
-// 	require.Equal(t, core.Provide("req"), providers[0].Name)
-// }
-
-// func Test_appendProvider(t *testing.T) {
-// 	module := core.NewModule(core.NewModuleOptions{
-// 		Scope: core.Global,
-// 	})
-
-// 	provider := module.NewProvider(core.ProviderOptions{
-// 		Name:  "test",
-// 		Value: "test",
-// 	})
-
-// 	module.appendProvider(provider)
-// 	require.Equal(t, 1, len(module.DataProviders))
-// }
-
 func Test_FactoryProvider(t *testing.T) {
 	rootModule := func(module *core.DynamicModule) *core.DynamicModule {
 		root := module.New(core.NewModuleOptions{
@@ -201,7 +109,7 @@ func Test_FactoryProvider(t *testing.T) {
 	require.Equal(t, "rootChild", module.Ref("child"))
 }
 
-func Test_RequestProvider(t *testing.T) {
+func tenantModule() *core.DynamicModule {
 	const (
 		TENANT  core.Provide = "TENANT"
 		SERVICE core.Provide = "SERVICE"
@@ -228,7 +136,7 @@ func Test_RequestProvider(t *testing.T) {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("/", func(ctx core.Ctx) error {
-			service := module.Ref(SERVICE).(*RequestProvider)
+			service := ctx.Get(SERVICE).(*RequestProvider)
 			return ctx.JSON(core.Map{
 				"data": service.Name,
 			})
@@ -254,17 +162,17 @@ func Test_RequestProvider(t *testing.T) {
 		return tenant
 	}
 
-	appModule := func() *core.DynamicModule {
-		module := core.NewModule(core.NewModuleOptions{
-			Imports:     []core.Module{tenantModule},
-			Controllers: []core.Controller{controller},
-			Providers:   []core.Provider{service},
-		})
+	module := core.NewModule(core.NewModuleOptions{
+		Imports:     []core.Module{tenantModule},
+		Controllers: []core.Controller{controller},
+		Providers:   []core.Provider{service},
+	})
 
-		return module
-	}
+	return module
+}
 
-	app := core.CreateFactory(appModule)
+func Test_RequestProvider(t *testing.T) {
+	app := core.CreateFactory(tenantModule)
 	app.SetGlobalPrefix("/api")
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
@@ -298,4 +206,24 @@ func Test_RequestProvider(t *testing.T) {
 	err = json.Unmarshal(data2, &res2)
 	require.Nil(t, err)
 	require.Equal(t, "modeltest2", res2.Data)
+}
+
+func BenchmarkRequestModule(b *testing.B) {
+	app := core.CreateFactory(tenantModule)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			req, err := http.NewRequest("GET", testServer.URL+"/api/test/", nil)
+			require.Nil(b, err)
+			req.Header.Set("x-tenant", "test")
+			resp, err := testClient.Do(req)
+			require.Nil(b, err)
+			require.Equal(b, http.StatusOK, resp.StatusCode)
+		}
+	})
 }
