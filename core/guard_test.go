@@ -98,8 +98,8 @@ const Key core.CtxKey = "key"
 
 func Test_Ctx_Guard(t *testing.T) {
 	guard := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
-		ctx.Set(Key, "value")
-		return true
+		ctx.Set(Key, ctx.Query("key"))
+		return ctx.Query("key") == "value"
 	}
 
 	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
@@ -129,7 +129,7 @@ func Test_Ctx_Guard(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	resp, err := testClient.Get(testServer.URL + "/api/test")
+	resp, err := testClient.Get(testServer.URL + "/api/test?key=value")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -140,4 +140,46 @@ func Test_Ctx_Guard(t *testing.T) {
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, "value", res.Data)
+}
+
+func Test_GuardModule(t *testing.T) {
+	guard := func(module core.RefProvider, ctx *core.Ctx) bool {
+		return ctx.Query("key") == "value"
+	}
+
+	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": ctx.Get(Key),
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() *core.DynamicModule {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controller{authCtrl},
+		}).Guard(guard)
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/test?key=value")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test?key=abc")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
