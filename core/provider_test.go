@@ -33,7 +33,7 @@ func ChildModule(module *core.DynamicModule) *core.DynamicModule {
 func AppController(module *core.DynamicModule) *core.DynamicController {
 	ctrl := module.NewController("test")
 	ctrl.Get("/", func(ctx core.Ctx) error {
-		name := ctrl.Inject("child")
+		name := ctrl.Ref("child")
 		return ctx.JSON(core.Map{
 			"data": name,
 		})
@@ -136,7 +136,7 @@ func tenantModule() *core.DynamicModule {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("/", func(ctx core.Ctx) error {
-			service := ctx.Get(SERVICE).(*RequestProvider)
+			service := ctx.Ref(SERVICE).(*RequestProvider)
 			return ctx.JSON(core.Map{
 				"data": service.Name,
 			})

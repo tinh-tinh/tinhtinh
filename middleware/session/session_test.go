@@ -1,14 +1,15 @@
-package session
+package session_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/middleware/session"
 )
 
 func Test_Session(t *testing.T) {
-	s := New(Options{
+	s := session.New(session.Options{
 		GeneratorID: func() string {
 			return time.Now().String()
 		},
@@ -19,7 +20,7 @@ func Test_Session(t *testing.T) {
 }
 
 func Test_Expiration(t *testing.T) {
-	s := New(Options{
+	s := session.New(session.Options{
 		ExpiresIn: 1 * time.Second,
 	})
 
