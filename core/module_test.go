@@ -137,7 +137,7 @@ func Test_Controller(t *testing.T) {
 		ctrl := module.NewController("sub")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			data := ctrl.Inject(core.Provide("sub"))
+			data := ctrl.Ref(core.Provide("sub"))
 			return ctx.JSON(core.Map{
 				"data": data,
 			})

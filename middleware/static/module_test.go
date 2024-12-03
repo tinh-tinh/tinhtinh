@@ -1,4 +1,4 @@
-package static
+package static_test
 
 import (
 	"net/http"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/middleware/static"
 )
 
 func Test_Static(t *testing.T) {
@@ -24,7 +25,7 @@ func Test_Static(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		return core.NewModule(core.NewModuleOptions{
-			Imports:     []core.Module{ForRoot("upload")},
+			Imports:     []core.Module{static.ForRoot("upload")},
 			Controllers: []core.Controller{appController},
 		})
 	}

@@ -512,3 +512,7 @@ func (ctx *Ctx) Redirect(uri string) error {
 	http.Redirect(ctx.Res(), ctx.Req(), fullUrl.String(), http.StatusFound)
 	return nil
 }
+
+func (ctx *Ctx) Ref(name Provide) interface{} {
+	return ctx.Get(name)
+}
