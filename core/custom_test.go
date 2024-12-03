@@ -93,7 +93,7 @@ func Test_Middleware_CustomCtx(t *testing.T) {
 		return ctx.Req().Header.Get("x-tenant-id")
 	})
 
-	guard := func(ctrl *core.DynamicController, ctx *core.Ctx) bool {
+	guard := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
 		return ctx.Query("key") == "value"
 	}
 

@@ -12,7 +12,7 @@ import (
 )
 
 func Test_ParseGuardCtrl(t *testing.T) {
-	guard := func(ctrl *core.DynamicController, ctx *core.Ctx) bool {
+	guard := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
 		return ctx.Query("key") == "value"
 	}
 
@@ -53,7 +53,7 @@ func Test_ParseGuardCtrl(t *testing.T) {
 }
 
 func Test_ParseGuardModule(t *testing.T) {
-	guard := func(module *core.DynamicModule, ctx core.Ctx) bool {
+	guard := func(module core.RefProvider, ctx *core.Ctx) bool {
 		return ctx.Query("key") == "value"
 	}
 
@@ -72,7 +72,7 @@ func Test_ParseGuardModule(t *testing.T) {
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controller{authCtrl},
-			Guards:      []core.AppGuard{guard},
+			Guards:      []core.Guard{guard},
 		})
 
 		return appModule
@@ -97,7 +97,7 @@ func Test_ParseGuardModule(t *testing.T) {
 const Key core.CtxKey = "key"
 
 func Test_Ctx_Guard(t *testing.T) {
-	guard := func(ctrl *core.DynamicController, ctx *core.Ctx) bool {
+	guard := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
 		ctx.Set(Key, "value")
 		return true
 	}

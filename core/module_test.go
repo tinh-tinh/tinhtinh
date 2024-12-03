@@ -181,7 +181,7 @@ func Test_Nil(t *testing.T) {
 			Providers:   []core.Provider{nil},
 			Imports:     []core.Module{nil},
 			Exports:     []core.Provider{nil},
-			Guards:      []core.AppGuard{nil},
+			Guards:      []core.Guard{nil},
 			Middlewares: []core.Middleware{nil},
 		})
 		return module
@@ -255,7 +255,7 @@ func Test_LifecycleModule(t *testing.T) {
 		return ctx.Next()
 	}
 
-	tenantGuard := func(module *core.DynamicModule, ctx core.Ctx) bool {
+	tenantGuard := func(module core.RefProvider, ctx *core.Ctx) bool {
 		return ctx.Get(Tenant) != nil
 	}
 
@@ -274,7 +274,7 @@ func Test_LifecycleModule(t *testing.T) {
 	appModule := func() *core.DynamicModule {
 		return core.NewModule(core.NewModuleOptions{
 			Middlewares: []core.Middleware{tenantMiddleware},
-			Guards:      []core.AppGuard{tenantGuard},
+			Guards:      []core.Guard{tenantGuard},
 			Controllers: []core.Controller{appController},
 		})
 	}
@@ -317,7 +317,7 @@ func Test_PassMiddlewareModule(t *testing.T) {
 		return ctx.Next()
 	}
 
-	tenantGuard := func(module *core.DynamicModule, ctx core.Ctx) bool {
+	tenantGuard := func(module core.RefProvider, ctx *core.Ctx) bool {
 		return ctx.Get(Tenant) != nil
 	}
 
@@ -345,7 +345,7 @@ func Test_PassMiddlewareModule(t *testing.T) {
 		return core.NewModule(core.NewModuleOptions{
 			Imports:     []core.Module{userModule},
 			Middlewares: []core.Middleware{tenantMiddleware},
-			Guards:      []core.AppGuard{tenantGuard},
+			Guards:      []core.Guard{tenantGuard},
 		})
 	}
 
