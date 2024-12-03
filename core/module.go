@@ -40,7 +40,7 @@ type NewModuleOptions struct {
 	Controllers []Controller
 	Providers   []Provider
 	Exports     []Provider
-	Guards      []AppGuard
+	Guards      []Guard
 	Middlewares []Middleware
 	Interceptor Interceptor
 }

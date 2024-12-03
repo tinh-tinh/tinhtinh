@@ -20,7 +20,7 @@ func Test_Metadata(t *testing.T) {
 
 	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test").Guard(
-			func(ctrl *core.DynamicController, ctx *core.Ctx) bool {
+			func(ctrl core.RefProvider, ctx *core.Ctx) bool {
 				roles, ok := ctx.GetMetadata(role_key).([]string)
 				fmt.Println(roles)
 				if !ok || len(roles) == 0 {
