@@ -1,7 +1,6 @@
 package core_test
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,101 +10,38 @@ import (
 	"github.com/tinh-tinh/tinhtinh/core"
 )
 
-func Test_ParseGuardCtrl(t *testing.T) {
-	guard := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
-		return ctx.Query("key") == "value"
-	}
-
-	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
-		ctrl := module.NewController("test")
-
-		ctrl.Guard(guard).Get("", func(ctx core.Ctx) error {
-			return ctx.JSON(core.Map{
-				"data": "1",
-			})
-		})
-
-		return ctrl
-	}
-
-	module := func() *core.DynamicModule {
-		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{authCtrl},
-		})
-
-		return appModule
-	}
-
-	app := core.CreateFactory(module)
-	app.SetGlobalPrefix("/api")
-
-	testServer := httptest.NewServer(app.PrepareBeforeListen())
-	defer testServer.Close()
-	testClient := testServer.Client()
-
-	resp, err := testClient.Get(testServer.URL + "/api/test?key=value")
-	require.Nil(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	resp, err = testClient.Get(testServer.URL + "/api/test?key=abc")
-	require.Nil(t, err)
-	require.Equal(t, http.StatusForbidden, resp.StatusCode)
-}
-
-func Test_ParseGuardModule(t *testing.T) {
-	guard := func(module core.RefProvider, ctx *core.Ctx) bool {
-		return ctx.Query("key") == "value"
-	}
-
-	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
-		ctrl := module.NewController("test")
-
-		ctrl.Get("", func(ctx core.Ctx) error {
-			return ctx.JSON(core.Map{
-				"data": "1",
-			})
-		})
-
-		return ctrl
-	}
-
-	module := func() *core.DynamicModule {
-		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{authCtrl},
-			Guards:      []core.Guard{guard},
-		})
-
-		return appModule
-	}
-
-	app := core.CreateFactory(module)
-	app.SetGlobalPrefix("/api")
-
-	testServer := httptest.NewServer(app.PrepareBeforeListen())
-	defer testServer.Close()
-	testClient := testServer.Client()
-
-	resp, err := testClient.Get(testServer.URL + "/api/test?key=value")
-	require.Nil(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	resp, err = testClient.Get(testServer.URL + "/api/test?key=abc")
-	require.Nil(t, err)
-	require.Equal(t, http.StatusForbidden, resp.StatusCode)
-}
-
 const Key core.CtxKey = "key"
 
-func Test_Ctx_Guard(t *testing.T) {
-	guard := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
-		ctx.Set(Key, ctx.Query("key"))
-		return ctx.Query("key") == "value"
+func TestGuard(t *testing.T) {
+	guardInCtrl := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
+		return ctx.Query("ctrl") == "value"
+	}
+
+	guardInModule := func(module core.RefProvider, ctx *core.Ctx) bool {
+		return ctx.Query("module") == "value"
+	}
+
+	guardWithCtx := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
+		ctx.Set(Key, ctx.Query("ctx"))
+		return true
 	}
 
 	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Guard(guard).Get("", func(ctx core.Ctx) error {
+		ctrl.Guard(guardInCtrl).Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": "1",
+			})
+		})
+
+		ctrl.Get("module", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": "2",
+			})
+		})
+
+		ctrl.Get("ctx", func(ctx core.Ctx) error {
 			return ctx.JSON(core.Map{
 				"data": ctx.Get(Key),
 			})
@@ -117,7 +53,8 @@ func Test_Ctx_Guard(t *testing.T) {
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controller{authCtrl},
-		})
+			Guards:      []core.Guard{guardInModule},
+		}).Guard(guardWithCtx)
 
 		return appModule
 	}
@@ -127,59 +64,38 @@ func Test_Ctx_Guard(t *testing.T) {
 
 	testServer := httptest.NewServer(app.PrepareBeforeListen())
 	defer testServer.Close()
+
 	testClient := testServer.Client()
 
-	resp, err := testClient.Get(testServer.URL + "/api/test?key=value")
+	resp, err := testClient.Get(testServer.URL + "/api/test/module")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/module?module=value")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	data, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
+	require.Equal(t, `{"data":"2"}`, string(data))
 
-	var res Response
-	err = json.Unmarshal(data, &res)
+	resp, err = testClient.Get(testServer.URL + "/api/test?module=value")
 	require.Nil(t, err)
-	require.Equal(t, "value", res.Data)
-}
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 
-func Test_GuardModule(t *testing.T) {
-	guard := func(module core.RefProvider, ctx *core.Ctx) bool {
-		return ctx.Query("key") == "value"
-	}
-
-	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
-		ctrl := module.NewController("test")
-
-		ctrl.Get("", func(ctx core.Ctx) error {
-			return ctx.JSON(core.Map{
-				"data": ctx.Get(Key),
-			})
-		})
-
-		return ctrl
-	}
-
-	module := func() *core.DynamicModule {
-		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{authCtrl},
-		}).Guard(guard)
-
-		return appModule
-	}
-
-	app := core.CreateFactory(module)
-	app.SetGlobalPrefix("/api")
-
-	testServer := httptest.NewServer(app.PrepareBeforeListen())
-	defer testServer.Close()
-
-	testClient := testServer.Client()
-
-	resp, err := testClient.Get(testServer.URL + "/api/test?key=value")
+	resp, err = testClient.Get(testServer.URL + "/api/test?module=value&ctrl=value")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	resp, err = testClient.Get(testServer.URL + "/api/test?key=abc")
+	data, err = io.ReadAll(resp.Body)
 	require.Nil(t, err)
-	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+	require.Equal(t, `{"data":"1"}`, string(data))
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/ctx?module=value&ctx=value")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"value"}`, string(data))
 }

@@ -1,6 +1,7 @@
 package core_test
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -21,6 +22,9 @@ func Test_Route(t *testing.T) {
 	route = core.ParseRoute("GET /user/{id}/edit")
 	route.SetPrefix("admin")
 	require.Equal(t, "GET /admin/user/{id}/edit", route.GetPath())
+
+	route = core.ParseRoute("GET /")
+	require.Equal(t, "GET /", route.GetPath())
 }
 
 func Test_IfSlashPrefixString(t *testing.T) {
@@ -87,9 +91,17 @@ func Test_registerRoutes(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"1"}`, string(data))
+
 	resp, err = testClient.Post(testServer.URL+"/api/test", "application/json", nil)
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"2"}`, string(data))
 
 	req, err := http.NewRequest("PATCH", testServer.URL+"/api/test/1", nil)
 	require.Nil(t, err)
@@ -97,15 +109,27 @@ func Test_registerRoutes(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"3"}`, string(data))
+
 	req, err = http.NewRequest("PUT", testServer.URL+"/api/test/1", nil)
 	require.Nil(t, err)
 	resp, err = testClient.Do(req)
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"4"}`, string(data))
+
 	req, err = http.NewRequest("DELETE", testServer.URL+"/api/test/1", nil)
 	require.Nil(t, err)
 	resp, err = testClient.Do(req)
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"5"}`, string(data))
 }

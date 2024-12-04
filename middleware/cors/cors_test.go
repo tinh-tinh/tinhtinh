@@ -1,6 +1,7 @@
 package cors_test
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -81,6 +82,9 @@ func Test_Cors(t *testing.T) {
 	resp, err := testClient.Do(req)
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
+	require.Equal(t, "true", resp.Header.Get("Access-Control-Allow-Credentials"))
+	require.Equal(t, "GET", resp.Header.Get("Access-Control-Allow-Methods"))
 
 	// ACtual req
 	resp, err = testClient.Get(testServer.URL + "/api/test")
@@ -169,6 +173,9 @@ func Test_FailedCors(t *testing.T) {
 	require.Nil(t, err)
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Equal(t, "localhost", resp.Header.Get("Access-Control-Allow-Origin"))
+	require.Equal(t, "PUT", resp.Header.Get("Access-Control-Allow-Methods"))
+	require.Equal(t, "Content-Type", resp.Header.Get("Access-Control-Allow-Headers"))
 }
 
 func Test_OriginFnc(t *testing.T) {
@@ -200,6 +207,10 @@ func Test_OriginFnc(t *testing.T) {
 	require.Nil(t, err)
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"ok"}`, string(data))
 
 	// Bad referer
 	req, err = http.NewRequest("GET", testServer.URL+"/api/test", nil)

@@ -1,6 +1,7 @@
 package router_test
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,7 +17,7 @@ func Test_Module(t *testing.T) {
 
 		ctrl.Get("", func(ctx core.Ctx) error {
 			return ctx.JSON(core.Map{
-				"data": "ok",
+				"data": "auth",
 			})
 		})
 
@@ -36,7 +37,7 @@ func Test_Module(t *testing.T) {
 
 		ctrl.Get("", func(ctx core.Ctx) error {
 			return ctx.JSON(core.Map{
-				"data": "ok",
+				"data": "documents",
 			})
 		})
 
@@ -88,7 +89,15 @@ func Test_Module(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"auth"}`, string(data))
+
 	resp, err = testClient.Get(testServer.URL + "/api/setting/documents")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":"documents"}`, string(data))
 }

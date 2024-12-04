@@ -19,7 +19,7 @@ func AppVersionModule() core.ModuleParam {
 	appController1 := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test").Version("1")
 
-		ctrl.Get("/", func(ctx core.Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			return ctx.JSON(core.Map{
 				"data": "1",
 			})
@@ -30,7 +30,7 @@ func AppVersionModule() core.ModuleParam {
 	appController2 := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test").Version("2")
 
-		ctrl.Get("/", func(ctx core.Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			return ctx.JSON(core.Map{
 				"data": "2",
 			})
@@ -97,7 +97,7 @@ func Test_VersionHeader(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	req, err := http.NewRequest("GET", testServer.URL+"/api/test/", nil)
+	req, err := http.NewRequest("GET", testServer.URL+"/api/test", nil)
 	require.Nil(t, err)
 	req.Header.Set("X-Version", "1")
 
@@ -144,7 +144,7 @@ func Test_VersionMedia(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	req, err := http.NewRequest("GET", testServer.URL+"/api/test/", nil)
+	req, err := http.NewRequest("GET", testServer.URL+"/api/test", nil)
 	require.Nil(t, err)
 	req.Header.Set("Accept", "application/json; v=1")
 
