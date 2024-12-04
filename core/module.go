@@ -22,6 +22,7 @@ const (
 )
 
 type DynamicModule struct {
+	isRoot        bool
 	Scope         Scope
 	Routers       []*Router
 	Middlewares   []Middleware
@@ -53,7 +54,7 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 	if opt.Scope == "" {
 		opt.Scope = Global
 	}
-	module := &DynamicModule{}
+	module := &DynamicModule{isRoot: true}
 	initModule(module, opt)
 
 	return module
@@ -70,7 +71,7 @@ func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
 	if opt.Scope == "" {
 		opt.Scope = Global
 	}
-	newMod := &DynamicModule{}
+	newMod := &DynamicModule{isRoot: false}
 	newMod.DataProviders = append(newMod.DataProviders, m.getExports()...)
 	newMod.Middlewares = append(newMod.Middlewares, m.Middlewares...)
 
