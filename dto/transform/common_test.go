@@ -38,22 +38,16 @@ func Test_ToDate(t *testing.T) {
 	require.Panics(t, func() { transform.ToDate(true) })
 }
 
-func Test_StringToDate(t *testing.T) {
-	require.Equal(t, time.Date(2024, 9, 27, 0, 0, 0, 0, time.UTC), transform.StringToDate("2024-09-27"))
-}
+func Test_ToString(t *testing.T) {
+	require.Equal(t, "true", transform.ToString(true))
+	require.Equal(t, "false", transform.ToString(false))
+	require.Equal(t, "123", transform.ToString(123))
+	require.Equal(t, "0.45", transform.ToString(0.45))
+	require.Equal(t, "0.1", transform.ToString(float32(0.1)))
+	require.Equal(t, "2024-01-01", transform.ToString("2024-01-01"))
 
-func Test_StringToBool(t *testing.T) {
-	require.True(t, transform.StringToBool("true"))
-	require.False(t, transform.StringToBool("false"))
-}
+	current := time.Now()
+	require.Equal(t, current.String(), transform.ToString(current))
 
-func Test_StringToInt(t *testing.T) {
-	require.Equal(t, int64(123), transform.StringToInt64("123"))
-	require.Equal(t, int(123), transform.StringToInt("123"))
-}
-
-func Test_StringToTimeDuration(t *testing.T) {
-	require.Equal(t, time.Second, transform.StringToTimeDuration("1s"))
-	require.Equal(t, time.Minute, transform.StringToTimeDuration("1m"))
-	require.Equal(t, time.Hour, transform.StringToTimeDuration("1h"))
+	require.Panics(t, func() { transform.ToString(make(map[string]interface{})) })
 }
