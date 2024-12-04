@@ -1,6 +1,8 @@
 package core_test
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -57,6 +59,14 @@ func Test_Compose(t *testing.T) {
 	resp, err := testClient.Get(testServer.URL + "/api/test?name=abc&key=value")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	var res Response
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, []interface{}{"admin"}, res.Data)
 
 	resp, err = testClient.Get(testServer.URL + "/api/test?name=abc")
 	require.Nil(t, err)

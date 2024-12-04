@@ -32,7 +32,7 @@ func ChildModule(module *core.DynamicModule) *core.DynamicModule {
 
 func AppController(module *core.DynamicModule) *core.DynamicController {
 	ctrl := module.NewController("test")
-	ctrl.Get("/", func(ctx core.Ctx) error {
+	ctrl.Get("", func(ctx core.Ctx) error {
 		name := ctrl.Ref("child")
 		return ctx.JSON(core.Map{
 			"data": name,
@@ -59,7 +59,7 @@ func Test_NewProvider(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	resp, err := testClient.Get(testServer.URL + "/api/test/")
+	resp, err := testClient.Get(testServer.URL + "/api/test")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -135,7 +135,7 @@ func tenantModule() *core.DynamicModule {
 	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("/", func(ctx core.Ctx) error {
+		ctrl.Get("", func(ctx core.Ctx) error {
 			service := ctx.Ref(SERVICE).(*RequestProvider)
 			return ctx.JSON(core.Map{
 				"data": service.Name,
@@ -179,7 +179,7 @@ func Test_RequestProvider(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	req, err := http.NewRequest("GET", testServer.URL+"/api/test/", nil)
+	req, err := http.NewRequest("GET", testServer.URL+"/api/test", nil)
 	require.Nil(t, err)
 	req.Header.Set("x-tenant", "test")
 	resp, err := testClient.Do(req)
@@ -218,7 +218,7 @@ func BenchmarkRequestModule(b *testing.B) {
 
 	b.RunParallel(func(p *testing.PB) {
 		for p.Next() {
-			req, err := http.NewRequest("GET", testServer.URL+"/api/test/", nil)
+			req, err := http.NewRequest("GET", testServer.URL+"/api/test", nil)
 			require.Nil(b, err)
 			req.Header.Set("x-tenant", "test")
 			resp, err := testClient.Do(req)
