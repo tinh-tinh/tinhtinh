@@ -10,7 +10,7 @@ const LOGGER core.Provide = "LOGGER"
 // The logger is created with the given options and is registered as a provider in the module
 // with the name LOGGER. The logger is also exported by the module.
 func Module(opt Options) core.Modules {
-	return func(module *core.DynamicModule) *core.DynamicModule {
+	return func(module core.Module) core.Module {
 		loggerModule := module.New(core.NewModuleOptions{
 			Scope: core.Global,
 		})
@@ -27,6 +27,6 @@ func Module(opt Options) core.Modules {
 
 // InjectLog injects the logger from the module to the caller. It returns a
 // pointer to the logger, or nil if the logger is not found.
-func InjectLog(module *core.DynamicModule) *Logger {
+func InjectLog(module core.Module) *Logger {
 	return module.Ref(LOGGER).(*Logger)
 }

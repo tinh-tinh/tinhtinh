@@ -11,7 +11,7 @@ import (
 )
 
 func Test_Exception(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("bad-request", func(ctx core.Ctx) error {
@@ -133,7 +133,7 @@ func Test_Exception(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})

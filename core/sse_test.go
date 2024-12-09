@@ -13,7 +13,7 @@ import (
 )
 
 func TestSseHandler(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("")
 
 		ctrl.Sse("events", func(broker *core.SseBroker) {
@@ -31,7 +31,7 @@ func TestSseHandler(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})

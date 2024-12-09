@@ -9,7 +9,7 @@ import (
 )
 
 func Test_Version(t *testing.T) {
-	ctrl := func(module *core.DynamicModule) *core.DynamicController {
+	ctrl := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 		ctrl.Version("1").Get("/t1", func(ctx core.Ctx) error {
 			return ctx.JSON(core.Map{
@@ -29,17 +29,17 @@ func Test_Version(t *testing.T) {
 		Controllers: []core.Controllers{ctrl},
 	})
 
-	findT1 := slices.IndexFunc(appModule.Routers, func(r *core.Router) bool {
+	findT1 := slices.IndexFunc(appModule.GetRouters(), func(r *core.Router) bool {
 		return r.Path == "/t1"
 	})
 	require.NotEqual(t, -1, findT1)
-	require.Equal(t, "1", appModule.Routers[findT1].Version)
+	require.Equal(t, "1", appModule.GetRouters()[findT1].Version)
 
-	findT2 := slices.IndexFunc(appModule.Routers, func(r *core.Router) bool {
+	findT2 := slices.IndexFunc(appModule.GetRouters(), func(r *core.Router) bool {
 		return r.Path == "/t2"
 	})
 	require.NotEqual(t, -1, findT2)
-	require.Equal(t, "2", appModule.Routers[findT2].Version)
+	require.Equal(t, "2", appModule.GetRouters()[findT2].Version)
 }
 
 func Test_free(t *testing.T) {

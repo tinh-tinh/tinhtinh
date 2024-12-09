@@ -23,7 +23,7 @@ func BenchmarkTenant(b *testing.B) {
 	type mapper map[string]interface{}
 	var mutex = sync.RWMutex{}
 
-	forRoot := func(module *core.DynamicModule) *core.DynamicModule {
+	forRoot := func(module core.Module) core.Module {
 		tenantModule := module.New(core.NewModuleOptions{})
 
 		tenantModule.NewProvider(core.ProviderOptions{
@@ -62,7 +62,7 @@ func BenchmarkTenant(b *testing.B) {
 		return tenantModule
 	}
 
-	userController := func(module *core.DynamicModule) *core.DynamicController {
+	userController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("user")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -74,7 +74,7 @@ func BenchmarkTenant(b *testing.B) {
 		return ctrl
 	}
 
-	userModule := func(module *core.DynamicModule) *core.DynamicModule {
+	userModule := func(module core.Module) core.Module {
 		user := module.New(core.NewModuleOptions{
 			Controllers: []core.Controllers{userController},
 		})
@@ -82,7 +82,7 @@ func BenchmarkTenant(b *testing.B) {
 		return user
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		app := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{forRoot, userModule},
 		})

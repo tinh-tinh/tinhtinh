@@ -18,7 +18,7 @@ func Test_Metadata(t *testing.T) {
 		return core.SetMetadata(role_key, roles)
 	}
 
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test").Guard(
 			func(ctrl core.RefProvider, ctx *core.Ctx) bool {
 				roles, ok := ctx.GetMetadata(role_key).([]string)
@@ -47,7 +47,7 @@ func Test_Metadata(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		mod := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})

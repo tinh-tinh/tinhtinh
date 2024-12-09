@@ -26,7 +26,7 @@ func TestGuard(t *testing.T) {
 		return true
 	}
 
-	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
+	authCtrl := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Guard(guardInCtrl).Get("", func(ctx core.Ctx) error {
@@ -50,7 +50,7 @@ func TestGuard(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{authCtrl},
 			Guards:      []core.Guard{guardInModule},

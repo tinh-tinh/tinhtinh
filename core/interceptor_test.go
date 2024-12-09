@@ -28,7 +28,7 @@ func Transform(ctx *core.Ctx) core.CallHandler {
 }
 
 func Test_Interceptor(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Interceptor(Transform).Get("", func(ctx core.Ctx) error {
@@ -42,7 +42,7 @@ func Test_Interceptor(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -67,7 +67,7 @@ func Test_Interceptor(t *testing.T) {
 }
 
 func Test_ParseInterceptorModule(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -81,7 +81,7 @@ func Test_ParseInterceptorModule(t *testing.T) {
 		return ctrl
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 			Interceptor: Transform,
@@ -107,7 +107,7 @@ func Test_ParseInterceptorModule(t *testing.T) {
 }
 
 func Test_InterceptorMultiApi(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test").Interceptor(Transform).Registry()
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -129,7 +129,7 @@ func Test_InterceptorMultiApi(t *testing.T) {
 		return ctrl
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})

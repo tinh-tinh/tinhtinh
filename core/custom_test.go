@@ -18,7 +18,7 @@ func Test_CustomCtx(t *testing.T) {
 		}
 		return ctx.Req().Header.Get("x-tenant-id")
 	})
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", tenant.Handler(true, func(wCtx core.WrappedCtx[string]) error {
@@ -36,7 +36,7 @@ func Test_CustomCtx(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})
@@ -97,7 +97,7 @@ func Test_Middleware_CustomCtx(t *testing.T) {
 		return ctx.Query("key") == "value"
 	}
 
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Guard(guard).Get("", tenant.Handler(true, func(wCtx core.WrappedCtx[string]) error {
@@ -115,7 +115,7 @@ func Test_Middleware_CustomCtx(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})

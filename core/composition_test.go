@@ -29,7 +29,7 @@ func Test_Compose(t *testing.T) {
 	}
 
 	composite := core.Composition().Guard(guard).Pipe(core.Query(FilterDto{})).Metadata(roleFnc("admin"))
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Composition(composite).Get("", func(ctx core.Ctx) error {
@@ -41,7 +41,7 @@ func Test_Compose(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})

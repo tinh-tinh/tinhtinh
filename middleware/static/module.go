@@ -9,7 +9,7 @@ import (
 
 func ForRoot(path string) core.Modules {
 	path = strings.ReplaceAll(path, "/", "")
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("")
 
 		routePath := "/" + path + "/"
@@ -18,7 +18,7 @@ func ForRoot(path string) core.Modules {
 		return ctrl
 	}
 
-	return func(module *core.DynamicModule) *core.DynamicModule {
+	return func(module core.Module) core.Module {
 		staticModule := module.New(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})

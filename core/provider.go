@@ -1,12 +1,22 @@
 package core
 
-import "slices"
+import (
+	"slices"
+)
 
 type Provider interface {
 	GetName() Provide
+	SetName(name Provide)
 	GetValue() interface{}
-	IsPublic() bool
-	IsRequest() bool
+	SetValue(value interface{})
+	GetStatus() ProvideStatus
+	SetStatus(status ProvideStatus)
+	GetScope() Scope
+	SetScope(scope Scope)
+	SetInject(inject []Provide)
+	GetInject() []Provide
+	SetFactory(factory Factory)
+	GetFactory() Factory
 }
 
 type Provide string
@@ -37,6 +47,54 @@ type DynamicProvider struct {
 	inject []Provide
 }
 
+func (p *DynamicProvider) GetName() Provide {
+	return p.Name
+}
+
+func (p *DynamicProvider) SetName(name Provide) {
+	p.Name = name
+}
+
+func (p *DynamicProvider) GetValue() interface{} {
+	return p.Value
+}
+
+func (p *DynamicProvider) SetValue(value interface{}) {
+	p.Value = value
+}
+
+func (p *DynamicProvider) GetStatus() ProvideStatus {
+	return p.Status
+}
+
+func (p *DynamicProvider) SetStatus(status ProvideStatus) {
+	p.Status = status
+}
+
+func (p *DynamicProvider) GetScope() Scope {
+	return p.Scope
+}
+
+func (p *DynamicProvider) SetScope(scope Scope) {
+	p.Scope = scope
+}
+
+func (p *DynamicProvider) SetInject(inject []Provide) {
+	p.inject = inject
+}
+
+func (p *DynamicProvider) GetInject() []Provide {
+	return p.inject
+}
+
+func (p *DynamicProvider) SetFactory(factory Factory) {
+	p.factory = factory
+}
+
+func (p *DynamicProvider) GetFactory() Factory {
+	return p.factory
+}
+
 type ProviderOptions struct {
 	// Scope of the provider. Default is Global.
 	Scope Scope
@@ -60,8 +118,8 @@ type ProviderOptions struct {
 // the factory function with the given injects.
 // Otherwise, the value of the provider will be set to the given value, or the
 // result of the factory function with the given injects if the value is nil.
-func (module *DynamicModule) NewProvider(opt ProviderOptions) *DynamicProvider {
-	var provider *DynamicProvider
+func (module *DynamicModule) NewProvider(opt ProviderOptions) Provider {
+	var provider Provider
 	providerIdx := module.findIdx(opt.Name)
 	if providerIdx != -1 {
 		provider = module.DataProviders[providerIdx]
@@ -77,24 +135,25 @@ func (module *DynamicModule) NewProvider(opt ProviderOptions) *DynamicProvider {
 		return p == REQUEST
 	})
 	if reqInject {
-		provider.Scope = Request
+		provider.SetScope(Request)
 	}
-	if provider.Scope == "" {
-		provider.Scope = module.Scope
+	if provider.GetScope() == "" {
+		provider.SetScope(module.Scope)
 	}
-	if provider.Scope == Request {
-		provider.inject = opt.Inject
-		provider.factory = opt.Factory
-		provider.Value = opt.Value
+	if provider.GetScope() == Request {
+		provider.SetInject(opt.Inject)
+		provider.SetFactory(opt.Factory)
+		provider.SetValue(opt.Value)
 		return provider
 	}
-	provider.Value = opt.Value
+	provider.SetValue(opt.Value)
 	if opt.Value == nil {
 		var values []interface{}
 		for _, p := range opt.Inject {
 			values = append(values, module.Ref(p))
 		}
-		provider.Value = opt.Factory(values...)
+		val := opt.Factory(values...)
+		provider.SetValue(val)
 	}
 
 	return provider
@@ -102,10 +161,10 @@ func (module *DynamicModule) NewProvider(opt ProviderOptions) *DynamicProvider {
 
 // getExports returns a list of providers that are exported by the module.
 // The exported providers are the providers that have the status PUBLIC.
-func (module *DynamicModule) getExports() []*DynamicProvider {
-	exports := make([]*DynamicProvider, 0)
+func (module *DynamicModule) GetExports() []Provider {
+	exports := make([]Provider, 0)
 	for _, v := range module.DataProviders {
-		if v.Status == PUBLIC {
+		if v.GetStatus() == PUBLIC {
 			exports = append(exports, v)
 		}
 	}
@@ -115,10 +174,10 @@ func (module *DynamicModule) getExports() []*DynamicProvider {
 
 // getRequest returns a list of providers that have the scope Request.
 // The providers are the providers that will be injected with the request.
-func (module *DynamicModule) getRequest() []*DynamicProvider {
-	reqs := make([]*DynamicProvider, 0)
+func (module *DynamicModule) getRequest() []Provider {
+	reqs := make([]Provider, 0)
 	for _, v := range module.DataProviders {
-		if v.Scope == Request {
+		if v.GetScope() == Request {
 			reqs = append(reqs, v)
 		}
 	}
@@ -128,9 +187,9 @@ func (module *DynamicModule) getRequest() []*DynamicProvider {
 // appendProvider appends the given providers to the module's list of providers.
 // If the provider already exists with the same name, it will override the existing
 // provider.
-func (module *DynamicModule) appendProvider(providers ...*DynamicProvider) {
+func (module *DynamicModule) appendProvider(providers ...Provider) {
 	for _, provider := range providers {
-		idx := module.findIdx(provider.Name)
+		idx := module.findIdx(provider.GetName())
 		if idx == -1 {
 			module.DataProviders = append(module.DataProviders, provider)
 			continue

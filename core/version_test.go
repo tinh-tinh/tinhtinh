@@ -16,7 +16,7 @@ type Response struct {
 }
 
 func AppVersionModule() core.ModuleParam {
-	appController1 := func(module *core.DynamicModule) *core.DynamicController {
+	appController1 := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test").Version("1")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -27,7 +27,7 @@ func AppVersionModule() core.ModuleParam {
 		return ctrl
 	}
 
-	appController2 := func(module *core.DynamicModule) *core.DynamicController {
+	appController2 := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test").Version("2")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -38,7 +38,7 @@ func AppVersionModule() core.ModuleParam {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController1, appController2},
 		})

@@ -19,7 +19,7 @@ func SetMetadata(key string, value interface{}) *Metadata {
 
 // Metadata sets the given metadata for the controller. The metadata will be
 // merged with any existing metadata on the controller.
-func (controller *DynamicController) Metadata(meta ...*Metadata) *DynamicController {
+func (controller *DynamicController) Metadata(meta ...*Metadata) Controller {
 	controller.metadata = append(controller.metadata, meta...)
 	return controller
 }
