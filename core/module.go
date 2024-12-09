@@ -24,11 +24,21 @@ const (
 type Module interface {
 	OnInit(hooks ...HookModule) Module
 	New(opt NewModuleOptions) Module
-	Controlllers(opt NewModuleOptions) Module
-	Providers(opt NewModuleOptions) Module
-	Export(name Provide) interface{}
+	Controllers(controllers ...Controllers) Module
+	Providers(providers ...Providers) Module
+	Export(name Provide) Provider
 	Ref(name Provide, ctx ...Ctx) interface{}
-	FindIdx(name Provide) int
+	findIdx(name Provide) int
+	init()
+	GetRouters() []*Router
+	GetExports() []Provider
+	free()
+	NewController(name string) Controller
+	NewProvider(opt ProviderOptions) Provider
+	Consumer(consumer *Consumer) Module
+	Guard(guards ...Guard) Module
+	Use(middleware ...Middleware) Module
+	UseRef(middlewareRefs ...MiddlewareRef) Module
 }
 
 type DynamicModule struct {
@@ -36,14 +46,14 @@ type DynamicModule struct {
 	Scope         Scope
 	Routers       []*Router
 	Middlewares   []Middleware
-	DataProviders []*DynamicProvider
+	DataProviders []Provider
 	hooks         []HookModule
 	interceptor   Interceptor
 }
 
-type Modules func(module *DynamicModule) *DynamicModule
-type Controllers func(module *DynamicModule) *DynamicController
-type Providers func(module *DynamicModule) *DynamicProvider
+type Modules func(module Module) Module
+type Controllers func(module Module) Controller
+type Providers func(module Module) Provider
 
 type NewModuleOptions struct {
 	Scope       Scope
@@ -60,7 +70,7 @@ type NewModuleOptions struct {
 //
 // The scope of the module will default to Global if not specified.
 // The module will be initialized with the given imports, controllers, providers and exports.
-func NewModule(opt NewModuleOptions) *DynamicModule {
+func NewModule(opt NewModuleOptions) Module {
 	if opt.Scope == "" {
 		opt.Scope = Global
 	}
@@ -77,12 +87,12 @@ func NewModule(opt NewModuleOptions) *DynamicModule {
 //
 // The scope of the sub-module will default to Global if not specified.
 // The sub-module will be initialized with the given imports, controllers, providers and exports.
-func (m *DynamicModule) New(opt NewModuleOptions) *DynamicModule {
+func (m *DynamicModule) New(opt NewModuleOptions) Module {
 	if opt.Scope == "" {
 		opt.Scope = Global
 	}
 	newMod := &DynamicModule{isRoot: false}
-	newMod.DataProviders = append(newMod.DataProviders, m.getExports()...)
+	newMod.DataProviders = append(newMod.DataProviders, m.GetExports()...)
 	newMod.Middlewares = append(newMod.Middlewares, m.Middlewares...)
 
 	initModule(newMod, opt)
@@ -130,9 +140,9 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 		)
 
 		mod.init()
-		module.Routers = append(module.Routers, mod.Routers...)
-		module.appendProvider(mod.getExports()...)
-		mod.Routers = nil
+		module.Routers = append(module.Routers, mod.GetRouters()...)
+		module.appendProvider(mod.GetExports()...)
+		mod.free()
 	}
 
 	// Providers
@@ -143,8 +153,8 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 		p(module)
 	}
 
-	isRequest := slices.ContainsFunc(module.DataProviders, func(e *DynamicProvider) bool {
-		return e.Scope == Request
+	isRequest := slices.ContainsFunc(module.DataProviders, func(e Provider) bool {
+		return e.GetScope() == Request
 	})
 
 	if module.Scope == Request || isRequest {
@@ -165,13 +175,13 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 			continue
 		}
 		provider := e(module)
-		provider.Status = PUBLIC
+		provider.SetStatus(PUBLIC)
 	}
 }
 
 // Controllers registers the given controllers with the module.
 // The controllers are registered in the order they are given.
-func (m *DynamicModule) Controllers(controllers ...Controllers) *DynamicModule {
+func (m *DynamicModule) Controllers(controllers ...Controllers) Module {
 	for _, v := range controllers {
 		v(m)
 	}
@@ -180,10 +190,12 @@ func (m *DynamicModule) Controllers(controllers ...Controllers) *DynamicModule {
 
 // Providers registers the given providers with the module.
 // The providers are registered in the order they are given.
-func (m *DynamicModule) Providers(providers ...Providers) {
+func (m *DynamicModule) Providers(providers ...Providers) Module {
 	for _, v := range providers {
 		v(m)
 	}
+
+	return m
 }
 
 // Ref returns the value of the provider with the given name.
@@ -192,50 +204,59 @@ func (m *DynamicModule) Ref(name Provide, ctx ...Ctx) interface{} {
 	if name == REQUEST {
 		return ctx[0].Req()
 	}
-	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
-		return e.Name == name
+	idx := slices.IndexFunc(m.DataProviders, func(e Provider) bool {
+		return e.GetName() == name
 	})
 	if idx == -1 {
 		return nil
 	}
 
-	if m.DataProviders[idx].Scope == Request {
+	if m.DataProviders[idx].GetScope() == Request {
 		if len(ctx) == 0 {
 			panic("request provider need ctx as parameters")
 		}
 		return ctx[0].Get(name)
 	}
-	return m.DataProviders[idx].Value
+	return m.DataProviders[idx].GetValue()
 }
 
 func (m *DynamicModule) findIdx(name Provide) int {
-	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
-		return e.Name == name
+	idx := slices.IndexFunc(m.DataProviders, func(e Provider) bool {
+		return e.GetName() == name
 	})
 	return idx
 }
 
 // Export sets the status of the provider with the given name to PUBLIC and returns
 // the provider.
-func (m *DynamicModule) Export(name Provide) *DynamicProvider {
-	idx := slices.IndexFunc(m.DataProviders, func(e *DynamicProvider) bool {
-		return e.Name == name
+func (m *DynamicModule) Export(name Provide) Provider {
+	idx := slices.IndexFunc(m.DataProviders, func(e Provider) bool {
+		return e.GetName() == name
 	})
-	m.DataProviders[idx].Status = PUBLIC
+	m.DataProviders[idx].SetStatus(PUBLIC)
 	return m.DataProviders[idx]
+}
+
+func (m *DynamicModule) GetRouters() []*Router {
+	return m.Routers
+}
+
+func (m *DynamicModule) free() {
+	m.Routers = nil
 }
 
 func requestMiddleware(module *DynamicModule) Middleware {
 	return func(ctx Ctx) error {
 		for _, p := range module.getRequest() {
-			if p.Value == nil {
+			if p.GetValue() == nil {
 				var values []interface{}
-				for _, p := range p.inject {
+				for _, p := range p.GetInject() {
 					values = append(values, module.Ref(p, ctx))
 				}
 
-				value := p.factory(values...)
-				ctx.Set(p.Name, value)
+				factory := p.GetFactory()
+				value := factory(values...)
+				ctx.Set(p.GetName(), value)
 			}
 		}
 		return ctx.Next()

@@ -12,7 +12,7 @@ import (
 )
 
 func Test_Exception(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("bad-request", func(ctx core.Ctx) error {
@@ -46,7 +46,7 @@ func Test_Exception(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})
@@ -96,7 +96,7 @@ func Test_Exception(t *testing.T) {
 }
 
 func Benchmark_App(b *testing.B) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -108,7 +108,7 @@ func Benchmark_App(b *testing.B) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})
@@ -133,7 +133,7 @@ func Benchmark_App(b *testing.B) {
 }
 
 func Test_Timeout(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -146,7 +146,7 @@ func Test_Timeout(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})
@@ -170,7 +170,7 @@ func Test_Timeout(t *testing.T) {
 }
 
 func Test_Listen(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -182,7 +182,7 @@ func Test_Listen(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})

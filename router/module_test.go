@@ -12,7 +12,7 @@ import (
 )
 
 func Test_Module(t *testing.T) {
-	userController := func(module *core.DynamicModule) *core.DynamicController {
+	userController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("auth")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -24,7 +24,7 @@ func Test_Module(t *testing.T) {
 		return ctrl
 	}
 
-	userModule := func(module *core.DynamicModule) *core.DynamicModule {
+	userModule := func(module core.Module) core.Module {
 		mod := module.New(core.NewModuleOptions{
 			Controllers: []core.Controllers{userController},
 		})
@@ -32,7 +32,7 @@ func Test_Module(t *testing.T) {
 		return mod
 	}
 
-	postController := func(module *core.DynamicModule) *core.DynamicController {
+	postController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("documents")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -44,7 +44,7 @@ func Test_Module(t *testing.T) {
 		return ctrl
 	}
 
-	postModule := func(module *core.DynamicModule) *core.DynamicModule {
+	postModule := func(module core.Module) core.Module {
 		mod := module.New(core.NewModuleOptions{
 			Controllers: []core.Controllers{postController},
 		})
@@ -52,7 +52,7 @@ func Test_Module(t *testing.T) {
 		return mod
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		app := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
 				router.Register(

@@ -11,8 +11,8 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/cors"
 )
 
-func appModule() *core.DynamicModule {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+func appModule() core.Module {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {

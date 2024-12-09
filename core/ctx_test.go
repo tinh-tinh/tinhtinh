@@ -17,7 +17,7 @@ import (
 )
 
 func Test_Ctx_Req(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -29,7 +29,7 @@ func Test_Ctx_Req(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -58,7 +58,7 @@ func Test_Ctx_Req(t *testing.T) {
 }
 
 func Test_Ctx_Res(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -71,7 +71,7 @@ func Test_Ctx_Res(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -94,7 +94,7 @@ func Test_Ctx_Res(t *testing.T) {
 }
 
 func Test_Ctx_Headers(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -106,7 +106,7 @@ func Test_Ctx_Headers(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -143,7 +143,7 @@ func Test_Ctx_BodyParser(t *testing.T) {
 	type BodyData struct {
 		Name string `json:"name"`
 	}
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Post("", func(ctx core.Ctx) error {
@@ -160,7 +160,7 @@ func Test_Ctx_BodyParser(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -193,7 +193,7 @@ func Test_Ctx_Body(t *testing.T) {
 	type BodyData struct {
 		Name string `json:"name"`
 	}
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Pipe(core.Body(BodyData{})).Post("", func(ctx core.Ctx) error {
@@ -206,7 +206,7 @@ func Test_Ctx_Body(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -239,7 +239,7 @@ func Test_Ctx_Params(t *testing.T) {
 	type ID struct {
 		ID string `param:"id"`
 	}
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Pipe(core.Param(ID{})).Get("/{id}", func(ctx core.Ctx) error {
@@ -252,7 +252,7 @@ func Test_Ctx_Params(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -284,7 +284,7 @@ func Test_Ctx_Queries(t *testing.T) {
 	type QueryData struct {
 		Name string `query:"name"`
 	}
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Pipe(core.Query(QueryData{})).Get("", func(ctx core.Ctx) error {
@@ -297,7 +297,7 @@ func Test_Ctx_Queries(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -326,7 +326,7 @@ func Test_Ctx_Queries(t *testing.T) {
 }
 
 func Test_Ctx_Param(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("/{id}", func(ctx core.Ctx) error {
@@ -360,7 +360,7 @@ func Test_Ctx_Param(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -437,7 +437,7 @@ func Test_Ctx_Param(t *testing.T) {
 }
 
 func Test_Ctx_Query(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -471,7 +471,7 @@ func Test_Ctx_Query(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -544,7 +544,7 @@ func Test_Ctx_Query(t *testing.T) {
 }
 
 func Test_Ctx_QueryInt(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -557,7 +557,7 @@ func Test_Ctx_QueryInt(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -590,7 +590,7 @@ func Test_Ctx_QueryInt(t *testing.T) {
 }
 
 func Test_Ctx_QueryBool(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -603,7 +603,7 @@ func Test_Ctx_QueryBool(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -636,7 +636,7 @@ func Test_Ctx_QueryBool(t *testing.T) {
 }
 
 func Test_Ctx_Status(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -648,7 +648,7 @@ func Test_Ctx_Status(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -673,7 +673,7 @@ func Test_QueryParser(t *testing.T) {
 		Age    int  `query:"age"`
 		Format bool `query:"format"`
 	}
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -690,7 +690,7 @@ func Test_QueryParser(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -723,7 +723,7 @@ func Test_ParamParser(t *testing.T) {
 		ID     int  `param:"id"`
 		Export bool `param:"export"`
 	}
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("{id}/{export}", func(ctx core.Ctx) error {
@@ -740,7 +740,7 @@ func Test_ParamParser(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -770,7 +770,7 @@ func Test_ParamParser(t *testing.T) {
 }
 
 func Test_Ctx_Session(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Post("", func(ctx core.Ctx) error {
@@ -792,7 +792,7 @@ func Test_Ctx_Session(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -838,7 +838,7 @@ func Test_Ctx_Session(t *testing.T) {
 }
 
 func Test_Cookie(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Post("", func(ctx core.Ctx) error {
@@ -860,7 +860,7 @@ func Test_Cookie(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -897,7 +897,7 @@ func Test_Cookie(t *testing.T) {
 }
 
 func Test_SignedCookie(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Post("", func(ctx core.Ctx) error {
@@ -924,7 +924,7 @@ func Test_SignedCookie(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -968,7 +968,7 @@ func Test_SignedCookie(t *testing.T) {
 }
 
 func Test_Redirect(t *testing.T) {
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("/redirect", func(ctx core.Ctx) error {
@@ -992,7 +992,7 @@ func Test_Redirect(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})

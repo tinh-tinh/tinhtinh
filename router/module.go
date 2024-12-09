@@ -17,14 +17,14 @@ type Options struct {
 
 func Register(opt ...Options) core.Modules {
 	routers := RegistryRoutes(opt)
-	return func(module *core.DynamicModule) *core.DynamicModule {
+	return func(module core.Module) core.Module {
 		imports := []core.Modules{}
 		for _, router := range routers {
-			imports = append(imports, func(module *core.DynamicModule) *core.DynamicModule {
+			imports = append(imports, func(module core.Module) core.Module {
 				temp := module.New(core.NewModuleOptions{
 					Imports: []core.Modules{router.Module},
 				})
-				for _, subRouter := range temp.Routers {
+				for _, subRouter := range temp.GetRouters() {
 					subRouter.Name = router.Path + core.IfSlashPrefixString(subRouter.Name)
 				}
 

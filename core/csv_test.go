@@ -23,7 +23,7 @@ func Test_Csv(t *testing.T) {
 		Email    string
 	}
 
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -52,7 +52,7 @@ func Test_Csv(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})

@@ -18,7 +18,7 @@ func Test_PipeMiddleware(t *testing.T) {
 		Password string `validate:"isStrongPassword"`
 		Age      int    `validate:"isInt"`
 	}
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Pipe(core.Body(SignUpDto{})).Post("", func(ctx core.Ctx) error {
@@ -30,7 +30,7 @@ func Test_PipeMiddleware(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})
@@ -76,7 +76,7 @@ func Test_Query(t *testing.T) {
 		Email string `validate:"required,isEmail" query:"email"`
 		Age   int    `validate:"isInt" query:"age"`
 	}
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Pipe(core.Query(FilterDto{})).Get("", func(ctx core.Ctx) error {
@@ -88,7 +88,7 @@ func Test_Query(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})
@@ -124,7 +124,7 @@ func Test_Param(t *testing.T) {
 	type ParamDto struct {
 		ID int `validate:"required,isInt" param:"id"`
 	}
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Pipe(core.Param(ParamDto{})).Get("{id}", func(ctx core.Ctx) error {
@@ -136,7 +136,7 @@ func Test_Param(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})
@@ -166,7 +166,7 @@ func TestDefaultDto(t *testing.T) {
 		Limit int `validate:"isInt" default:"10"`
 	}
 
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Pipe(core.Query(Pagination{})).Get("", func(ctx core.Ctx) error {
@@ -179,7 +179,7 @@ func TestDefaultDto(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})
@@ -210,7 +210,7 @@ func BenchmarkPipe(b *testing.B) {
 		Password string `validate:"isStrongPassword"`
 		Age      int    `validate:"isInt"`
 	}
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Pipe(core.Body(SignUpDto{})).Post("", func(ctx core.Ctx) error {
@@ -222,7 +222,7 @@ func BenchmarkPipe(b *testing.B) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})

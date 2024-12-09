@@ -11,7 +11,7 @@ import (
 )
 
 func Test_Compress(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -23,7 +23,7 @@ func Test_Compress(t *testing.T) {
 		return ctrl
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		return core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})

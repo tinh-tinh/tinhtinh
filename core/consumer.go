@@ -36,7 +36,7 @@ func (c *Consumer) Apply(middlewares ...Middleware) *Consumer {
 	return c
 }
 
-func (m *DynamicModule) Consumer(consumer *Consumer) *DynamicModule {
+func (m *DynamicModule) Consumer(consumer *Consumer) Module {
 	effectRoutes := []*Router{}
 	for _, i := range consumer.includes {
 		if i.Path == "*" && i.Method == MethodAll {

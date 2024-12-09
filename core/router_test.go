@@ -37,7 +37,7 @@ func Test_IfSlashPrefixString(t *testing.T) {
 }
 
 func Test_registerRoutes(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -72,7 +72,7 @@ func Test_registerRoutes(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})

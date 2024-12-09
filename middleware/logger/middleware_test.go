@@ -11,7 +11,7 @@ import (
 )
 
 func TestMiddleware(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("success", func(ctx core.Ctx) error {
@@ -41,7 +41,7 @@ func TestMiddleware(t *testing.T) {
 		return ctrl
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		return core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})
@@ -78,7 +78,7 @@ func TestMiddleware(t *testing.T) {
 }
 
 func TestDev(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -90,7 +90,7 @@ func TestDev(t *testing.T) {
 		return ctrl
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		return core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{appController},
 		})

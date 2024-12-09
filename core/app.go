@@ -29,7 +29,7 @@ type App struct {
 	Mux *http.ServeMux
 	// Module is the module that the App uses to initialize itself.
 	// The App uses this Module to initialize itself.
-	Module *DynamicModule
+	Module Module
 	// cors is the CORS middleware.
 	cors *cors.Cors
 	// version is the type version of the API.
@@ -50,7 +50,7 @@ type App struct {
 	timeout      time.Duration
 }
 
-type ModuleParam func() *DynamicModule
+type ModuleParam func() Module
 type AppOptions struct {
 	// Encoder is the encoder that the App uses to initialize itself.
 	Encoder Encode

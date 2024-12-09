@@ -19,7 +19,7 @@ func Test_CtxContext(t *testing.T) {
 		ctx.Set(key, "value")
 		return ctx.Next()
 	}
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Use(middleware).Get("", func(ctx core.Ctx) error {
@@ -31,7 +31,7 @@ func Test_CtxContext(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		})
@@ -66,7 +66,7 @@ func Test_Middleware(t *testing.T) {
 		ctx.Set(key, "value")
 		return ctx.Next()
 	}
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -78,7 +78,7 @@ func Test_Middleware(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		}).Use(middleware)
@@ -110,7 +110,7 @@ func Test_ExceptionMiddleware(t *testing.T) {
 	middleware := func(ctx core.Ctx) error {
 		panic("error")
 	}
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -122,7 +122,7 @@ func Test_ExceptionMiddleware(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		}).Use(middleware)
@@ -158,7 +158,7 @@ func TestErrorMiddleware(t *testing.T) {
 	middleware := func(ctx core.Ctx) error {
 		return fmt.Errorf("error")
 	}
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -170,7 +170,7 @@ func TestErrorMiddleware(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 		}).Use(middleware)
@@ -201,7 +201,7 @@ func TestRefMiddleware(t *testing.T) {
 		return ctx.Next()
 	}
 
-	service := func(module *core.DynamicModule) *core.DynamicProvider {
+	service := func(module core.Module) core.Provider {
 		prd := module.NewProvider(core.ProviderOptions{
 			Name:  KEY,
 			Value: "value",
@@ -210,7 +210,7 @@ func TestRefMiddleware(t *testing.T) {
 		return prd
 	}
 
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.UseRef(middleware).Get("", func(ctx core.Ctx) error {
@@ -222,7 +222,7 @@ func TestRefMiddleware(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 			Providers:   []core.Providers{service},
@@ -263,7 +263,7 @@ func TestRefMiddlewareModule(t *testing.T) {
 		return ctx.Next()
 	}
 
-	service := func(module *core.DynamicModule) *core.DynamicProvider {
+	service := func(module core.Module) core.Provider {
 		prd := module.NewProvider(core.ProviderOptions{
 			Name:  KEY,
 			Value: "value",
@@ -272,7 +272,7 @@ func TestRefMiddlewareModule(t *testing.T) {
 		return prd
 	}
 
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -284,7 +284,7 @@ func TestRefMiddlewareModule(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 			Providers:   []core.Providers{service},
