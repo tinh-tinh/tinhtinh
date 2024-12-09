@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/middleware/logger"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
 
 func TestMiddleware(t *testing.T) {
@@ -43,7 +43,7 @@ func TestMiddleware(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		return core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 	}
 
@@ -92,7 +92,7 @@ func TestDev(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		return core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 	}
 

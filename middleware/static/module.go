@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
-func ForRoot(path string) core.Module {
+func ForRoot(path string) core.Modules {
 	path = strings.ReplaceAll(path, "/", "")
 	controller := func(module *core.DynamicModule) *core.DynamicController {
 		ctrl := module.NewController("")
@@ -20,7 +20,7 @@ func ForRoot(path string) core.Module {
 
 	return func(module *core.DynamicModule) *core.DynamicModule {
 		staticModule := module.New(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return staticModule

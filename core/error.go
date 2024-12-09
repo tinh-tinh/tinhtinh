@@ -3,7 +3,7 @@ package core
 import (
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/common/exception"
+	"github.com/tinh-tinh/tinhtinh/v2/common/exception"
 )
 
 type ErrorHandler func(err error, ctx Ctx) error

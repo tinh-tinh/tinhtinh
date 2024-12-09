@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/common"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_Exception(t *testing.T) {
@@ -48,7 +48,7 @@ func Test_Exception(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -110,7 +110,7 @@ func Benchmark_App(b *testing.B) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -148,7 +148,7 @@ func Test_Timeout(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -184,7 +184,7 @@ func Test_Listen(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule

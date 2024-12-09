@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_Compose(t *testing.T) {
@@ -43,7 +43,7 @@ func Test_Compose(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule

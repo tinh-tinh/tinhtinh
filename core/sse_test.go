@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func TestSseHandler(t *testing.T) {
@@ -33,7 +33,7 @@ func TestSseHandler(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule

@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/common/exception"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/common/exception"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_DefaultErrorHandler(t *testing.T) {
@@ -26,7 +26,7 @@ func Test_DefaultErrorHandler(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -63,7 +63,7 @@ func Test_ErrorHandler(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule

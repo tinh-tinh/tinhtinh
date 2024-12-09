@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 const Key core.CtxKey = "key"
@@ -52,7 +52,7 @@ func TestGuard(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{authCtrl},
+			Controllers: []core.Controllers{authCtrl},
 			Guards:      []core.Guard{guardInModule},
 		}).Guard(guardWithCtx)
 

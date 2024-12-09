@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 type Response struct {
@@ -40,7 +40,7 @@ func AppVersionModule() core.ModuleParam {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController1, appController2},
+			Controllers: []core.Controllers{appController1, appController2},
 		})
 
 		return appModule

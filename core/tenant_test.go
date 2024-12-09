@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func BenchmarkTenant(b *testing.B) {
@@ -76,7 +76,7 @@ func BenchmarkTenant(b *testing.B) {
 
 	userModule := func(module *core.DynamicModule) *core.DynamicModule {
 		user := module.New(core.NewModuleOptions{
-			Controllers: []core.Controller{userController},
+			Controllers: []core.Controllers{userController},
 		})
 
 		return user
@@ -84,7 +84,7 @@ func BenchmarkTenant(b *testing.B) {
 
 	appModule := func() *core.DynamicModule {
 		app := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Module{forRoot, userModule},
+			Imports: []core.Modules{forRoot, userModule},
 		})
 
 		return app

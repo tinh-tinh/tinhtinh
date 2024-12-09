@@ -5,8 +5,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/common"
-	"github.com/tinh-tinh/tinhtinh/common/color"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
+	"github.com/tinh-tinh/tinhtinh/v2/common/color"
 )
 
 type DocRoute struct {
@@ -21,6 +21,16 @@ const (
 	Request Scope = "request"
 )
 
+type Module interface {
+	OnInit(hooks ...HookModule) Module
+	New(opt NewModuleOptions) Module
+	Controlllers(opt NewModuleOptions) Module
+	Providers(opt NewModuleOptions) Module
+	Export(name Provide) interface{}
+	Ref(name Provide, ctx ...Ctx) interface{}
+	FindIdx(name Provide) int
+}
+
 type DynamicModule struct {
 	isRoot        bool
 	Scope         Scope
@@ -31,16 +41,16 @@ type DynamicModule struct {
 	interceptor   Interceptor
 }
 
-type Module func(module *DynamicModule) *DynamicModule
-type Controller func(module *DynamicModule) *DynamicController
-type Provider func(module *DynamicModule) *DynamicProvider
+type Modules func(module *DynamicModule) *DynamicModule
+type Controllers func(module *DynamicModule) *DynamicController
+type Providers func(module *DynamicModule) *DynamicProvider
 
 type NewModuleOptions struct {
 	Scope       Scope
-	Imports     []Module
-	Controllers []Controller
-	Providers   []Provider
-	Exports     []Provider
+	Imports     []Modules
+	Controllers []Controllers
+	Providers   []Providers
+	Exports     []Providers
 	Guards      []Guard
 	Middlewares []Middleware
 	Interceptor Interceptor
@@ -161,7 +171,7 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 
 // Controllers registers the given controllers with the module.
 // The controllers are registered in the order they are given.
-func (m *DynamicModule) Controllers(controllers ...Controller) *DynamicModule {
+func (m *DynamicModule) Controllers(controllers ...Controllers) *DynamicModule {
 	for _, v := range controllers {
 		v(m)
 	}
@@ -170,7 +180,7 @@ func (m *DynamicModule) Controllers(controllers ...Controller) *DynamicModule {
 
 // Providers registers the given providers with the module.
 // The providers are registered in the order they are given.
-func (m *DynamicModule) Providers(providers ...Provider) {
+func (m *DynamicModule) Providers(providers ...Providers) {
 	for _, v := range providers {
 		v(m)
 	}

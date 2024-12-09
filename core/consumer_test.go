@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_Consumer(t *testing.T) {
@@ -67,7 +67,7 @@ func Test_Consumer(t *testing.T) {
 
 	userModule := func(module *core.DynamicModule) *core.DynamicModule {
 		user := module.New(core.NewModuleOptions{
-			Controllers: []core.Controller{userController},
+			Controllers: []core.Controllers{userController},
 		})
 
 		user.Consumer(core.NewConsumer().Apply(userMiddleware).Include(core.RoutesPath{
@@ -109,7 +109,7 @@ func Test_Consumer(t *testing.T) {
 
 	postModule := func(module *core.DynamicModule) *core.DynamicModule {
 		post := module.New(core.NewModuleOptions{
-			Controllers: []core.Controller{postController},
+			Controllers: []core.Controllers{postController},
 		})
 
 		post.Consumer(core.NewConsumer().Apply(userMiddleware).Exclude(core.RoutesPath{
@@ -125,7 +125,7 @@ func Test_Consumer(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		app := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Module{userModule, postModule},
+			Imports: []core.Modules{userModule, postModule},
 		})
 
 		app.Consumer(core.NewConsumer().Apply(tenantMiddleware).Include(core.RoutesPath{

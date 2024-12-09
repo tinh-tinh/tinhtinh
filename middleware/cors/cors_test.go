@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/middleware/cors"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/cors"
 )
 
 func appModule() *core.DynamicModule {
@@ -25,7 +25,7 @@ func appModule() *core.DynamicModule {
 	}
 
 	return core.NewModule(core.NewModuleOptions{
-		Controllers: []core.Controller{appController},
+		Controllers: []core.Controllers{appController},
 	})
 }
 

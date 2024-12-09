@@ -2,6 +2,13 @@ package core
 
 import "slices"
 
+type Provider interface {
+	GetName() Provide
+	GetValue() interface{}
+	IsPublic() bool
+	IsRequest() bool
+}
+
 type Provide string
 
 const REQUEST Provide = "REQUEST"

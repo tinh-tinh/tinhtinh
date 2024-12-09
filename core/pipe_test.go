@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_PipeMiddleware(t *testing.T) {
@@ -32,7 +32,7 @@ func Test_PipeMiddleware(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -90,7 +90,7 @@ func Test_Query(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -138,7 +138,7 @@ func Test_Param(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -181,7 +181,7 @@ func TestDefaultDto(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -224,7 +224,7 @@ func BenchmarkPipe(b *testing.B) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule

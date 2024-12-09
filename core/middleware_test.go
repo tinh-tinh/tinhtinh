@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_CtxContext(t *testing.T) {
@@ -33,7 +33,7 @@ func Test_CtxContext(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -80,7 +80,7 @@ func Test_Middleware(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		}).Use(middleware)
 
 		return appModule
@@ -124,7 +124,7 @@ func Test_ExceptionMiddleware(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		}).Use(middleware)
 
 		return appModule
@@ -172,7 +172,7 @@ func TestErrorMiddleware(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		}).Use(middleware)
 
 		return appModule
@@ -224,8 +224,8 @@ func TestRefMiddleware(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
-			Providers:   []core.Provider{service},
+			Controllers: []core.Controllers{controller},
+			Providers:   []core.Providers{service},
 		})
 
 		return appModule
@@ -286,8 +286,8 @@ func TestRefMiddlewareModule(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
-			Providers:   []core.Provider{service},
+			Controllers: []core.Controllers{controller},
+			Providers:   []core.Providers{service},
 		}).UseRef(middleware)
 
 		return appModule

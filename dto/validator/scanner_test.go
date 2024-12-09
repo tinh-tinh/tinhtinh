@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/dto/validator"
+	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
 func Test_Scanner(t *testing.T) {

@@ -14,10 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/common"
-	"github.com/tinh-tinh/tinhtinh/common/color"
-	"github.com/tinh-tinh/tinhtinh/middleware/cors"
-	"github.com/tinh-tinh/tinhtinh/middleware/session"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
+	"github.com/tinh-tinh/tinhtinh/v2/common/color"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/cors"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/session"
 )
 
 type App struct {

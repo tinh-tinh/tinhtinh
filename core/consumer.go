@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/tinh-tinh/tinhtinh/common"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 )
 
 const MethodAll = "ALL"

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_CustomCtx(t *testing.T) {
@@ -38,7 +38,7 @@ func Test_CustomCtx(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -117,7 +117,7 @@ func Test_Middleware_CustomCtx(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule

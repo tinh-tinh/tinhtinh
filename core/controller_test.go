@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_Version(t *testing.T) {
@@ -26,7 +26,7 @@ func Test_Version(t *testing.T) {
 	}
 
 	appModule := core.NewModule(core.NewModuleOptions{
-		Controllers: []core.Controller{ctrl},
+		Controllers: []core.Controllers{ctrl},
 	})
 
 	findT1 := slices.IndexFunc(appModule.Routers, func(r *core.Router) bool {

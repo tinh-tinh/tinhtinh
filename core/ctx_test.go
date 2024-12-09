@@ -10,10 +10,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/common"
-	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/middleware/cookie"
-	"github.com/tinh-tinh/tinhtinh/middleware/session"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/cookie"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/session"
 )
 
 func Test_Ctx_Req(t *testing.T) {
@@ -31,7 +31,7 @@ func Test_Ctx_Req(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -73,7 +73,7 @@ func Test_Ctx_Res(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -108,7 +108,7 @@ func Test_Ctx_Headers(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -162,7 +162,7 @@ func Test_Ctx_BodyParser(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -208,7 +208,7 @@ func Test_Ctx_Body(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -254,7 +254,7 @@ func Test_Ctx_Params(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -299,7 +299,7 @@ func Test_Ctx_Queries(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -362,7 +362,7 @@ func Test_Ctx_Param(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -473,7 +473,7 @@ func Test_Ctx_Query(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -559,7 +559,7 @@ func Test_Ctx_QueryInt(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -605,7 +605,7 @@ func Test_Ctx_QueryBool(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -650,7 +650,7 @@ func Test_Ctx_Status(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -692,7 +692,7 @@ func Test_QueryParser(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -742,7 +742,7 @@ func Test_ParamParser(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -794,7 +794,7 @@ func Test_Ctx_Session(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -862,7 +862,7 @@ func Test_Cookie(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -926,7 +926,7 @@ func Test_SignedCookie(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -994,7 +994,7 @@ func Test_Redirect(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule

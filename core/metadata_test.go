@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_Metadata(t *testing.T) {
@@ -49,7 +49,7 @@ func Test_Metadata(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		mod := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return mod

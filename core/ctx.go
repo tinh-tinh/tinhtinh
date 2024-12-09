@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tinh-tinh/tinhtinh/middleware/cookie"
-	"github.com/tinh-tinh/tinhtinh/middleware/storage"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/cookie"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/storage"
 )
 
 type Ctx struct {

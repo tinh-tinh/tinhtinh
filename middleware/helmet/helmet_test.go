@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/middleware/helmet"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/helmet"
 )
 
 func Test_HelmetFullSetting(t *testing.T) {
@@ -25,7 +25,7 @@ func Test_HelmetFullSetting(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		return core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 	}
 
@@ -107,7 +107,7 @@ func Test_DefaultHelmet(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		return core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 	}
 
@@ -147,7 +147,7 @@ func Test_HelmetSomeSetting(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		return core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 	}
 

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_RequestModule(t *testing.T) {
@@ -63,15 +63,15 @@ func Test_RequestModule(t *testing.T) {
 	userModule := func(module *core.DynamicModule) *core.DynamicModule {
 		user := module.New(core.NewModuleOptions{
 			Scope:       core.Request,
-			Controllers: []core.Controller{userController},
-			Providers:   []core.Provider{userProvider},
+			Controllers: []core.Controllers{userController},
+			Providers:   []core.Providers{userProvider},
 		})
 		return user
 	}
 
 	appModule := func() *core.DynamicModule {
 		app := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Module{tenantModule, userModule},
+			Imports: []core.Modules{tenantModule, userModule},
 		})
 
 		return app
@@ -177,10 +177,10 @@ func Test_Controller(t *testing.T) {
 func Test_Nil(t *testing.T) {
 	appModule := func() *core.DynamicModule {
 		module := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{nil},
-			Providers:   []core.Provider{nil},
-			Imports:     []core.Module{nil},
-			Exports:     []core.Provider{nil},
+			Controllers: []core.Controllers{nil},
+			Providers:   []core.Providers{nil},
+			Imports:     []core.Modules{nil},
+			Exports:     []core.Providers{nil},
 			Guards:      []core.Guard{nil},
 			Middlewares: []core.Middleware{nil},
 		})
@@ -223,9 +223,9 @@ func Test_Import(t *testing.T) {
 
 	parentModule := func(module *core.DynamicModule) *core.DynamicModule {
 		parent := module.New(core.NewModuleOptions{
-			Imports:   []core.Module{subModule},
-			Providers: []core.Provider{parentService},
-			Exports:   []core.Provider{parentService},
+			Imports:   []core.Modules{subModule},
+			Providers: []core.Providers{parentService},
+			Exports:   []core.Providers{parentService},
 		})
 
 		return parent
@@ -233,7 +233,7 @@ func Test_Import(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Module{parentModule},
+			Imports: []core.Modules{parentModule},
 		})
 
 		return module
@@ -275,7 +275,7 @@ func Test_LifecycleModule(t *testing.T) {
 		return core.NewModule(core.NewModuleOptions{
 			Middlewares: []core.Middleware{tenantMiddleware},
 			Guards:      []core.Guard{tenantGuard},
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 	}
 
@@ -335,7 +335,7 @@ func Test_PassMiddlewareModule(t *testing.T) {
 
 	userModule := func(module *core.DynamicModule) *core.DynamicModule {
 		user := module.New(core.NewModuleOptions{
-			Controllers: []core.Controller{userController},
+			Controllers: []core.Controllers{userController},
 		})
 
 		return user
@@ -343,7 +343,7 @@ func Test_PassMiddlewareModule(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		return core.NewModule(core.NewModuleOptions{
-			Imports:     []core.Module{userModule},
+			Imports:     []core.Modules{userModule},
 			Middlewares: []core.Middleware{tenantMiddleware},
 			Guards:      []core.Guard{tenantGuard},
 		})

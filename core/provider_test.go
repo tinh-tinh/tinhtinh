@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func ChildProvider(module *core.DynamicModule) *core.DynamicProvider {
@@ -23,8 +23,8 @@ func ChildProvider(module *core.DynamicModule) *core.DynamicProvider {
 func ChildModule(module *core.DynamicModule) *core.DynamicModule {
 	childModule := module.New(core.NewModuleOptions{
 		Scope:     core.Global,
-		Providers: []core.Provider{ChildProvider},
-		Exports:   []core.Provider{ChildProvider},
+		Providers: []core.Providers{ChildProvider},
+		Exports:   []core.Providers{ChildProvider},
 	})
 
 	return childModule
@@ -44,8 +44,8 @@ func AppController(module *core.DynamicModule) *core.DynamicController {
 func AppModule() *core.DynamicModule {
 	module := core.NewModule(core.NewModuleOptions{
 		Scope:       core.Global,
-		Imports:     []core.Module{ChildModule},
-		Controllers: []core.Controller{AppController},
+		Imports:     []core.Modules{ChildModule},
+		Controllers: []core.Controllers{AppController},
 	})
 
 	return module
@@ -103,7 +103,7 @@ func Test_FactoryProvider(t *testing.T) {
 	}
 
 	module := core.NewModule(core.NewModuleOptions{
-		Imports: []core.Module{rootModule, childModule},
+		Imports: []core.Modules{rootModule, childModule},
 	})
 
 	require.Equal(t, "rootChild", module.Ref("child"))
@@ -163,9 +163,9 @@ func tenantModule() *core.DynamicModule {
 	}
 
 	module := core.NewModule(core.NewModuleOptions{
-		Imports:     []core.Module{tenantModule},
-		Controllers: []core.Controller{controller},
-		Providers:   []core.Provider{service},
+		Imports:     []core.Modules{tenantModule},
+		Controllers: []core.Controllers{controller},
+		Providers:   []core.Providers{service},
 	})
 
 	return module

@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/middleware/storage"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/storage"
 )
 
 func uploadFile(name string) (*bytes.Buffer, string, string) {
@@ -119,7 +119,7 @@ func Test_FileInterceptor(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -244,7 +244,7 @@ func Test_FilesInterceptor(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -389,7 +389,7 @@ func Test_FieldFileInterceptor(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule

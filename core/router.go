@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/common/color"
+	"github.com/tinh-tinh/tinhtinh/v2/common/color"
 )
 
 type Router struct {

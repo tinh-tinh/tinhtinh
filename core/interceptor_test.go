@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Transform(ctx *core.Ctx) core.CallHandler {
@@ -44,7 +44,7 @@ func Test_Interceptor(t *testing.T) {
 
 	module := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -83,7 +83,7 @@ func Test_ParseInterceptorModule(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 			Interceptor: Transform,
 		})
 
@@ -131,7 +131,7 @@ func Test_InterceptorMultiApi(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule

@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/router"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/router"
 )
 
 func Test_Module(t *testing.T) {
@@ -26,7 +26,7 @@ func Test_Module(t *testing.T) {
 
 	userModule := func(module *core.DynamicModule) *core.DynamicModule {
 		mod := module.New(core.NewModuleOptions{
-			Controllers: []core.Controller{userController},
+			Controllers: []core.Controllers{userController},
 		})
 
 		return mod
@@ -46,7 +46,7 @@ func Test_Module(t *testing.T) {
 
 	postModule := func(module *core.DynamicModule) *core.DynamicModule {
 		mod := module.New(core.NewModuleOptions{
-			Controllers: []core.Controller{postController},
+			Controllers: []core.Controllers{postController},
 		})
 
 		return mod
@@ -54,7 +54,7 @@ func Test_Module(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		app := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Module{
+			Imports: []core.Modules{
 				router.Register(
 					router.Options{
 						Path: "setting",

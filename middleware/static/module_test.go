@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/middleware/static"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/static"
 )
 
 func Test_Static(t *testing.T) {
@@ -25,8 +25,8 @@ func Test_Static(t *testing.T) {
 
 	appModule := func() *core.DynamicModule {
 		return core.NewModule(core.NewModuleOptions{
-			Imports:     []core.Module{static.ForRoot("upload")},
-			Controllers: []core.Controller{appController},
+			Imports:     []core.Modules{static.ForRoot("upload")},
+			Controllers: []core.Controllers{appController},
 		})
 	}
 
