@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/middleware/cookie"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/cookie"
 )
 
 func Test_Encode(t *testing.T) {

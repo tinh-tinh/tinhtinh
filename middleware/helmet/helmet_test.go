@@ -6,12 +6,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/middleware/helmet"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/helmet"
 )
 
 func Test_HelmetFullSetting(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -23,9 +23,9 @@ func Test_HelmetFullSetting(t *testing.T) {
 		return ctrl
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		return core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 	}
 
@@ -93,7 +93,7 @@ func Test_HelmetFullSetting(t *testing.T) {
 }
 
 func Test_DefaultHelmet(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -105,9 +105,9 @@ func Test_DefaultHelmet(t *testing.T) {
 		return ctrl
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		return core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 	}
 
@@ -133,7 +133,7 @@ func Test_DefaultHelmet(t *testing.T) {
 }
 
 func Test_HelmetSomeSetting(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -145,9 +145,9 @@ func Test_HelmetSomeSetting(t *testing.T) {
 		return ctrl
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		return core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 	}
 

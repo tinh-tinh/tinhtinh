@@ -1,12 +1,37 @@
 package core
 
 import (
+	"fmt"
 	"net/http"
 	"runtime"
 	"strings"
 )
 
 type Handler func(ctx Ctx) error
+
+type Controller interface {
+	Version(version string) Controller
+	Metadata(metadata ...*Metadata) Controller
+	Pipe(dtos ...PipeDto) Controller
+	Guard(guards ...Guard) Controller
+	Interceptor(interceptor Interceptor) Controller
+	Use(middleware ...Middleware) Controller
+	UseRef(middlewareRefs ...MiddlewareRef) Controller
+	Composition(ctrl Controller) Controller
+	Registry() Controller
+	Get(path string, handler Handler)
+	Post(path string, handler Handler)
+	Put(path string, handler Handler)
+	Patch(path string, handler Handler)
+	Delete(path string, handler Handler)
+	Handler(path string, handler http.Handler)
+	Ref(name Provide, ctx ...Ctx) interface{}
+	getMiddlewares() []Middleware
+	getGlobalMiddlewares() []Middleware
+	getMetadata() []*Metadata
+	GetDtos() []PipeDto
+	Sse(path string, sseFnc SseFnc)
+}
 
 type DynamicController struct {
 	// name of the controller. This is prefix when registry routes in controller
@@ -34,7 +59,7 @@ type DynamicController struct {
 // and a blank list of dtos and security roles. The module
 // parameter is used to store the controller in the module's
 // registry.
-func (module *DynamicModule) NewController(name string) *DynamicController {
+func (module *DynamicModule) NewController(name string) Controller {
 	return &DynamicController{
 		name:              strings.ToLower(name),
 		globalMiddlewares: module.Middlewares,
@@ -52,7 +77,7 @@ func (module *DynamicModule) NewController(name string) *DynamicController {
 // controller to be registered with the module. The version is also
 // used as the default value for the controller's version if the
 // version is not set.
-func (c *DynamicController) Version(version string) *DynamicController {
+func (c *DynamicController) Version(version string) Controller {
 	c.version = version
 	return c
 }
@@ -65,7 +90,7 @@ func (c *DynamicController) Version(version string) *DynamicController {
 // before the module's controllers. The controller's dtos are run before
 // the controller's handlers. If any of the dtos return an error, the
 // request will be rejected with the error.
-func (c *DynamicController) Pipe(dtos ...PipeDto) *DynamicController {
+func (c *DynamicController) Pipe(dtos ...PipeDto) Controller {
 	c.Dtos = append(c.Dtos, dtos...)
 	middleware := PipeMiddleware(dtos...)
 	c.middlewares = append(c.middlewares, middleware)
@@ -80,7 +105,7 @@ func (c *DynamicController) Pipe(dtos ...PipeDto) *DynamicController {
 // global middleware handlers of the sub-controller are cleared. This
 // ensures that the middleware handlers of the sub-controller are not
 // executed twice.
-func (c *DynamicController) Registry() *DynamicController {
+func (c *DynamicController) Registry() Controller {
 	c.globalMiddlewares = append(c.globalMiddlewares, c.middlewares...)
 	c.middlewares = []Middleware{}
 	c.globalMetadata = append(c.globalMetadata, c.metadata...)
@@ -186,5 +211,22 @@ func (c *DynamicController) free() {
 }
 
 func (c *DynamicController) Ref(name Provide, ctx ...Ctx) interface{} {
+	fmt.Printf("In here ctx is %v\n", ctx)
 	return c.module.Ref(name, ctx...)
+}
+
+func (c *DynamicController) getMiddlewares() []Middleware {
+	return c.middlewares
+}
+
+func (c *DynamicController) getGlobalMiddlewares() []Middleware {
+	return c.globalMiddlewares
+}
+
+func (c *DynamicController) getMetadata() []*Metadata {
+	return c.metadata
+}
+
+func (c *DynamicController) GetDtos() []PipeDto {
+	return c.Dtos
 }

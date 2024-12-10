@@ -4,14 +4,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_OnInit(t *testing.T) {
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{})
 
-		module.OnInit(func(module *core.DynamicModule) {
+		module.OnInit(func(module core.Module) {
 			t.Log("OnInit")
 		})
 		return module
@@ -25,7 +25,7 @@ func Test_OnInit(t *testing.T) {
 }
 
 func Test_BeforeShutdown(t *testing.T) {
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{})
 
 		return module

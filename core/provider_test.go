@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
-func ChildProvider(module *core.DynamicModule) *core.DynamicProvider {
+func ChildProvider(module core.Module) core.Provider {
 	provider := module.NewProvider(core.ProviderOptions{
 		Name:  "child",
 		Value: "child",
@@ -20,17 +20,17 @@ func ChildProvider(module *core.DynamicModule) *core.DynamicProvider {
 	return provider
 }
 
-func ChildModule(module *core.DynamicModule) *core.DynamicModule {
+func ChildModule(module core.Module) core.Module {
 	childModule := module.New(core.NewModuleOptions{
 		Scope:     core.Global,
-		Providers: []core.Provider{ChildProvider},
-		Exports:   []core.Provider{ChildProvider},
+		Providers: []core.Providers{ChildProvider},
+		Exports:   []core.Providers{ChildProvider},
 	})
 
 	return childModule
 }
 
-func AppController(module *core.DynamicModule) *core.DynamicController {
+func AppController(module core.Module) core.Controller {
 	ctrl := module.NewController("test")
 	ctrl.Get("", func(ctx core.Ctx) error {
 		name := ctrl.Ref("child")
@@ -41,11 +41,11 @@ func AppController(module *core.DynamicModule) *core.DynamicController {
 	return ctrl
 }
 
-func AppModule() *core.DynamicModule {
+func AppModule() core.Module {
 	module := core.NewModule(core.NewModuleOptions{
 		Scope:       core.Global,
-		Imports:     []core.Module{ChildModule},
-		Controllers: []core.Controller{AppController},
+		Imports:     []core.Modules{ChildModule},
+		Controllers: []core.Controllers{AppController},
 	})
 
 	return module
@@ -73,7 +73,7 @@ func Test_NewProvider(t *testing.T) {
 }
 
 func Test_FactoryProvider(t *testing.T) {
-	rootModule := func(module *core.DynamicModule) *core.DynamicModule {
+	rootModule := func(module core.Module) core.Module {
 		root := module.New(core.NewModuleOptions{
 			Scope: core.Global,
 		})
@@ -86,7 +86,7 @@ func Test_FactoryProvider(t *testing.T) {
 		return root
 	}
 
-	childModule := func(module *core.DynamicModule) *core.DynamicModule {
+	childModule := func(module core.Module) core.Module {
 		child := module.New(core.NewModuleOptions{
 			Scope: core.Global,
 		})
@@ -103,13 +103,13 @@ func Test_FactoryProvider(t *testing.T) {
 	}
 
 	module := core.NewModule(core.NewModuleOptions{
-		Imports: []core.Module{rootModule, childModule},
+		Imports: []core.Modules{rootModule, childModule},
 	})
 
 	require.Equal(t, "rootChild", module.Ref("child"))
 }
 
-func tenantModule() *core.DynamicModule {
+func tenantModule() core.Module {
 	const (
 		TENANT  core.Provide = "TENANT"
 		SERVICE core.Provide = "SERVICE"
@@ -117,7 +117,7 @@ func tenantModule() *core.DynamicModule {
 	type RequestProvider struct {
 		Name string
 	}
-	service := func(module *core.DynamicModule) *core.DynamicProvider {
+	service := func(module core.Module) core.Provider {
 		prd := module.NewProvider(core.ProviderOptions{
 			Scope: core.Request,
 			Name:  SERVICE,
@@ -132,7 +132,7 @@ func tenantModule() *core.DynamicModule {
 		return prd
 	}
 
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -145,7 +145,7 @@ func tenantModule() *core.DynamicModule {
 		return ctrl
 	}
 
-	tenantModule := func(module *core.DynamicModule) *core.DynamicModule {
+	tenantModule := func(module core.Module) core.Module {
 		tenant := module.New(core.NewModuleOptions{
 			Scope: core.Global,
 		})
@@ -163,9 +163,9 @@ func tenantModule() *core.DynamicModule {
 	}
 
 	module := core.NewModule(core.NewModuleOptions{
-		Imports:     []core.Module{tenantModule},
-		Controllers: []core.Controller{controller},
-		Providers:   []core.Provider{service},
+		Imports:     []core.Modules{tenantModule},
+		Controllers: []core.Controllers{controller},
+		Providers:   []core.Providers{service},
 	})
 
 	return module

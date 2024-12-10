@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/dto/transform"
+	"github.com/tinh-tinh/tinhtinh/v2/dto/transform"
 )
 
 func Test_ToBool(t *testing.T) {

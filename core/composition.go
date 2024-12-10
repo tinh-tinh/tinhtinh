@@ -4,9 +4,9 @@ func Composition() *DynamicController {
 	return &DynamicController{}
 }
 
-func (c *DynamicController) Composition(composer *DynamicController) *DynamicController {
-	c.middlewares = append(c.middlewares, composer.middlewares...)
-	c.metadata = append(c.metadata, composer.metadata...)
-	c.Dtos = append(c.Dtos, composer.Dtos...)
+func (c *DynamicController) Composition(composer Controller) Controller {
+	c.middlewares = append(c.middlewares, composer.getMiddlewares()...)
+	c.metadata = append(c.metadata, composer.getMetadata()...)
+	c.Dtos = append(c.Dtos, composer.GetDtos()...)
 	return c
 }

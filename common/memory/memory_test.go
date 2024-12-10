@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/common/memory"
+	"github.com/tinh-tinh/tinhtinh/v2/common/memory"
 )
 
 func Test_NewInMemory(t *testing.T) {

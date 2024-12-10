@@ -1,8 +1,8 @@
 package core
 
 import (
-	"github.com/tinh-tinh/tinhtinh/common"
-	"github.com/tinh-tinh/tinhtinh/middleware/storage"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/storage"
 )
 
 const (

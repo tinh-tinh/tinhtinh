@@ -1,6 +1,6 @@
 package logger
 
-import "github.com/tinh-tinh/tinhtinh/core"
+import "github.com/tinh-tinh/tinhtinh/v2/core"
 
 const LOGGER core.Provide = "LOGGER"
 
@@ -9,8 +9,8 @@ const LOGGER core.Provide = "LOGGER"
 // It takes an Options struct as a parameter, which is used to create the logger.
 // The logger is created with the given options and is registered as a provider in the module
 // with the name LOGGER. The logger is also exported by the module.
-func Module(opt Options) core.Module {
-	return func(module *core.DynamicModule) *core.DynamicModule {
+func Module(opt Options) core.Modules {
+	return func(module core.Module) core.Module {
 		loggerModule := module.New(core.NewModuleOptions{
 			Scope: core.Global,
 		})
@@ -27,6 +27,6 @@ func Module(opt Options) core.Module {
 
 // InjectLog injects the logger from the module to the caller. It returns a
 // pointer to the logger, or nil if the logger is not found.
-func InjectLog(module *core.DynamicModule) *Logger {
+func InjectLog(module core.Module) *Logger {
 	return module.Ref(LOGGER).(*Logger)
 }

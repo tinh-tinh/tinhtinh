@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/middleware/session"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/session"
 )
 
 func Test_Session(t *testing.T) {

@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/middleware/storage"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/storage"
 )
 
 func uploadFile(name string) (*bytes.Buffer, string, string) {
@@ -93,7 +93,7 @@ func Test_FileInterceptor(t *testing.T) {
 		},
 	}
 
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Use(core.FileInterceptor(storage.UploadFileOption{
@@ -117,9 +117,9 @@ func Test_FileInterceptor(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -217,7 +217,7 @@ func Test_FilesInterceptor(t *testing.T) {
 		},
 	}
 
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Use(core.FilesInterceptor(storage.UploadFileOption{
@@ -242,9 +242,9 @@ func Test_FilesInterceptor(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule
@@ -349,7 +349,7 @@ func Test_FieldFileInterceptor(t *testing.T) {
 		},
 	}
 
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Use(
@@ -387,9 +387,9 @@ func Test_FieldFileInterceptor(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule

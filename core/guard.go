@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/tinh-tinh/tinhtinh/common"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 )
 
 // Guard is a function that checks access permission for a controller
@@ -29,7 +29,7 @@ func (ctrl *DynamicController) ParseGuard(guard Guard) Middleware {
 // the module's controllers. The controller's Guard functions are run before the
 // controller's handlers. If any of the Guard functions return an error, the request
 // is rejected with the error.
-func (c *DynamicController) Guard(guards ...Guard) *DynamicController {
+func (c *DynamicController) Guard(guards ...Guard) Controller {
 	for _, v := range guards {
 		mid := c.ParseGuard(v)
 		c.middlewares = append(c.middlewares, mid)
@@ -50,7 +50,7 @@ func (module *DynamicModule) ParseGuard(guard Guard) Middleware {
 	}
 }
 
-func (module *DynamicModule) Guard(guards ...Guard) *DynamicModule {
+func (module *DynamicModule) Guard(guards ...Guard) Module {
 	middlewares := []Middleware{}
 
 	for _, v := range guards {

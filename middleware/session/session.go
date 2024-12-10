@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/common/memory"
+	"github.com/tinh-tinh/tinhtinh/v2/common/memory"
 )
 
 type Config struct {

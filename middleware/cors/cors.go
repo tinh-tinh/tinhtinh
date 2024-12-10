@@ -4,7 +4,7 @@ package cors
 import (
 	"net/http"
 
-	"github.com/tinh-tinh/tinhtinh/common"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 )
 
 type Options struct {
