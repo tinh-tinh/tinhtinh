@@ -552,6 +552,9 @@ func (ctx *DefaultCtx) Redirect(uri string) error {
 	return nil
 }
 
+// Ref returns the value associated with the given key from the request context.
+//
+// If no value is associated with the key, it returns nil.
 func (ctx *DefaultCtx) Ref(name Provide) interface{} {
 	return ctx.Get(name)
 }
