@@ -70,7 +70,7 @@ func checkFileName(name string) string {
 // should be a slice of slices of strings, where each inner slice is a row of
 // data, and each string is a column in that row. The data is written to the
 // response in the same order as it appears in the body.
-func (ctx *Ctx) ExportCSV(name string, body [][]string) error {
+func (ctx *DefaultCtx) ExportCSV(name string, body [][]string) error {
 	name = checkFileName(name)
 
 	ctx.Res().Header().Set("Content-Type", "text/csv")

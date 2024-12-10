@@ -15,7 +15,46 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/storage"
 )
 
-type Ctx struct {
+type Ctx interface {
+	Req() *http.Request
+	Res() http.ResponseWriter
+	Headers(key string) string
+	Cookies(key string) *http.Cookie
+	SetCookie(key string, value string, maxAge int)
+	SignedCookie(key string, val ...string) (string, error)
+	BodyParser(payload interface{}) error
+	QueryParser(payload interface{}) error
+	ParamParser(payload interface{}) error
+	Body() interface{}
+	Params() interface{}
+	Queries() interface{}
+	Param(key string) string
+	ParamInt(key string) int
+	ParamFloat(key string) float64
+	ParamBool(key string) bool
+	Query(key string) string
+	QueryInt(key string) int
+	QueryFloat(key string) float64
+	QueryBool(key string) bool
+	SetCallHandler(call CallHandler)
+	JSON(data Map) error
+	Get(key interface{}) interface{}
+	Set(key interface{}, val interface{})
+	Next() error
+	Session(key string, val ...interface{}) interface{}
+	SetCtx(w http.ResponseWriter, r *http.Request)
+	SetHandler(h http.Handler)
+	UploadedFile() *storage.File
+	UploadedFiles() []*storage.File
+	UploadedFieldFile() map[string][]*storage.File
+	Redirect(uri string) error
+	Ref(name Provide) interface{}
+	GetMetadata(key string) interface{}
+	ExportCSV(name string, body [][]string) error
+	Status(statusCode int) Ctx
+}
+
+type DefaultCtx struct {
 	r           *http.Request
 	w           http.ResponseWriter
 	handler     http.Handler
@@ -25,24 +64,24 @@ type Ctx struct {
 }
 
 // Req returns the original http.Request from the client.
-func (ctx *Ctx) Req() *http.Request {
+func (ctx *DefaultCtx) Req() *http.Request {
 	return ctx.r
 }
 
 // Res returns the original http.ResponseWriter from the server.
-func (ctx *Ctx) Res() http.ResponseWriter {
+func (ctx *DefaultCtx) Res() http.ResponseWriter {
 	return ctx.w
 }
 
 // Headers returns the value of the given HTTP header from the client's request.
 // If the header is not present, it returns an empty string.
-func (ctx *Ctx) Headers(key string) string {
+func (ctx *DefaultCtx) Headers(key string) string {
 	return ctx.r.Header.Get(key)
 }
 
 // Cookies returns the named cookie provided in the request or
 // nil if no such cookie is present.
-func (ctx *Ctx) Cookies(key string) *http.Cookie {
+func (ctx *DefaultCtx) Cookies(key string) *http.Cookie {
 	cookie, err := ctx.r.Cookie(key)
 	if err != nil {
 		return nil
@@ -57,7 +96,7 @@ func (ctx *Ctx) Cookies(key string) *http.Cookie {
 // cookie in seconds.
 //
 // The cookie is marked as HttpOnly, Secure, and SameSite=Lax.
-func (ctx *Ctx) SetCookie(key string, value string, maxAge int) {
+func (ctx *DefaultCtx) SetCookie(key string, value string, maxAge int) {
 	http.SetCookie(ctx.w, &http.Cookie{
 		Name:     key,
 		Value:    value,
@@ -79,7 +118,7 @@ func (ctx *Ctx) SetCookie(key string, value string, maxAge int) {
 // retrieved.
 //
 // The cookie is marked as HttpOnly, Secure, and SameSite=Lax.
-func (ctx *Ctx) SignedCookie(key string, val ...string) (string, error) {
+func (ctx *DefaultCtx) SignedCookie(key string, val ...string) (string, error) {
 	s, ok := ctx.Get(cookie.SIGNED_COOKIE).(*cookie.SecureCookie)
 	if !ok {
 		return "", errors.New("failed to get signed cookie")
@@ -112,7 +151,7 @@ func (ctx *Ctx) SignedCookie(key string, val ...string) (string, error) {
 }
 
 // BodyParser is a helper to parse the request body into a given interface
-func (ctx *Ctx) BodyParser(payload interface{}) error {
+func (ctx *DefaultCtx) BodyParser(payload interface{}) error {
 	body, err := io.ReadAll(ctx.r.Body)
 	if err != nil {
 		return err
@@ -125,7 +164,7 @@ func (ctx *Ctx) BodyParser(payload interface{}) error {
 	return nil
 }
 
-// QueryParse takes a struct and populates its fields based on the query
+// QueryParser takes a struct and populates its fields based on the query
 // parameters in the request. It supports string, int, and bool types.
 // If a field has a "query" tag, it will be populated with the query
 // parameter of the same name. If the query parameter is not present,
@@ -140,12 +179,12 @@ func (ctx *Ctx) BodyParser(payload interface{}) error {
 //	req, _ := http.NewRequest("GET", "/?name=John", nil)
 //	ctx := NewCtx(req, nil)
 //	var ms MyStruct
-//	err := ctx.QueryParse(&ms)
+//	err := ctx.QueryParser(&ms)
 //	if err != nil {
 //		// handle error
 //	}
 //	fmt.Println(ms.Name) // John
-func (ctx *Ctx) QueryParse(payload interface{}) error {
+func (ctx *DefaultCtx) QueryParser(payload interface{}) error {
 	ct := reflect.ValueOf(payload).Elem()
 	for i := 0; i < ct.NumField(); i++ {
 		field := ct.Type().Field(i)
@@ -178,12 +217,12 @@ func (ctx *Ctx) QueryParse(payload interface{}) error {
 	return nil
 }
 
-// ParamParse takes a struct and populates its fields based on the path
+// ParamParser takes a struct and populates its fields based on the path
 // parameters in the request. It supports string, int, and bool types.
 // If a field has a "param" tag, it will be populated with the path
 // parameter of the same name. If the path parameter is not present,
 // the field will be skipped.
-func (ctx *Ctx) ParamParse(payload interface{}) error {
+func (ctx *DefaultCtx) ParamParser(payload interface{}) error {
 	ct := reflect.ValueOf(payload).Elem()
 	for i := 0; i < ct.NumField(); i++ {
 		field := ct.Type().Field(i)
@@ -217,30 +256,30 @@ func (ctx *Ctx) ParamParse(payload interface{}) error {
 }
 
 // Body returns the request body as a given interface.
-func (ctx *Ctx) Body() interface{} {
+func (ctx *DefaultCtx) Body() interface{} {
 	return ctx.Get(InBody)
 }
 
 // Params returns the route parameters as a given interface.
-func (ctx *Ctx) Params() interface{} {
+func (ctx *DefaultCtx) Params() interface{} {
 	return ctx.Get(InPath)
 }
 
 // Queries returns the query parameters as a given interface.
-func (ctx *Ctx) Queries() interface{} {
+func (ctx *DefaultCtx) Queries() interface{} {
 	return ctx.Get(InQuery)
 }
 
 // Param returns the value of the route parameter with the given key.
 // If the parameter is not present, it returns an empty string.
-func (ctx *Ctx) Param(key string) string {
+func (ctx *DefaultCtx) Param(key string) string {
 	val := ctx.r.PathValue(key)
 	return val
 }
 
 // ParamInt returns the value of the route parameter with the given key as an integer.
 // If the parameter is not present, it panics.
-func (ctx *Ctx) ParamInt(key string) int {
+func (ctx *DefaultCtx) ParamInt(key string) int {
 	val := ctx.r.PathValue(key)
 	intVal, err := strconv.Atoi(val)
 	if err != nil {
@@ -251,7 +290,7 @@ func (ctx *Ctx) ParamInt(key string) int {
 
 // ParamFloat returns the value of the route parameter with the given key as a float64.
 // If the parameter is not present, it panics.
-func (ctx *Ctx) ParamFloat(key string) float64 {
+func (ctx *DefaultCtx) ParamFloat(key string) float64 {
 	val := ctx.r.PathValue(key)
 	floatVal, err := strconv.ParseFloat(val, 64)
 	if err != nil {
@@ -262,7 +301,7 @@ func (ctx *Ctx) ParamFloat(key string) float64 {
 
 // ParamBool returns the value of the route parameter with the given key as a boolean.
 // If the parameter is not present, it panics.
-func (ctx *Ctx) ParamBool(key string) bool {
+func (ctx *DefaultCtx) ParamBool(key string) bool {
 	val := ctx.r.PathValue(key)
 	boolVal, err := strconv.ParseBool(val)
 	if err != nil {
@@ -273,14 +312,14 @@ func (ctx *Ctx) ParamBool(key string) bool {
 
 // Query returns the value of the query string parameter with the given key.
 // If the parameter is not present, it returns an empty string.
-func (ctx *Ctx) Query(key string) string {
+func (ctx *DefaultCtx) Query(key string) string {
 	val := ctx.r.URL.Query().Get(key)
 	return val
 }
 
 // QueryInt returns the value of the query string parameter with the given key as an integer.
 // If the parameter is not present, it panics.
-func (ctx *Ctx) QueryInt(key string) int {
+func (ctx *DefaultCtx) QueryInt(key string) int {
 	val := ctx.r.URL.Query().Get(key)
 	intVal, err := strconv.Atoi(val)
 	if err != nil {
@@ -291,7 +330,7 @@ func (ctx *Ctx) QueryInt(key string) int {
 
 // QueryFloat returns the value of the query string parameter with the given key as a float.
 // If the parameter is not present, it panics.
-func (ctx *Ctx) QueryFloat(key string) float64 {
+func (ctx *DefaultCtx) QueryFloat(key string) float64 {
 	val := ctx.r.URL.Query().Get(key)
 	floatVal, err := strconv.ParseFloat(val, 64)
 	if err != nil {
@@ -302,7 +341,7 @@ func (ctx *Ctx) QueryFloat(key string) float64 {
 
 // QueryBool returns the value of the query string parameter with the given key as a boolean.
 // If the parameter is not present, it panics.
-func (ctx *Ctx) QueryBool(key string) bool {
+func (ctx *DefaultCtx) QueryBool(key string) bool {
 	val := ctx.r.URL.Query().Get(key)
 	boolVal, err := strconv.ParseBool(val)
 	if err != nil {
@@ -318,14 +357,14 @@ func (ctx *Ctx) QueryBool(key string) bool {
 // Example:
 //
 //	ctx.Status(http.StatusOK).JSON(core.Map{"message": "Hello, World!"})
-func (ctx *Ctx) Status(statusCode int) *Ctx {
+func (ctx *DefaultCtx) Status(statusCode int) Ctx {
 	ctx.w.WriteHeader(statusCode)
 	return ctx
 }
 
 type Map map[string]interface{}
 
-func (ctx *Ctx) SetCallHandler(call CallHandler) {
+func (ctx *DefaultCtx) SetCallHandler(call CallHandler) {
 	ctx.callHandler = call
 }
 
@@ -334,7 +373,7 @@ func (ctx *Ctx) SetCallHandler(call CallHandler) {
 // The Content-Type of the response is set to "application/json".
 //
 // If there is an error while encoding the data, it panics.
-func (ctx *Ctx) JSON(data Map) error {
+func (ctx *DefaultCtx) JSON(data Map) error {
 	ctx.w.Header().Set("Content-Type", "application/json")
 	if ctx.callHandler != nil {
 		data = ctx.callHandler(data)
@@ -355,7 +394,7 @@ func (ctx *Ctx) JSON(data Map) error {
 // Get returns the value associated with the given key from the request context.
 //
 // If no value is associated with the key, it returns nil.
-func (ctx *Ctx) Get(key any) interface{} {
+func (ctx *DefaultCtx) Get(key any) interface{} {
 	val := ctx.r.Context().Value(key)
 	return val
 }
@@ -367,7 +406,7 @@ func (ctx *Ctx) Get(key any) interface{} {
 //
 // The value is associated with the given key in the context of the request,
 // and can be retrieved using the Get method.
-func (ctx *Ctx) Set(key interface{}, val interface{}) {
+func (ctx *DefaultCtx) Set(key interface{}, val interface{}) {
 	ctx.r = ctx.r.WithContext(context.WithValue(ctx.r.Context(), key, val))
 }
 
@@ -377,7 +416,7 @@ func (ctx *Ctx) Set(key interface{}, val interface{}) {
 // If there is no next handler, it does nothing.
 //
 // It returns nil.
-func (ctx *Ctx) Next() error {
+func (ctx *DefaultCtx) Next() error {
 	ctx.handler.ServeHTTP(ctx.w, ctx.r)
 	return nil
 }
@@ -389,7 +428,7 @@ func (ctx *Ctx) Next() error {
 //
 // If no arguments are given, it gets the session value associated with the given key.
 // If the cookie is not present, or if the value is not found, it returns nil.
-func (ctx *Ctx) Session(key string, val ...interface{}) interface{} {
+func (ctx *DefaultCtx) Session(key string, val ...interface{}) interface{} {
 	if len(val) > 0 {
 		cookie := ctx.app.session.Set(key, val[0])
 		http.SetCookie(ctx.w, &cookie)
@@ -410,8 +449,8 @@ func (ctx *Ctx) Session(key string, val ...interface{}) interface{} {
 //
 // The returned Ctx can be used to call any of the methods on Ctx, such as
 // Req, Res, Headers, etc.
-func NewCtx(app *App) *Ctx {
-	return &Ctx{
+func NewCtx(app *App) *DefaultCtx {
+	return &DefaultCtx{
 		app: app,
 	}
 }
@@ -420,7 +459,7 @@ func NewCtx(app *App) *Ctx {
 // to the given values.
 //
 // It returns nothing.
-func (ctx *Ctx) SetCtx(w http.ResponseWriter, r *http.Request) {
+func (ctx *DefaultCtx) SetCtx(w http.ResponseWriter, r *http.Request) {
 	ctx.w = w
 	ctx.r = r
 }
@@ -428,7 +467,7 @@ func (ctx *Ctx) SetCtx(w http.ResponseWriter, r *http.Request) {
 // SetHandler sets the http.Handler field of the Ctx to the given value.
 //
 // This is usually called by the framework to set the handler for the current request.
-func (ctx *Ctx) SetHandler(h http.Handler) {
+func (ctx *DefaultCtx) SetHandler(h http.Handler) {
 	ctx.handler = h
 }
 
@@ -441,7 +480,7 @@ func (ctx *Ctx) SetHandler(h http.Handler) {
 //
 // The returned http.HandlerFunc can be used as a handler for an HTTP request.
 func ParseCtx(app *App, router *Router) http.Handler {
-	ctx := app.pool.Get().(*Ctx)
+	ctx := app.pool.Get().(*DefaultCtx)
 	defer app.pool.Put(ctx)
 
 	ctx.SetMetadata(router.Metadata...)
@@ -454,19 +493,19 @@ func ParseCtx(app *App, router *Router) http.Handler {
 		defer func() {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("%v", r)
-				app.errorHandler(err, *ctx)
+				app.errorHandler(err, ctx)
 			}
 		}()
-		err = router.Handler(*ctx)
+		err = router.Handler(ctx)
 		if err != nil {
-			app.errorHandler(err, *ctx)
+			app.errorHandler(err, ctx)
 		}
 	})
 }
 
 // UploadedFile returns the first uploaded file in the request, or nil if no
 // files were uploaded.
-func (ctx *Ctx) UploadedFile() *storage.File {
+func (ctx *DefaultCtx) UploadedFile() *storage.File {
 	uploadedFile, ok := ctx.Get(FILE).(*storage.File)
 	if uploadedFile == nil || !ok {
 		return nil
@@ -476,7 +515,7 @@ func (ctx *Ctx) UploadedFile() *storage.File {
 
 // UploadedFiles returns a slice of all uploaded files in the request, or nil
 // if no files were uploaded.
-func (ctx *Ctx) UploadedFiles() []*storage.File {
+func (ctx *DefaultCtx) UploadedFiles() []*storage.File {
 	uploadedFiles, ok := ctx.Get(FILES).([]*storage.File)
 	if uploadedFiles == nil || !ok {
 		return nil
@@ -487,7 +526,7 @@ func (ctx *Ctx) UploadedFiles() []*storage.File {
 // UploadedFieldFile returns a map of uploaded files in the request, where the key
 // is the field name, and the value is a slice of uploaded files for that field.
 // If no files were uploaded, it returns nil.
-func (ctx *Ctx) UploadedFieldFile() map[string][]*storage.File {
+func (ctx *DefaultCtx) UploadedFieldFile() map[string][]*storage.File {
 	uploadedFieldFile, ok := ctx.Get(FIELD_FILES).(map[string][]*storage.File)
 	if uploadedFieldFile == nil || !ok {
 		return nil
@@ -495,7 +534,7 @@ func (ctx *Ctx) UploadedFieldFile() map[string][]*storage.File {
 	return uploadedFieldFile
 }
 
-func (ctx *Ctx) Redirect(uri string) error {
+func (ctx *DefaultCtx) Redirect(uri string) error {
 	if !strings.HasPrefix(uri, "http://") && !strings.HasPrefix(uri, "https://") {
 		var scheme string
 		if ctx.Req().TLS != nil {
@@ -513,6 +552,6 @@ func (ctx *Ctx) Redirect(uri string) error {
 	return nil
 }
 
-func (ctx *Ctx) Ref(name Provide) interface{} {
+func (ctx *DefaultCtx) Ref(name Provide) interface{} {
 	return ctx.Get(name)
 }
