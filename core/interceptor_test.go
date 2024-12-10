@@ -12,7 +12,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
-func Transform(ctx *core.Ctx) core.CallHandler {
+func Transform(ctx core.Ctx) core.CallHandler {
 	fmt.Println("Before ...")
 	now := time.Now()
 	return func(data core.Map) core.Map {
