@@ -11,7 +11,7 @@ on:
 
 jobs:
 
-  build:
+  test-root:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -38,3 +38,37 @@ jobs:
 
     - name: Remove temp file
       run: rm -rf middleware/logger/logs
+
+  test-redis:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.22.x' ]
+
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      redis:
+        # Docker Hub image
+        image: redis
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps port 6379 on service container to the host
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22.0'
+
+    - name: Test microservices
+      run: cd microservices/redis; go test -cover ./...
+
