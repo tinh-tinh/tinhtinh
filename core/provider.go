@@ -119,44 +119,7 @@ type ProviderOptions struct {
 // Otherwise, the value of the provider will be set to the given value, or the
 // result of the factory function with the given injects if the value is nil.
 func (module *DynamicModule) NewProvider(opt ProviderOptions) Provider {
-	var provider Provider
-	providerIdx := module.findIdx(opt.Name)
-	if providerIdx != -1 {
-		provider = module.DataProviders[providerIdx]
-	} else {
-		provider = &DynamicProvider{
-			Name:   opt.Name,
-			Status: PRIVATE,
-			Scope:  opt.Scope,
-		}
-		module.DataProviders = append(module.DataProviders, provider)
-	}
-	reqInject := slices.ContainsFunc(opt.Inject, func(p Provide) bool {
-		return p == REQUEST
-	})
-	if reqInject {
-		provider.SetScope(Request)
-	}
-	if provider.GetScope() == "" {
-		provider.SetScope(module.Scope)
-	}
-	if provider.GetScope() == Request {
-		provider.SetInject(opt.Inject)
-		provider.SetFactory(opt.Factory)
-		provider.SetValue(opt.Value)
-		return provider
-	}
-	provider.SetValue(opt.Value)
-	if opt.Value == nil {
-		var values []interface{}
-		for _, p := range opt.Inject {
-			values = append(values, module.Ref(p))
-		}
-		val := opt.Factory(values...)
-		provider.SetValue(val)
-	}
-
-	return provider
+	return InitProviders(module, opt)
 }
 
 // getExports returns a list of providers that are exported by the module.
@@ -196,4 +159,49 @@ func (module *DynamicModule) appendProvider(providers ...Provider) {
 		}
 		module.DataProviders[idx] = provider
 	}
+}
+
+func InitProviders(module Module, opt ProviderOptions) Provider {
+	var provider Provider
+	providerIdx := module.findIdx(opt.Name)
+	if providerIdx != -1 {
+		provider = module.GetDataProviders()[providerIdx]
+	} else {
+		provider = &DynamicProvider{
+			Name:   opt.Name,
+			Status: PRIVATE,
+			Scope:  opt.Scope,
+		}
+		module.AppendDataProviders(provider)
+	}
+	reqInject := slices.ContainsFunc(opt.Inject, func(p Provide) bool {
+		return p == REQUEST
+	})
+	if reqInject {
+		provider.SetScope(Request)
+	}
+	if provider.GetScope() == "" {
+		provider.SetScope(module.GetScope())
+	}
+	if provider.GetScope() == Request {
+		provider.SetInject(opt.Inject)
+		provider.SetFactory(opt.Factory)
+		provider.SetValue(opt.Value)
+		return provider
+	}
+	provider.SetValue(opt.Value)
+	if opt.Value == nil {
+		var values []interface{}
+		for _, p := range opt.Inject {
+			values = append(values, module.Ref(p))
+		}
+		val := opt.Factory(values...)
+		if val != nil {
+			provider.SetValue(val)
+		} else {
+			provider.SetFactory(opt.Factory)
+		}
+	}
+
+	return provider
 }
