@@ -38,7 +38,7 @@ func Test_Server(t *testing.T) {
 			return nil
 		})
 
-		handler.OnResponse("user.updated", func(param ...interface{}) interface{} {
+		handler.OnEvent("user.updated", func(param ...interface{}) interface{} {
 			if len(param) == 0 {
 				return nil
 			}
