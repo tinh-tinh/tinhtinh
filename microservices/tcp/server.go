@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
@@ -104,13 +105,29 @@ func (svc *Server) handler(param interface{}) {
 		}
 		fmt.Printf("Received message: %v from event %v\n", msg.Data, msg.Event)
 
-		findEvent := slices.IndexFunc(svc.Module.GetDataProviders(), func(e core.Provider) bool {
-			return string(e.GetName()) == msg.Event
-		})
-		if findEvent != -1 {
-			provider := svc.Module.GetDataProviders()[findEvent]
-			fnc := provider.GetFactory()
-			fnc(msg.Data)
+		if msg.Event == "*" {
+			for _, provider := range svc.Module.GetDataProviders() {
+				fnc := provider.GetFactory()
+				fnc(msg.Data)
+			}
+		} else if strings.ContainsAny(msg.Event, "*") {
+			prefix := strings.TrimSuffix(msg.Event, "*")
+			fmt.Println(prefix)
+			for _, provider := range svc.Module.GetDataProviders() {
+				if strings.HasPrefix(string(provider.GetName()), prefix) {
+					fnc := provider.GetFactory()
+					fnc(msg.Data)
+				}
+			}
+		} else {
+			findEvent := slices.IndexFunc(svc.Module.GetDataProviders(), func(e core.Provider) bool {
+				return string(e.GetName()) == msg.Event
+			})
+			if findEvent != -1 {
+				provider := svc.Module.GetDataProviders()[findEvent]
+				fnc := provider.GetFactory()
+				fnc(msg.Data)
+			}
 		}
 	}
 }

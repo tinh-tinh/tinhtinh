@@ -14,6 +14,8 @@ type Client struct {
 	Conn         net.Conn
 	Serializer   core.Encode
 	Deserializer core.Decode
+	Wildcard     bool
+	Delimiter    string
 }
 
 func (client *Client) Close() {
