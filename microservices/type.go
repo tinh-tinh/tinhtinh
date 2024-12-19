@@ -19,7 +19,6 @@ type ConnectOptions struct {
 }
 
 type ClientProxy interface {
-	Close()
 	Send(event string, data interface{}) error
 	Broadcast(data interface{}) error
 }

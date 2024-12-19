@@ -54,6 +54,32 @@ func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microser
 	return svc
 }
 
+func Open(opts ...microservices.ConnectOptions) core.Service {
+	svc := &Server{
+		Serializer:   json.Marshal,
+		Deserializer: json.Unmarshal,
+	}
+
+	if len(opts) > 0 {
+		if opts[0].Serializer != nil {
+			svc.Serializer = opts[0].Serializer
+		}
+
+		if opts[0].Deserializer != nil {
+			svc.Deserializer = opts[0].Deserializer
+		}
+		if opts[0].Addr != "" {
+			svc.Addr = opts[0].Addr
+		}
+	}
+
+	return svc
+}
+
+func (svc *Server) Create(module core.Module) {
+	svc.Module = module
+}
+
 // Listen starts the TCP server on the address specified by the Addr field.
 //
 // It will listen for incoming connections and handle each connection in a

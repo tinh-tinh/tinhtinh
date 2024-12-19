@@ -48,6 +48,7 @@ type App struct {
 	// errorHandler is the error handler that the App uses to initialize itself.
 	errorHandler ErrorHandler
 	timeout      time.Duration
+	Services     []Service
 }
 
 type ModuleParam func() Module
@@ -61,6 +62,11 @@ type AppOptions struct {
 	// ErrorHandler is the error handler that the App uses to initialize itself.
 	ErrorHandler ErrorHandler
 	Timeout      time.Duration
+}
+
+type Service interface {
+	Create(module Module)
+	Listen()
 }
 
 // CreateFactory creates a new App with the given module and options.
@@ -234,5 +240,16 @@ func (app *App) Listen(port int) {
 		if hook.RunAt == AFTER_SHUTDOWN {
 			hook.fnc()
 		}
+	}
+}
+
+func (app *App) ConnectMicroservice(svc Service) {
+	svc.Create(app.Module)
+	app.Services = append(app.Services, svc)
+}
+
+func (app *App) StartAllMicroservices() {
+	for _, svc := range app.Services {
+		go svc.Listen()
 	}
 }
