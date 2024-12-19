@@ -256,7 +256,7 @@ func Test_LifecycleModule(t *testing.T) {
 		return ctx.Next()
 	}
 
-	tenantGuard := func(module core.RefProvider, ctx *core.Ctx) bool {
+	tenantGuard := func(module core.RefProvider, ctx core.Ctx) bool {
 		return ctx.Get(Tenant) != nil
 	}
 
@@ -318,7 +318,7 @@ func Test_PassMiddlewareModule(t *testing.T) {
 		return ctx.Next()
 	}
 
-	tenantGuard := func(module core.RefProvider, ctx *core.Ctx) bool {
+	tenantGuard := func(module core.RefProvider, ctx core.Ctx) bool {
 		return ctx.Get(Tenant) != nil
 	}
 

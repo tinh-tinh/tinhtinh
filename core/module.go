@@ -39,6 +39,9 @@ type Module interface {
 	Guard(guards ...Guard) Module
 	Use(middleware ...Middleware) Module
 	UseRef(middlewareRefs ...MiddlewareRef) Module
+	GetDataProviders() []Provider
+	AppendDataProviders(providers ...Provider)
+	GetScope() Scope
 }
 
 type DynamicModule struct {
@@ -261,4 +264,16 @@ func requestMiddleware(module *DynamicModule) Middleware {
 		}
 		return ctx.Next()
 	}
+}
+
+func (m *DynamicModule) GetDataProviders() []Provider {
+	return m.DataProviders
+}
+
+func (m *DynamicModule) AppendDataProviders(providers ...Provider) {
+	m.DataProviders = append(m.DataProviders, providers...)
+}
+
+func (m *DynamicModule) GetScope() Scope {
+	return m.Scope
 }

@@ -18,7 +18,7 @@ type middlewareRaw func(http.Handler) http.Handler
 // that can be used by http server. It provides a Ctx instance to the wrapped
 // middleware function and automatically sets the handler of the Ctx instance.
 func ParseCtxMiddleware(app *App, ctxMid Middleware) middlewareRaw {
-	ctx := app.pool.Get().(*Ctx)
+	ctx := app.pool.Get().(*DefaultCtx)
 	defer app.pool.Put(ctx)
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -28,12 +28,12 @@ func ParseCtxMiddleware(app *App, ctxMid Middleware) middlewareRaw {
 			defer func() {
 				if r := recover(); r != nil {
 					err = fmt.Errorf("%v", r)
-					app.errorHandler(err, *ctx)
+					app.errorHandler(err, ctx)
 				}
 			}()
-			err = ctxMid(*ctx)
+			err = ctxMid(ctx)
 			if err != nil {
-				app.errorHandler(err, *ctx)
+				app.errorHandler(err, ctx)
 				return
 			}
 		})

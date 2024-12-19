@@ -176,6 +176,9 @@ func (c *DynamicController) Handler(path string, handler http.Handler) {
 // The route is registered with the controller's module and the controller's
 // middlewares and metadata are cleared.
 func (c *DynamicController) registry(method string, path string, handler Handler) {
+	if path == "/" {
+		path = ""
+	}
 	router := &Router{
 		Name:        c.name,
 		Method:      method,

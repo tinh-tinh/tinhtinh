@@ -678,7 +678,7 @@ func Test_QueryParser(t *testing.T) {
 
 		ctrl.Get("", func(ctx core.Ctx) error {
 			var queryData QueryData
-			err := ctx.QueryParse(&queryData)
+			err := ctx.QueryParser(&queryData)
 			if err != nil {
 				return common.InternalServerException(ctx.Res(), err.Error())
 			}
@@ -728,7 +728,7 @@ func Test_ParamParser(t *testing.T) {
 
 		ctrl.Get("{id}/{export}", func(ctx core.Ctx) error {
 			var queryData ParamData
-			err := ctx.ParamParse(&queryData)
+			err := ctx.ParamParser(&queryData)
 			if err != nil {
 				return common.InternalServerException(ctx.Res(), err.Error())
 			}
