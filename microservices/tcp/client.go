@@ -18,10 +18,6 @@ type Client struct {
 	Delimiter    string
 }
 
-func (client *Client) Close() {
-	client.Conn.Close()
-}
-
 func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 	conn, err := net.Dial("tcp", opt.Addr)
 	if err != nil {
