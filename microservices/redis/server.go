@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	redis_store "github.com/redis/go-redis/v9"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
@@ -19,8 +20,14 @@ type Server struct {
 }
 
 func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microservices.Service {
+	svc := Open(opts...)
+	svc.Create(module())
+
+	return svc
+}
+
+func Open(opts ...microservices.ConnectOptions) core.Service {
 	svc := &Server{
-		Module:       module(),
 		Serializer:   json.Marshal,
 		Deserializer: json.Unmarshal,
 		Context:      context.Background(),
@@ -39,6 +46,10 @@ func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microser
 	return svc
 }
 
+func (svc *Server) Create(module core.Module) {
+	svc.Module = module
+}
+
 func (svc *Server) Listen() {
 	rdb := redis_store.NewClient(&redis_store.Options{
 		Addr:     svc.Addr,
@@ -53,7 +64,12 @@ func (svc *Server) Listen() {
 	}
 
 	for _, prd := range svc.Module.GetDataProviders() {
-		subscriber := rdb.Subscribe(svc.Context, string(prd.GetName()))
+		var subscriber *redis_store.PubSub
+		if strings.HasSuffix(string(prd.GetName()), "*") {
+			subscriber = rdb.PSubscribe(svc.Context, string(prd.GetName()))
+		} else {
+			subscriber = rdb.Subscribe(svc.Context, string(prd.GetName()))
+		}
 		go svc.Handler(subscriber, prd.GetFactory())
 	}
 }

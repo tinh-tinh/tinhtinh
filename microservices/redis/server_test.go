@@ -14,10 +14,6 @@ import (
 )
 
 func Test_Server(t *testing.T) {
-	type Message struct {
-		Name string `json:"name"`
-		Age  int    `json:"age"`
-	}
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
@@ -27,7 +23,7 @@ func Test_Server(t *testing.T) {
 			}
 			msg := param[0]
 			if msg != nil {
-				fmt.Println("Receive Data:", msg)
+				fmt.Printf("Receive Data: %v on event user.created\n", msg)
 			}
 
 			return nil
@@ -39,7 +35,7 @@ func Test_Server(t *testing.T) {
 			}
 			msg := param[0]
 			if msg != nil {
-				fmt.Println("Receive Data:", msg)
+				fmt.Printf("Receive Data: %v on event user.updated\n", msg)
 			}
 
 			return nil
@@ -64,6 +60,21 @@ func Test_Server(t *testing.T) {
 	// Allow some time for the server to start
 	time.Sleep(100 * time.Millisecond)
 
+	clientApp := appClient()
+	testServer := httptest.NewServer(clientApp.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/update")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func appClient() *core.App {
 	clientController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
@@ -122,15 +133,5 @@ func Test_Server(t *testing.T) {
 	clientApp := core.CreateFactory(clientModule)
 	clientApp.SetGlobalPrefix("api")
 
-	testServer := httptest.NewServer(clientApp.PrepareBeforeListen())
-	defer testServer.Close()
-	testClient := testServer.Client()
-
-	resp, err := testClient.Get(testServer.URL + "/api/test")
-	require.Nil(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	resp, err = testClient.Get(testServer.URL + "/api/test/update")
-	require.Nil(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+	return clientApp
 }

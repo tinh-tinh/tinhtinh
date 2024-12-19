@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	redis_store "github.com/redis/go-redis/v9"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
@@ -48,6 +49,7 @@ func (client *Client) Send(event string, data interface{}) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Send message: %v for event %s\n", data, event)
 	err = client.Conn.Publish(client.Context, event, payload).Err()
 	if err != nil {
 		return err
