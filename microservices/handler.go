@@ -7,6 +7,7 @@ import (
 type Handler struct {
 	core.DynamicProvider
 	module core.Module
+	schema interface{}
 }
 
 // NewHandler creates a new Handler with the given module and options.
@@ -18,16 +19,21 @@ func NewHandler(module core.Module, opt core.ProviderOptions) *Handler {
 	return provider
 }
 
+func (h *Handler) Schema(schema interface{}) *Handler {
+	h.schema = schema
+	return h
+}
+
 // OnResponse registers a provider with the given name and factory function to be
 // called when the response is ready. The provider will be registered with the
 // same scope as the handler.
-func (h *Handler) OnResponse(name string, fnc core.Factory) {
-	core.InitProviders(h.module, core.ProviderOptions{Name: core.Provide(name), Factory: fnc, Scope: h.Scope})
+func (h *Handler) OnResponse(name string, fnc Factory) {
+	core.InitProviders(h.module, core.ProviderOptions{Name: core.Provide(name), Factory: ConvertFactory(fnc), Scope: h.Scope})
 }
 
 // OnEvent registers a provider with the given name and factory function to be
 // called when an event is triggered. The provider will be registered with the
 // same scope as the handler.
-func (h *Handler) OnEvent(name string, fnc core.Factory) {
-	core.InitProviders(h.module, core.ProviderOptions{Name: core.Provide(name), Factory: fnc, Scope: h.Scope})
+func (h *Handler) OnEvent(name string, fnc Factory) {
+	core.InitProviders(h.module, core.ProviderOptions{Name: core.Provide(name), Factory: ConvertFactory(fnc), Scope: h.Scope})
 }

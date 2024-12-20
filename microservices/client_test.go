@@ -1,7 +1,6 @@
-package tcp_test
+package microservices_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -36,34 +35,12 @@ func Test_HybridApp(t *testing.T) {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
-		handler.OnResponse("user.created", func(param ...interface{}) interface{} {
-			if len(param) == 0 {
-				return nil
-			}
-			msg := param[0]
-			var decodedData Message
-			if msg != nil {
-				dataBytes, _ := json.Marshal(msg)
-				_ = json.Unmarshal(dataBytes, &decodedData)
-				fmt.Println("User Created Data:", decodedData)
-			}
-
-			return nil
+		handler.OnResponse("user.created", func(ctx microservices.Ctx) {
+			fmt.Println("User Created Data:", ctx.Payload(&Message{}))
 		})
 
-		handler.OnEvent("user.updated", func(param ...interface{}) interface{} {
-			if len(param) == 0 {
-				return nil
-			}
-			msg := param[0]
-			var decodedData Message
-			if msg != nil {
-				dataBytes, _ := json.Marshal(msg)
-				_ = json.Unmarshal(dataBytes, &decodedData)
-				fmt.Println("User Updated Data:", decodedData)
-			}
-
-			return nil
+		handler.OnEvent("user.updated", func(ctx microservices.Ctx) {
+			fmt.Println("User Updated Data:", ctx.Payload(&Message{}))
 		})
 
 		return handler
@@ -93,9 +70,9 @@ func Test_HybridApp(t *testing.T) {
 	clientApp := appClient("localhost:3005")
 	testServer2 := httptest.NewServer(clientApp.PrepareBeforeListen())
 	defer testServer2.Close()
-	testClient := testServer.Client()
+	testClient := testServer2.Client()
 
-	resp, err := testClient.Get(testServer.URL + "/api/test/broadcast")
+	resp, err := testClient.Get(testServer2.URL + "/api/test/broadcast")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }

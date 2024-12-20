@@ -1,8 +1,7 @@
-package tcp_test
+package microservices_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -146,34 +145,12 @@ func appServer(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
-		handler.OnResponse("user.created", func(param ...interface{}) interface{} {
-			if len(param) == 0 {
-				return nil
-			}
-			msg := param[0]
-			var decodedData Message
-			if msg != nil {
-				dataBytes, _ := json.Marshal(msg)
-				_ = json.Unmarshal(dataBytes, &decodedData)
-				fmt.Println("User Created Data:", decodedData)
-			}
-
-			return nil
+		handler.OnResponse("user.created", func(ctx microservices.Ctx) {
+			fmt.Println("User Created Data:", ctx.Payload())
 		})
 
-		handler.OnEvent("user.updated", func(param ...interface{}) interface{} {
-			if len(param) == 0 {
-				return nil
-			}
-			msg := param[0]
-			var decodedData Message
-			if msg != nil {
-				dataBytes, _ := json.Marshal(msg)
-				_ = json.Unmarshal(dataBytes, &decodedData)
-				fmt.Println("User Updated Data:", decodedData)
-			}
-
-			return nil
+		handler.OnEvent("user.updated", func(ctx microservices.Ctx) {
+			fmt.Println("User Updated Data:", ctx.Payload())
 		})
 
 		return handler

@@ -84,6 +84,8 @@ func (svc *Server) Handler(params ...interface{}) {
 			return
 		}
 
-		factory(msg)
+		fmt.Printf("Received message: %s from event %s\n", msg.Payload, msg.Channel)
+		data := microservices.ParseCtx(msg.Payload)
+		factory(data)
 	}
 }
