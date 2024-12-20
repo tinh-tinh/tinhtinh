@@ -131,10 +131,11 @@ func (svc *Server) handler(param interface{}) {
 		}
 		fmt.Printf("Received message: %v from event %v\n", msg.Data, msg.Event)
 
+		data := microservices.ParseCtx(msg.Data)
 		if msg.Event == "*" {
 			for _, provider := range svc.Module.GetDataProviders() {
 				fnc := provider.GetFactory()
-				fnc(msg.Data)
+				fnc(data)
 			}
 		} else if strings.ContainsAny(msg.Event, "*") {
 			prefix := strings.TrimSuffix(msg.Event, "*")
@@ -142,7 +143,7 @@ func (svc *Server) handler(param interface{}) {
 			for _, provider := range svc.Module.GetDataProviders() {
 				if strings.HasPrefix(string(provider.GetName()), prefix) {
 					fnc := provider.GetFactory()
-					fnc(msg.Data)
+					fnc(data)
 				}
 			}
 		} else {
@@ -152,7 +153,7 @@ func (svc *Server) handler(param interface{}) {
 			if findEvent != -1 {
 				provider := svc.Module.GetDataProviders()[findEvent]
 				fnc := provider.GetFactory()
-				fnc(msg.Data)
+				fnc(data)
 			}
 		}
 	}
