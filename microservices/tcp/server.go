@@ -16,8 +16,8 @@ import (
 type Server struct {
 	Addr         string
 	Module       core.Module
-	Serializer   core.Encode
-	Deserializer core.Decode
+	serializer   core.Encode
+	deserializer core.Decode
 }
 
 // New creates a new TCP server with the given module and options.
@@ -34,17 +34,17 @@ type Server struct {
 func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microservices.Service {
 	svc := &Server{
 		Module:       module(),
-		Serializer:   json.Marshal,
-		Deserializer: json.Unmarshal,
+		serializer:   json.Marshal,
+		deserializer: json.Unmarshal,
 	}
 
 	if len(opts) > 0 {
 		if opts[0].Serializer != nil {
-			svc.Serializer = opts[0].Serializer
+			svc.serializer = opts[0].Serializer
 		}
 
 		if opts[0].Deserializer != nil {
-			svc.Deserializer = opts[0].Deserializer
+			svc.deserializer = opts[0].Deserializer
 		}
 		if opts[0].Addr != "" {
 			svc.Addr = opts[0].Addr
@@ -56,17 +56,17 @@ func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microser
 
 func Open(opts ...microservices.ConnectOptions) core.Service {
 	svc := &Server{
-		Serializer:   json.Marshal,
-		Deserializer: json.Unmarshal,
+		serializer:   json.Marshal,
+		deserializer: json.Unmarshal,
 	}
 
 	if len(opts) > 0 {
 		if opts[0].Serializer != nil {
-			svc.Serializer = opts[0].Serializer
+			svc.serializer = opts[0].Serializer
 		}
 
 		if opts[0].Deserializer != nil {
-			svc.Deserializer = opts[0].Deserializer
+			svc.deserializer = opts[0].Deserializer
 		}
 		if opts[0].Addr != "" {
 			svc.Addr = opts[0].Addr
@@ -124,14 +124,14 @@ func (svc *Server) handler(param interface{}) {
 		}
 
 		var msg microservices.Message
-		err = svc.Deserializer([]byte(message), &msg)
+		err = svc.deserializer([]byte(message), &msg)
 		if err != nil {
 			fmt.Println("Error deserializing message: ", err)
 			return
 		}
 		fmt.Printf("Received message: %v from event %v\n", msg.Data, msg.Event)
 
-		data := microservices.ParseCtx(msg.Data)
+		data := microservices.ParseCtx(msg.Data, svc)
 		if msg.Event == "*" {
 			for _, provider := range svc.Module.GetDataProviders() {
 				fnc := provider.GetFactory()
@@ -157,4 +157,12 @@ func (svc *Server) handler(param interface{}) {
 			}
 		}
 	}
+}
+
+func (svc *Server) Serializer(v interface{}) ([]byte, error) {
+	return svc.serializer(v)
+}
+
+func (svc *Server) Deserializer(data []byte, v interface{}) error {
+	return svc.deserializer(data, v)
 }

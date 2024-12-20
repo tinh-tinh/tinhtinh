@@ -25,21 +25,22 @@ func ConvertFactory(fnc Factory) core.Factory {
 
 type DefaultCtx struct {
 	payload interface{}
+	service Service
 }
 
-func ParseCtx(data interface{}) Ctx {
-	return &DefaultCtx{payload: data}
+func ParseCtx(data interface{}, service Service) Ctx {
+	return &DefaultCtx{payload: data, service: service}
 }
 
 func (c *DefaultCtx) Payload(data ...interface{}) interface{} {
 	if len(data) > 0 {
 		schema := data[0]
 		if reflect.TypeOf(c.payload).Kind() == reflect.String {
-			_ = json.Unmarshal([]byte(c.payload.(string)), schema)
+			_ = c.service.Deserializer([]byte(c.payload.(string)), schema)
 			return schema
 		}
 		dataBytes, _ := json.Marshal(c.payload)
-		_ = json.Unmarshal(dataBytes, schema)
+		_ = c.service.Deserializer(dataBytes, schema)
 		return schema
 	}
 	return c.payload
