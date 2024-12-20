@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ type Order struct {
 func OrderApp() *core.App {
 	type OrderService struct {
 		orders map[string]interface{}
+		mutex  sync.RWMutex
 	}
 
 	const ORDER core.Provide = "orders"
@@ -29,6 +31,7 @@ func OrderApp() *core.App {
 			Name: ORDER,
 			Value: &OrderService{
 				orders: make(map[string]interface{}),
+				mutex:  sync.RWMutex{},
 			},
 		})
 
@@ -42,10 +45,12 @@ func OrderApp() *core.App {
 		handler.OnResponse("order.created", func(ctx microservices.Ctx) {
 			data := ctx.Payload(&Order{}).(*Order)
 
+			orderService.mutex.Lock()
 			if orderService.orders[data.ID] == nil {
 				orderService.orders[data.ID] = true
 			}
 
+			orderService.mutex.Unlock()
 		})
 
 		return handler

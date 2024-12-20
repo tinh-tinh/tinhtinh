@@ -1027,3 +1027,40 @@ func Test_Redirect(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
+
+func Benchmark_CtxJson(b *testing.B) {
+	controller := func(module core.Module) core.Controller {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": "ok",
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() core.Module {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controllers{controller},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	testClient := testServer.Client()
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			resp, err := testClient.Get(testServer.URL + "/api/test")
+			require.Nil(b, err)
+			require.Equal(b, http.StatusOK, resp.StatusCode)
+		}
+	})
+}

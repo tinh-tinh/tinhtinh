@@ -3,7 +3,6 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	redis_store "github.com/redis/go-redis/v9"
@@ -60,7 +59,7 @@ func (svc *Server) Listen() {
 	ctx := context.Background()
 	err := rdb.Set(ctx, "key", "value", 0).Err()
 	if err != nil {
-		panic(err)
+		return
 	}
 
 	for _, prd := range svc.Module.GetDataProviders() {
@@ -80,11 +79,9 @@ func (svc *Server) Handler(params ...interface{}) {
 	for {
 		msg, err := subscriber.ReceiveMessage(svc.Context)
 		if err != nil {
-			fmt.Println("Error reading message: ", err)
 			return
 		}
 
-		fmt.Printf("Received message: %s from event %s\n", msg.Payload, msg.Channel)
 		data := microservices.ParseCtx(msg.Payload)
 		factory(data)
 	}

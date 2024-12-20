@@ -1,9 +1,11 @@
 package redis_test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -21,6 +23,7 @@ type Order struct {
 func OrderApp() *core.App {
 	type OrderService struct {
 		orders map[string]interface{}
+		mutex  sync.RWMutex
 	}
 
 	const ORDER core.Provide = "orders"
@@ -29,6 +32,7 @@ func OrderApp() *core.App {
 			Name: ORDER,
 			Value: &OrderService{
 				orders: make(map[string]interface{}),
+				mutex:  sync.RWMutex{},
 			},
 		})
 
@@ -38,14 +42,16 @@ func OrderApp() *core.App {
 	handlerService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
-		orderService := module.Ref(ORDER).(*OrderService)
+		// orderService := module.Ref(ORDER).(*OrderService)
 		handler.OnResponse("order.created", func(ctx microservices.Ctx) {
 			data := ctx.Payload(&Order{}).(*Order)
 
-			if orderService.orders[data.ID] == nil {
-				orderService.orders[data.ID] = true
-			}
-
+			// orderService.mutex.Lock()
+			// if orderService.orders[data.ID] == nil {
+			// 	orderService.orders[data.ID] = true
+			// }
+			// orderService.mutex.Unlock()
+			fmt.Println(data)
 		})
 
 		return handler
@@ -88,7 +94,7 @@ func ProductApp(addr string) *core.App {
 		ctrl.Post("", func(ctx core.Ctx) error {
 			client := microservices.Inject(module)
 
-			client.Send("order.created", &Order{
+			go client.Send("order.created", &Order{
 				ID:   "order1",
 				Name: "order1",
 			})
@@ -157,4 +163,31 @@ func Test_Practice(t *testing.T) {
 	// data, err = io.ReadAll(resp.Body)
 	// require.Nil(t, err)
 	// require.Equal(t, `{"data":{"order1":true}}`, string(data))
+}
+
+func Benchmark_Practice(b *testing.B) {
+	orderApp := OrderApp()
+	orderApp.ConnectMicroservice(redis.Open(microservices.ConnectOptions{
+		Addr: "localhost:6379",
+	}))
+
+	orderApp.StartAllMicroservices()
+	testOrderServer := httptest.NewServer(orderApp.PrepareBeforeListen())
+	defer testOrderServer.Close()
+
+	time.Sleep(100 * time.Millisecond)
+
+	productApp := ProductApp("localhost:6379")
+	testProductServer := httptest.NewServer(productApp.PrepareBeforeListen())
+	defer testProductServer.Close()
+
+	testClientProduct := testProductServer.Client()
+
+	b.RunParallel(func(p *testing.PB) {
+		for p.Next() {
+			resp, err := testClientProduct.Post(testProductServer.URL+"/product-api/products", "application/json", nil)
+			require.Nil(b, err)
+			require.Equal(b, http.StatusOK, resp.StatusCode)
+		}
+	})
 }
