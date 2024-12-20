@@ -41,7 +41,7 @@ func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 }
 
 func (c *Connect) Send(event string, data interface{}) error {
-	payload, err := c.serializer(data)
+	payload, err := c.Serializer(data)
 	if err != nil {
 		return err
 	}

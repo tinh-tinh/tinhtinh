@@ -1,4 +1,4 @@
-package redis_test
+package nats_test
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/microservices/redis"
+	"github.com/tinh-tinh/tinhtinh/microservices/nats"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -42,16 +42,15 @@ func OrderApp() *core.App {
 	handlerService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
-		// orderService := module.Ref(ORDER).(*OrderService)
-		handler.OnResponse("order.created", func(ctx microservices.Ctx) {
+		orderService := module.Ref(ORDER).(*OrderService)
+		handler.OnEvent("order.created", func(ctx microservices.Ctx) {
 			data := ctx.Payload(&Order{}).(*Order)
 
-			// orderService.mutex.Lock()
-			// if orderService.orders[data.ID] == nil {
-			// 	orderService.orders[data.ID] = true
-			// }
-			// orderService.mutex.Unlock()
-			fmt.Println(data)
+			orderService.mutex.Lock()
+			if orderService.orders[data.ID] == nil {
+				orderService.orders[data.ID] = true
+			}
+			orderService.mutex.Unlock()
 		})
 
 		return handler
@@ -109,7 +108,7 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(redis.NewClient(microservices.ConnectOptions{
+				microservices.RegisterClient(nats.NewClient(microservices.ConnectOptions{
 					Addr: addr,
 				})),
 			},
@@ -124,10 +123,10 @@ func ProductApp(addr string) *core.App {
 	return app
 }
 
-func Test_Practice(t *testing.T) {
+func Test_Hybrid(t *testing.T) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(redis.Open(microservices.ConnectOptions{
-		Addr: "localhost:6379",
+	orderApp.ConnectMicroservice(nats.Open(microservices.ConnectOptions{
+		Addr: "localhost:3010",
 	}))
 
 	orderApp.StartAllMicroservices()
@@ -144,7 +143,7 @@ func Test_Practice(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, `{"data":{}}`, string(data))
 
-	productApp := ProductApp("localhost:6379")
+	productApp := ProductApp("localhost:3010")
 	testProductServer := httptest.NewServer(productApp.PrepareBeforeListen())
 	defer testProductServer.Close()
 
@@ -160,15 +159,53 @@ func Test_Practice(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// data, err = io.ReadAll(resp.Body)
-	// require.Nil(t, err)
-	// require.Equal(t, `{"data":{"order1":true}}`, string(data))
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":{"order1":true}}`, string(data))
+}
+
+func Test_Standalone(t *testing.T) {
+	appService := func(module core.Module) core.Provider {
+		handler := microservices.NewHandler(module, core.ProviderOptions{})
+
+		handler.OnEvent("order.*", func(ctx microservices.Ctx) {
+			fmt.Println("User Event Data:", ctx.Payload(&Order{}))
+		})
+
+		return handler
+	}
+
+	appModule := func() core.Module {
+		module := core.NewModule(core.NewModuleOptions{
+			Providers: []core.Providers{
+				appService,
+			},
+		})
+		return module
+	}
+	app := nats.New(appModule, microservices.ConnectOptions{
+		Addr: "localhost:3010",
+	})
+
+	go app.Listen()
+
+	productApp := ProductApp("localhost:3010")
+	testProductServer := httptest.NewServer(productApp.PrepareBeforeListen())
+	defer testProductServer.Close()
+
+	testClientProduct := testProductServer.Client()
+
+	resp, err := testClientProduct.Post(testProductServer.URL+"/product-api/products", "application/json", nil)
+	time.Sleep(100 * time.Millisecond)
+
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func Benchmark_Practice(b *testing.B) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(redis.Open(microservices.ConnectOptions{
-		Addr: "localhost:6379",
+	orderApp.ConnectMicroservice(nats.Open(microservices.ConnectOptions{
+		Addr: "localhost:3010",
 	}))
 
 	orderApp.StartAllMicroservices()
@@ -177,7 +214,7 @@ func Benchmark_Practice(b *testing.B) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	productApp := ProductApp("localhost:6379")
+	productApp := ProductApp("localhost:3010")
 	testProductServer := httptest.NewServer(productApp.PrepareBeforeListen())
 	defer testProductServer.Close()
 
