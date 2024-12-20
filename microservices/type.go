@@ -9,6 +9,8 @@ type Message struct {
 
 type Service interface {
 	Listen()
+	Serializer(v interface{}) ([]byte, error)
+	Deserializer(data []byte, v interface{}) error
 }
 
 type ConnectOptions struct {

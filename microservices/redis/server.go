@@ -14,31 +14,47 @@ type Server struct {
 	Context      context.Context
 	Addr         string
 	Module       core.Module
-	Serializer   core.Encode
-	Deserializer core.Decode
+	serializer   core.Encode
+	deserializer core.Decode
 }
 
 func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microservices.Service {
-	svc := Open(opts...)
-	svc.Create(module())
+	svc := &Server{
+		Module:       module(),
+		serializer:   json.Marshal,
+		deserializer: json.Unmarshal,
+	}
+
+	if len(opts) > 0 {
+		if opts[0].Serializer != nil {
+			svc.serializer = opts[0].Serializer
+		}
+
+		if opts[0].Deserializer != nil {
+			svc.deserializer = opts[0].Deserializer
+		}
+		if opts[0].Addr != "" {
+			svc.Addr = opts[0].Addr
+		}
+	}
 
 	return svc
 }
 
 func Open(opts ...microservices.ConnectOptions) core.Service {
 	svc := &Server{
-		Serializer:   json.Marshal,
-		Deserializer: json.Unmarshal,
+		serializer:   json.Marshal,
+		deserializer: json.Unmarshal,
 		Context:      context.Background(),
 	}
 
 	if len(opts) > 0 {
 		if opts[0].Serializer != nil {
-			svc.Serializer = opts[0].Serializer
+			svc.serializer = opts[0].Serializer
 		}
 
 		if opts[0].Deserializer != nil {
-			svc.Deserializer = opts[0].Deserializer
+			svc.deserializer = opts[0].Deserializer
 		}
 	}
 
@@ -82,7 +98,15 @@ func (svc *Server) Handler(params ...interface{}) {
 			return
 		}
 
-		data := microservices.ParseCtx(msg.Payload)
+		data := microservices.ParseCtx(msg.Payload, svc)
 		factory(data)
 	}
+}
+
+func (svc *Server) Serializer(v interface{}) ([]byte, error) {
+	return svc.serializer(v)
+}
+
+func (svc *Server) Deserializer(data []byte, v interface{}) error {
+	return svc.deserializer(data, v)
 }
