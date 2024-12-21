@@ -4,21 +4,6 @@ import (
 	"slices"
 )
 
-type Provider interface {
-	GetName() Provide
-	SetName(name Provide)
-	GetValue() interface{}
-	SetValue(value interface{})
-	GetStatus() ProvideStatus
-	SetStatus(status ProvideStatus)
-	GetScope() Scope
-	SetScope(scope Scope)
-	SetInject(inject []Provide)
-	GetInject() []Provide
-	SetFactory(factory Factory)
-	GetFactory() Factory
-}
-
 type Provide string
 
 const REQUEST Provide = "REQUEST"
@@ -32,6 +17,30 @@ const (
 
 type Factory func(param ...interface{}) interface{}
 
+type ProviderType string
+
+const (
+	EVENT   ProviderType = "event"
+	SERVICE ProviderType = "service"
+)
+
+type Provider interface {
+	GetName() Provide
+	SetName(name Provide)
+	GetValue() interface{}
+	SetValue(value interface{})
+	GetStatus() ProvideStatus
+	SetStatus(status ProvideStatus)
+	GetScope() Scope
+	SetScope(scope Scope)
+	SetInject(inject []Provide)
+	GetInject() []Provide
+	SetFactory(factory Factory)
+	GetFactory() Factory
+	GetType() ProviderType
+	SetType(providerType ProviderType)
+}
+
 type DynamicProvider struct {
 	// Scope of the provider. Default is Global.
 	Scope Scope
@@ -44,7 +53,8 @@ type DynamicProvider struct {
 	// Factory function for retrieving the value of the other providers in the module.
 	factory Factory
 	// Providers that are injected with the provider.
-	inject []Provide
+	inject       []Provide
+	providerType ProviderType
 }
 
 func (p *DynamicProvider) GetName() Provide {
@@ -95,6 +105,14 @@ func (p *DynamicProvider) GetFactory() Factory {
 	return p.factory
 }
 
+func (p *DynamicProvider) GetType() ProviderType {
+	return p.providerType
+}
+
+func (p *DynamicProvider) SetType(providerType ProviderType) {
+	p.providerType = providerType
+}
+
 type ProviderOptions struct {
 	// Scope of the provider. Default is Global.
 	Scope Scope
@@ -108,6 +126,7 @@ type ProviderOptions struct {
 	Factory Factory
 	// Providers that are injected with the provider.
 	Inject []Provide
+	Type   ProviderType
 }
 
 // NewProvider creates a new provider with the given options.
@@ -164,13 +183,17 @@ func (module *DynamicModule) appendProvider(providers ...Provider) {
 func InitProviders(module Module, opt ProviderOptions) Provider {
 	var provider Provider
 	providerIdx := module.findIdx(opt.Name)
+	if opt.Type == "" {
+		opt.Type = SERVICE
+	}
 	if providerIdx != -1 {
 		provider = module.GetDataProviders()[providerIdx]
 	} else {
 		provider = &DynamicProvider{
-			Name:   opt.Name,
-			Status: PRIVATE,
-			Scope:  opt.Scope,
+			Name:         opt.Name,
+			Status:       PRIVATE,
+			Scope:        opt.Scope,
+			providerType: opt.Type,
 		}
 		module.AppendDataProviders(provider)
 	}
