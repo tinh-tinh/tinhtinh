@@ -1,7 +1,6 @@
 package core
 
-// type Interceptor func(ctx Ctx) http.Handler
-
+// Serialization
 type Encode func(v interface{}) ([]byte, error)
 
 type Decode func(data []byte, v interface{}) error

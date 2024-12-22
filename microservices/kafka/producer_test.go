@@ -7,12 +7,13 @@ import (
 	"github.com/tinh-tinh/tinhtinh/microservices/kafka"
 )
 
-func TestProducer(t *testing.T) {
-	producer := kafka.NewProducer(kafka.Options{
-		Brokers:   []string{"127.0.0.1:9092"},
-		Producers: 10,
-		Version:   sarama.DefaultVersion.String(),
+func Test_Producer(t *testing.T) {
+	instance := kafka.New(kafka.Config{
+		Brokers: []string{"127.0.0.1:9092"},
 	})
-
-	producer.Publish("sarama", "abc")
+	producer := instance.Producer(10)
+	producer.Publish(&sarama.ProducerMessage{
+		Topic: "order.updated",
+		Value: sarama.StringEncoder("abc"),
+	})
 }

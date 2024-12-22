@@ -28,12 +28,12 @@ func (h *Handler) Schema(schema interface{}) *Handler {
 // called when the response is ready. The provider will be registered with the
 // same scope as the handler.
 func (h *Handler) OnResponse(name string, fnc Factory) {
-	core.InitProviders(h.module, core.ProviderOptions{Name: core.Provide(name), Factory: ConvertFactory(fnc), Scope: h.Scope})
+	core.InitProviders(h.module, core.ProviderOptions{Name: core.Provide(name), Factory: ConvertFactory(fnc), Scope: h.Scope, Type: core.EVENT})
 }
 
 // OnEvent registers a provider with the given name and factory function to be
 // called when an event is triggered. The provider will be registered with the
 // same scope as the handler.
 func (h *Handler) OnEvent(name string, fnc Factory) {
-	core.InitProviders(h.module, core.ProviderOptions{Name: core.Provide(name), Factory: ConvertFactory(fnc), Scope: h.Scope})
+	core.InitProviders(h.module, core.ProviderOptions{Name: core.Provide(name), Factory: ConvertFactory(fnc), Scope: h.Scope, Type: core.EVENT})
 }

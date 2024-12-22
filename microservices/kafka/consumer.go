@@ -4,59 +4,37 @@ import (
 	"context"
 	"errors"
 	"log"
-	"os"
 	"sync"
 
 	"github.com/IBM/sarama"
-	"github.com/rcrowley/go-metrics"
 )
 
-type ConsumerOptions struct {
-	Brokers     []string
-	Group       string
-	Version     string
-	Verbose     bool
-	Assignor    string
-	RecordsRate metrics.Meter
-	Oldest      bool
+type ConsumerConfig struct {
+	GroupID  string
+	Assignor string
+	Oldest   bool
 }
+
 type Consumer struct {
-	running bool
-	Brokers []string
-	Group   string
-	config  *sarama.Config
-	ready   chan bool
+	instance *Kafka
+	Group    string
+	config   *sarama.Config
+	running  bool
+	ready    chan bool
+	handler  Handler
 }
 
-func NewConsumer(opt ConsumerOptions) *Consumer {
-	consumer := &Consumer{
-		running: true,
-		Brokers: opt.Brokers,
-		ready:   make(chan bool),
-		Group:   opt.Group,
-	}
-
-	log.Println("Starting a new Sarama consumer")
-
-	if opt.Verbose {
-		sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)
-	}
-
-	version, err := sarama.ParseKafkaVersion(opt.Version)
-	if err != nil {
-		log.Panicf("Error parsing Kafka version: %v", err)
-	}
-
+func (k *Kafka) Consumer(opt ConsumerConfig) *Consumer {
 	config := sarama.NewConfig()
-	config.Version = version
+	config.Version = k.Version
 
 	switch opt.Assignor {
 	case sarama.StickyBalanceStrategyName:
-		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
-	case sarama.RangeBalanceStrategyName:
-		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+		config.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategySticky()}
 	case sarama.RoundRobinBalanceStrategyName:
-		config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRoundRobin
+		config.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategyRoundRobin()}
+	case sarama.RangeBalanceStrategyName:
+		config.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategyRange()}
 	default:
 		log.Panicf("Unrecognized consumer group partition assignor: %s", opt.Assignor)
 	}
@@ -65,42 +43,59 @@ func NewConsumer(opt ConsumerOptions) *Consumer {
 		config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	}
 
-	consumer.config = config
-
-	return consumer
+	return &Consumer{
+		instance: k,
+		Group:    opt.GroupID,
+		config:   config,
+		ready:    make(chan bool),
+		running:  true,
+	}
 }
 
-func (consumer *Consumer) Subscribe(topics []string) {
+func (c *Consumer) Subscribe(topics []string, handler Handler) {
 	ctx, cancel := context.WithCancel(context.Background())
-	client, err := sarama.NewConsumerGroup(consumer.Brokers, consumer.Group, consumer.config)
+	client, err := sarama.NewConsumerGroup(c.instance.Brokers, c.Group, c.config)
 	if err != nil {
 		log.Panicf("Error creating consumer group client: %v", err)
 	}
 
-	consumptionIsPaused := false
+	c.handler = handler
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
 		for {
-			if err := client.Consume(ctx, topics, consumer); err != nil {
+			if err := client.Consume(ctx, topics, c); err != nil {
 				if errors.Is(err, sarama.ErrClosedConsumerGroup) {
 					return
 				}
 				log.Panicf("Error from consumer: %v", err)
 			}
+			// check if context was cancelled, signaling that the consumer should stop
 			if ctx.Err() != nil {
 				return
 			}
-			consumer.ready = make(chan bool)
+			c.ready = make(chan bool)
 		}
 	}()
 
-	<-consumer.ready // Await till the consumer has been set up
+	<-c.ready // Await till the consumer has been set up
 	log.Println("Sarama consumer up and running!...")
 
-	toggleConsumptionFlow(client, &consumptionIsPaused)
+	// sigterm := make(chan os.Signal, 1)
+	// signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
+
+	// for c.running {
+	// 	select {
+	// 	case <-ctx.Done():
+	// 		log.Println("terminating: context cancelled")
+	// 		c.running = false
+	// 	case <-sigterm:
+	// 		log.Println("terminating: via signal")
+	// 		c.running = false
+	// 	}
+	// }
 
 	cancel()
 	wg.Wait()
@@ -109,38 +104,43 @@ func (consumer *Consumer) Subscribe(topics []string) {
 	}
 }
 
+type Handler func(msg *sarama.ConsumerMessage)
+
+// Setup is run at the beginning of a new session, before ConsumeClaim
+func (consumer *Consumer) Setup(sarama.ConsumerGroupSession) error {
+	// Mark the consumer as ready
+	close(consumer.ready)
+	return nil
+}
+
+// Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
 func (consumer *Consumer) Cleanup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
-func (consumer *Consumer) Setup(sarama.ConsumerGroupSession) error {
-	return nil
-}
-
+// ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
+// Once the Messages() channel is closed, the Handler must finish its processing
+// loop and exit.
 func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	// NOTE:
+	// Do not move the code below to a goroutine.
+	// The `ConsumeClaim` itself is called within a goroutine, see:
+	// https://github.com/IBM/sarama/blob/main/consumer_group.go#L27-L29
 	for {
 		select {
 		case message, ok := <-claim.Messages():
+			log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
 			if !ok {
 				log.Printf("message channel was closed")
 				return nil
 			}
-			log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
+			consumer.handler(message)
 			session.MarkMessage(message, "")
+		// Should return when `session.Context()` is done.
+		// If not, will raise `ErrRebalanceInProgress` or `read tcp <ip>:<port>: i/o timeout` when kafka rebalance. see:
+		// https://github.com/IBM/sarama/issues/1192
 		case <-session.Context().Done():
 			return nil
 		}
 	}
-}
-
-func toggleConsumptionFlow(client sarama.ConsumerGroup, isPaused *bool) {
-	if *isPaused {
-		client.ResumeAll()
-		log.Println("Resuming consumption")
-	} else {
-		client.PauseAll()
-		log.Println("Pausing consumption")
-	}
-
-	*isPaused = !*isPaused
 }
