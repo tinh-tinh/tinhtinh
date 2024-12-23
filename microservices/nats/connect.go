@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	nats_connect "github.com/nats-io/nats.go"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -124,7 +125,10 @@ func (c *Connect) Create(module core.Module) {
 
 func (c *Connect) Listen() {
 	fmt.Println("Listening to NATS")
-	for _, prd := range c.Module.GetDataProviders() {
+	subscribers := common.Filter(c.Module.GetDataProviders(), func(prd core.Provider) bool {
+		return prd.GetType() == core.EVENT
+	})
+	for _, prd := range subscribers {
 		c.Conn.Subscribe(string(prd.GetName()), func(msg *nats_connect.Msg) {
 			fmt.Printf("Received message: %s on event: %s\n", string(msg.Data), string(prd.GetName()))
 			data := microservices.ParseCtx(string(msg.Data), c)
