@@ -3,10 +3,8 @@ package kafka
 import (
 	"log"
 	"os"
-	"time"
 
 	"github.com/IBM/sarama"
-	"github.com/rcrowley/go-metrics"
 )
 
 type Config struct {
@@ -35,7 +33,7 @@ func New(config Config) *Kafka {
 		log.Panicf("Error parsing Kafka version: %v", err)
 	}
 
-	go metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.LstdFlags))
+	// go metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.LstdFlags))
 	return &Kafka{
 		Brokers: config.Brokers,
 		Version: version,

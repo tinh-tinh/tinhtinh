@@ -126,7 +126,6 @@ func (p *txnProducer) producer(msg *sarama.ProducerMessage) {
 		return
 	}
 	p.recordsRate.Mark(1)
-
 }
 
 func (p *txnProducer) borrow() (producer sarama.AsyncProducer) {

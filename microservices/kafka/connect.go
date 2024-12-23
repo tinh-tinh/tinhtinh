@@ -52,7 +52,7 @@ func (c *Connect) Send(event string, data interface{}) error {
 		fmt.Println(err)
 		return err
 	}
-	fmt.Println(string(payload))
+	fmt.Printf("Send payload: %v to event: %s\n", data, event)
 	producer := c.Conn.Producer(10)
 	producer.Publish(&sarama.ProducerMessage{
 		Topic: event,
@@ -109,7 +109,7 @@ func (c *Connect) Listen() {
 	for _, prd := range events {
 		go consumer.Subscribe([]string{string(prd.GetName())}, func(msg *sarama.ConsumerMessage) {
 			fmt.Println("Received message: ", string(msg.Value))
-			data := microservices.ParseCtx(msg.Value, c)
+			data := microservices.ParseCtx(string(msg.Value), c)
 			prd.GetFactory()(data)
 		})
 	}
