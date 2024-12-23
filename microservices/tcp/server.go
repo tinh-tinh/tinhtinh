@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -132,26 +133,29 @@ func (svc *Server) handler(param interface{}) {
 		fmt.Printf("Received message: %v from event %v\n", msg.Data, msg.Event)
 
 		data := microservices.ParseCtx(msg.Data, svc)
+		subscribers := common.Filter(svc.Module.GetDataProviders(), func(prd core.Provider) bool {
+			return prd.GetType() == core.EVENT
+		})
 		if msg.Event == "*" {
-			for _, provider := range svc.Module.GetDataProviders() {
+			for _, provider := range subscribers {
 				fnc := provider.GetFactory()
 				fnc(data)
 			}
 		} else if strings.ContainsAny(msg.Event, "*") {
 			prefix := strings.TrimSuffix(msg.Event, "*")
 			fmt.Println(prefix)
-			for _, provider := range svc.Module.GetDataProviders() {
+			for _, provider := range subscribers {
 				if strings.HasPrefix(string(provider.GetName()), prefix) {
 					fnc := provider.GetFactory()
 					fnc(data)
 				}
 			}
 		} else {
-			findEvent := slices.IndexFunc(svc.Module.GetDataProviders(), func(e core.Provider) bool {
+			findEvent := slices.IndexFunc(subscribers, func(e core.Provider) bool {
 				return string(e.GetName()) == msg.Event
 			})
 			if findEvent != -1 {
-				provider := svc.Module.GetDataProviders()[findEvent]
+				provider := subscribers[findEvent]
 				fnc := provider.GetFactory()
 				fnc(data)
 			}
