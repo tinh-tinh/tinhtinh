@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log"
-	"sync"
 
 	"github.com/IBM/sarama"
 )
@@ -15,13 +14,14 @@ type ConsumerConfig struct {
 	Oldest   bool
 }
 
+type Handler func(msg *sarama.ConsumerMessage)
+
 type Consumer struct {
 	instance *Kafka
 	Group    string
 	config   *sarama.Config
 	running  bool
-	ready    chan bool
-	handler  Handler
+	channel  ConsumerChannel
 }
 
 func (k *Kafka) Consumer(opt ConsumerConfig) *Consumer {
@@ -43,11 +43,15 @@ func (k *Kafka) Consumer(opt ConsumerConfig) *Consumer {
 		config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	}
 
+	channel := ConsumerChannel{
+		ready: make(chan bool),
+	}
+
 	return &Consumer{
 		instance: k,
 		Group:    opt.GroupID,
 		config:   config,
-		ready:    make(chan bool),
+		channel:  channel,
 		running:  true,
 	}
 }
@@ -59,69 +63,59 @@ func (c *Consumer) Subscribe(topics []string, handler Handler) {
 		log.Panicf("Error creating consumer group client: %v", err)
 	}
 
-	c.handler = handler
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-		for {
-			if err := client.Consume(ctx, topics, c); err != nil {
-				if errors.Is(err, sarama.ErrClosedConsumerGroup) {
-					return
-				}
-				log.Panicf("Error from consumer: %v", err)
-			}
-			// check if context was cancelled, signaling that the consumer should stop
-			if ctx.Err() != nil {
-				return
-			}
-			c.ready = make(chan bool)
-		}
-	}()
-
-	<-c.ready // Await till the consumer has been set up
+	c.channel.handler = handler
 	log.Println("Sarama consumer up and running!...")
+	// wg := &sync.WaitGroup{}
+	// wg.Add(1)
 
-	// sigterm := make(chan os.Signal, 1)
-	// signal.Notify(sigterm, syscall.SIGINT, syscall.SIGTERM)
+	// go func() {
+	// defer wg.Done()
+	for {
+		if err := client.Consume(ctx, topics, &c.channel); err != nil {
+			if errors.Is(err, sarama.ErrClosedConsumerGroup) {
+				break
+			}
+			log.Panicf("Error from consumer: %v", err)
+		}
+		// check if context was cancelled, signaling that the consumer should stop
+		if ctx.Err() != nil {
+			break
+		}
+		c.channel.ready = make(chan bool)
+	}
+	// }()
 
-	// for c.running {
-	// 	select {
-	// 	case <-ctx.Done():
-	// 		log.Println("terminating: context cancelled")
-	// 		c.running = false
-	// 	case <-sigterm:
-	// 		log.Println("terminating: via signal")
-	// 		c.running = false
-	// 	}
-	// }
+	// <-c.channel.ready // Await till the consumer has been set up
 
 	cancel()
-	wg.Wait()
+	// wg.Wait()
 	if err = client.Close(); err != nil {
 		log.Panicf("Error closing client: %v", err)
 	}
 }
 
-type Handler func(msg *sarama.ConsumerMessage)
+// ConsumerChannel represents a Sarama consumer group consumer
+type ConsumerChannel struct {
+	ready   chan bool
+	handler Handler
+}
 
 // Setup is run at the beginning of a new session, before ConsumeClaim
-func (consumer *Consumer) Setup(sarama.ConsumerGroupSession) error {
+func (consumer *ConsumerChannel) Setup(sarama.ConsumerGroupSession) error {
 	// Mark the consumer as ready
 	close(consumer.ready)
 	return nil
 }
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
-func (consumer *Consumer) Cleanup(sarama.ConsumerGroupSession) error {
+func (consumer *ConsumerChannel) Cleanup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 // Once the Messages() channel is closed, the Handler must finish its processing
 // loop and exit.
-func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (consumer *ConsumerChannel) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	// NOTE:
 	// Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine, see:
@@ -129,11 +123,11 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	for {
 		select {
 		case message, ok := <-claim.Messages():
-			log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
 			if !ok {
 				log.Printf("message channel was closed")
 				return nil
 			}
+			log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
 			consumer.handler(message)
 			session.MarkMessage(message, "")
 		// Should return when `session.Context()` is done.

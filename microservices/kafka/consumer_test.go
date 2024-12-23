@@ -28,4 +28,7 @@ func Test_Consumer(t *testing.T) {
 		Topic: "sarama",
 		Value: sarama.StringEncoder("abc"),
 	})
+
+	time.Sleep(1000 * time.Millisecond)
+
 }
