@@ -4,11 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"reflect"
 	"time"
 
 	"github.com/rabbitmq/amqp091-go"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -69,7 +68,8 @@ func (c *Connect) Send(event string, data interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	body, err := c.Serializer(data)
+	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	body, err := c.Serializer(message)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (c *Connect) Send(event string, data interface{}) error {
 	return nil
 }
 
-func (c *Connect) Broadcast(data interface{}) error {
+func (c *Connect) Publish(event string, data interface{}) error {
 	defer c.Conn.Close()
 
 	ch, err := c.Conn.Channel()
@@ -100,13 +100,13 @@ func (c *Connect) Broadcast(data interface{}) error {
 	defer ch.Close()
 
 	err = ch.ExchangeDeclare(
-		"logs",   // name
-		"fanout", // type
-		true,     // durable
-		false,    // auto-deleted
-		false,    // internal
-		false,    // no-wait
-		nil,      // arguments
+		"logs_direct", // name
+		"direct",      // type
+		true,          // durable
+		false,         // auto-deleted
+		false,         // internal
+		false,         // no-wait
+		nil,           // arguments
 	)
 	if err != nil {
 		return err
@@ -115,15 +115,16 @@ func (c *Connect) Broadcast(data interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	body, err := c.Serializer(data)
+	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	body, err := c.Serializer(message)
 	if err != nil {
 		return err
 	}
 	err = ch.PublishWithContext(ctx,
-		"logs", // exchange
-		"",     // routing key
-		false,  // mandatory
-		false,  // immediate
+		"logs_direct", // exchange
+		event,         // routing key
+		false,         // mandatory
+		false,         // immediate
 		amqp091.Publishing{
 			ContentType: "text/plain",
 			Body:        body,
@@ -177,6 +178,12 @@ func (c *Connect) Create(module core.Module) {
 }
 
 func (c *Connect) Listen() {
+	fmt.Println("Listening to RabbitMQ")
+	store := c.Module.Ref(microservices.STORE).(*microservices.Store)
+	if store == nil {
+		panic("store not found")
+	}
+
 	ch, err := c.Conn.Channel()
 	if err != nil {
 		panic(err)
@@ -207,42 +214,64 @@ func (c *Connect) Listen() {
 		panic(err)
 	}
 
-	subscribers := common.Filter(c.Module.GetDataProviders(), func(provider core.Provider) bool {
-		return provider.GetType() == core.EVENT
-	})
-
-	for _, prd := range subscribers {
-		err = ch.QueueBind(
-			q.Name,                // queue name
-			string(prd.GetName()), // routing key
-			"logs_direct",         // exchange
-			false,                 // no-wait
-			nil,                   // arguments
-		)
-		if err != nil {
-			log.Printf("Error binding queue %s: %s", q.Name, err)
-			continue
+	if store.Subscribers[string(microservices.RPC)] != nil {
+		for _, sub := range store.Subscribers[string(microservices.RPC)] {
+			err = ch.QueueBind(
+				q.Name,        // queue name
+				sub.Name,      // routing key
+				"logs_direct", // exchange
+				false,
+				nil)
+			if err != nil {
+				panic(err)
+			}
+			go c.Handler(ch, q.Name, sub.Factory)
 		}
-		go c.Handler(ch, q.Name, prd.GetFactory())
+	}
+
+	if store.Subscribers[string(microservices.PubSub)] != nil {
+		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
+			err = ch.QueueBind(
+				q.Name,        // queue name
+				sub.Name,      // routing key
+				"logs_direct", // exchange
+				false,
+				nil)
+			if err != nil {
+				panic(err)
+			}
+			go c.Handler(ch, q.Name, sub.Factory)
+		}
 	}
 }
 
-func (c *Connect) Handler(ch *amqp091.Channel, q string, factory core.Factory) {
+func (c *Connect) Handler(ch *amqp091.Channel, q string, factory microservices.Factory) {
 	msgs, err := ch.Consume(
 		q,     // queue
 		"",    // consumer
-		true,  // auto ack
+		true,  // auto-ack
 		false, // exclusive
-		false, // no local
-		false, // no wait
+		false, // no-local
+		false, // no-wait
 		nil,   // args
 	)
 	if err != nil {
-		panic(err)
+		return
 	}
-
 	for d := range msgs {
-		data := microservices.ParseCtx(string(d.Body), c)
-		factory(data)
+		var message microservices.Message
+		err := c.Deserializer(d.Body, &message)
+		if err != nil {
+			fmt.Println("Error deserializing message: ", err)
+			continue
+		}
+		fmt.Println(message)
+		if !reflect.ValueOf(message).IsZero() {
+			data := microservices.ParseCtx(message.Data, c)
+			factory(data)
+		} else {
+			data := microservices.ParseCtx(string(d.Body), c)
+			factory(data)
+		}
 	}
 }

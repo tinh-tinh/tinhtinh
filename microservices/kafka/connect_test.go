@@ -72,6 +72,7 @@ func OrderApp() *core.App {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
+			Imports:     []core.Modules{microservices.Register()},
 			Controllers: []core.Controllers{controller},
 			Providers: []core.Providers{
 				service,
