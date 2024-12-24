@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/IBM/sarama"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -47,7 +46,24 @@ func (c *Connect) Deserializer(data []byte, v interface{}) error {
 }
 
 func (c *Connect) Send(event string, data interface{}) error {
-	payload, err := c.Serializer(data)
+	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	payload, err := c.Serializer(message)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Printf("Send payload: %v to event: %s\n", string(payload), event)
+	producer := c.Conn.Producer(10)
+	producer.Publish(&sarama.ProducerMessage{
+		Topic: event,
+		Value: sarama.StringEncoder(string(payload)),
+	})
+	return nil
+}
+
+func (c *Connect) Publish(event string, data interface{}) error {
+	message := microservices.Message{Type: microservices.PubSub, Event: event, Data: data}
+	payload, err := c.Serializer(message)
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -59,10 +75,6 @@ func (c *Connect) Send(event string, data interface{}) error {
 		Value: sarama.StringEncoder(string(payload)),
 	})
 	return nil
-}
-
-func (client *Connect) Broadcast(data interface{}) error {
-	return client.Send("*", data)
 }
 
 // Server usage
@@ -98,19 +110,45 @@ func (c *Connect) Create(module core.Module) {
 }
 
 func (c *Connect) Listen() {
+	fmt.Println("Listening to Kafka")
+	store := c.Module.Ref(microservices.STORE).(*microservices.Store)
+	if store == nil {
+		panic("store not found")
+	}
+
 	consumer := c.Conn.Consumer(ConsumerConfig{
 		GroupID:  c.GroupID,
 		Assignor: sarama.RangeBalanceStrategyName,
 		Oldest:   true,
 	})
-	events := common.Filter(c.Module.GetDataProviders(), func(prd core.Provider) bool {
-		return prd.GetType() == core.EVENT
-	})
-	for _, prd := range events {
-		go consumer.Subscribe([]string{string(prd.GetName())}, func(msg *sarama.ConsumerMessage) {
-			fmt.Println("Received message: ", string(msg.Value))
-			data := microservices.ParseCtx(string(msg.Value), c)
-			prd.GetFactory()(data)
-		})
+
+	if store.Subscribers[string(microservices.RPC)] != nil {
+		for _, sub := range store.Subscribers[string(microservices.RPC)] {
+			go consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
+				c.Handler(msg, sub.Factory)
+			})
+		}
 	}
+
+	if store.Subscribers[string(microservices.PubSub)] != nil {
+		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
+			go consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
+				c.Handler(msg, sub.Factory)
+			})
+		}
+	}
+}
+
+func (c *Connect) Handler(msg *sarama.ConsumerMessage, factory microservices.Factory) {
+	fmt.Println(string(msg.Value))
+	var message microservices.Message
+	err := c.Deserializer(msg.Value, &message)
+	if err != nil {
+		fmt.Println("Error deserializing message: ", err)
+		return
+	}
+
+	fmt.Println(message)
+	data := microservices.ParseCtx(message.Data, c)
+	factory(data)
 }

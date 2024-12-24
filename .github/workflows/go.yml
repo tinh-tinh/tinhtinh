@@ -105,3 +105,48 @@ jobs:
 
     - name: Test NATS
       run: cd microservices/nats; go test -cover ./...
+
+  test-rabbitmq:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.22.x' ]
+
+    services:
+      rabbitmq:
+        image: rabbitmq:3.8
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        ports:
+          - 5672:5672  # RabbitMQ default port
+          - 15672:15672  # RabbitMQ Management Plugin
+        options: >-
+          --health-cmd "rabbitmqctl status"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+  
+
+    steps:
+      # Checkout code
+      - uses: actions/checkout@v4
+  
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22.0'
+
+      - name: Wait for RabbitMQ to be ready
+        run: |
+          for i in {1..10}; do
+            if nc -z localhost 5672; then
+              echo "RabbitMQ is up and running"
+              break
+            fi
+            echo "Waiting for RabbitMQ..."
+            sleep 5
+          done
+  
+      - name: Test RabbitMQ
+        run: cd microservices/amqlib; go test -cover ./...
