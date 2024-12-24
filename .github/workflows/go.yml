@@ -69,6 +69,39 @@ jobs:
       with:
         go-version: '1.22.0'
 
-    - name: Test microservices
+    - name: Test Redis
       run: cd microservices/redis; go test -cover ./...
 
+  test-nats:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.22.x' ]
+
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      nats:
+        # Docker Hub image
+        image: nats:latest
+        ports:
+          # Maps port 6379 on service container to the host
+          - 4222:4222
+
+    steps:
+    # Checkout code
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22.0'
+
+    # Verify NATS Server is Running
+    - name: Verify NATS Server
+      run: |
+        echo "Checking if NATS server is running on port 4222..."
+        nc -zv 127.0.0.1 4222
+
+    - name: Test NATS
+      run: cd microservices/nats; go test -cover ./...
