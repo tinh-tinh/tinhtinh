@@ -127,7 +127,7 @@ func ProductApp(addr string) *core.App {
 func Test_Hybrid(t *testing.T) {
 	orderApp := OrderApp()
 	orderApp.ConnectMicroservice(nats.Open(microservices.ConnectOptions{
-		Addr: "localhost:3010",
+		Addr: "localhost:4222",
 	}))
 
 	orderApp.StartAllMicroservices()
@@ -144,7 +144,7 @@ func Test_Hybrid(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, `{"data":{}}`, string(data))
 
-	productApp := ProductApp("localhost:3010")
+	productApp := ProductApp("localhost:4222")
 	testProductServer := httptest.NewServer(productApp.PrepareBeforeListen())
 	defer testProductServer.Close()
 
@@ -178,6 +178,7 @@ func Test_Standalone(t *testing.T) {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
+			Imports: []core.Modules{microservices.Register()},
 			Providers: []core.Providers{
 				appService,
 			},
@@ -185,12 +186,12 @@ func Test_Standalone(t *testing.T) {
 		return module
 	}
 	app := nats.New(appModule, microservices.ConnectOptions{
-		Addr: "localhost:3010",
+		Addr: "localhost:4222",
 	})
 
 	go app.Listen()
 
-	productApp := ProductApp("localhost:3010")
+	productApp := ProductApp("localhost:4222")
 	testProductServer := httptest.NewServer(productApp.PrepareBeforeListen())
 	defer testProductServer.Close()
 
@@ -206,7 +207,7 @@ func Test_Standalone(t *testing.T) {
 func Benchmark_Practice(b *testing.B) {
 	orderApp := OrderApp()
 	orderApp.ConnectMicroservice(nats.Open(microservices.ConnectOptions{
-		Addr: "localhost:3010",
+		Addr: "localhost:4222",
 	}))
 
 	orderApp.StartAllMicroservices()
@@ -215,7 +216,7 @@ func Benchmark_Practice(b *testing.B) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	productApp := ProductApp("localhost:3010")
+	productApp := ProductApp("localhost:4222")
 	testProductServer := httptest.NewServer(productApp.PrepareBeforeListen())
 	defer testProductServer.Close()
 
