@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	redis_store "github.com/redis/go-redis/v9"
@@ -47,7 +48,8 @@ func (c *Connect) Close() {
 }
 
 func (c *Connect) Send(event string, data interface{}) error {
-	payload, err := c.Serializer(data)
+	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	payload, err := c.Serializer(message)
 	if err != nil {
 		return err
 	}
@@ -55,11 +57,22 @@ func (c *Connect) Send(event string, data interface{}) error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Send mesage: %v for event: %s\n", data, event)
 	return nil
 }
 
-func (client *Connect) Broadcast(data interface{}) error {
-	return client.Send("*", data)
+func (c *Connect) Publish(event string, data interface{}) error {
+	message := microservices.Message{Type: microservices.PubSub, Event: event, Data: data}
+	payload, err := c.Serializer(message)
+	if err != nil {
+		return err
+	}
+	err = c.Conn.Publish(c.Context, event, payload).Err()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Publish mesage: %v for event %s\n", data, event)
+	return nil
 }
 
 // Server usage
@@ -125,27 +138,45 @@ func (c *Connect) Create(module core.Module) {
 }
 
 func (c *Connect) Listen() {
-	for _, prd := range c.Module.GetDataProviders() {
-		var subscriber *redis_store.PubSub
-		if strings.HasSuffix(string(prd.GetName()), "*") {
-			subscriber = c.Conn.PSubscribe(c.Context, string(prd.GetName()))
-		} else {
-			subscriber = c.Conn.Subscribe(c.Context, string(prd.GetName()))
+	store := c.Module.Ref(microservices.STORE).(*microservices.Store)
+	if store == nil {
+		panic("store not found")
+	}
+
+	if store.Subscribers[string(microservices.RPC)] != nil {
+		for _, sub := range store.Subscribers[string(microservices.RPC)] {
+			subscriber := c.Conn.Subscribe(c.Context, sub.Name)
+			go c.Handler(subscriber, sub.Factory)
 		}
-		go c.Handler(subscriber, prd.GetFactory())
+	}
+
+	if store.Subscribers[string(microservices.PubSub)] != nil {
+		var subscriber *redis_store.PubSub
+		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
+			if strings.HasSuffix(sub.Name, "*") {
+				subscriber = c.Conn.PSubscribe(c.Context, sub.Name)
+			} else {
+				subscriber = c.Conn.Subscribe(c.Context, sub.Name)
+			}
+			go c.Handler(subscriber, sub.Factory)
+		}
 	}
 }
 
-func (c *Connect) Handler(params ...interface{}) {
-	subscriber := params[0].(*redis_store.PubSub)
-	factory := params[1].(core.Factory)
+func (c *Connect) Handler(subscriber *redis_store.PubSub, factory microservices.Factory) {
 	for {
 		msg, err := subscriber.ReceiveMessage(c.Context)
 		if err != nil {
 			return
 		}
+		var message microservices.Message
+		err = c.Deserializer([]byte(msg.Payload), &message)
+		if err != nil {
+			fmt.Println("Error deserializing message: ", err)
+			return
+		}
 
-		data := microservices.ParseCtx(msg.Payload, c)
+		data := microservices.ParseCtx(message.Data, c)
 		factory(data)
 	}
 }

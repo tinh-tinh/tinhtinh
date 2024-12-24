@@ -21,17 +21,6 @@ type Server struct {
 	deserializer core.Decode
 }
 
-// New creates a new TCP server with the given module and options.
-//
-// The module is the module that the server uses to initialize itself.
-// The options are the options that the server uses to initialize itself.
-// The options can be used to override the default encoder, decoder, and address.
-//
-// The server is created with a default encoder and decoder of json.Marshal and
-// json.Unmarshal respectively.
-// The server is created with a default address of ":8080".
-// The server is initialized by calling the init method of the module.
-// The server is then returned.
 func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microservices.Service {
 	svc := &Server{
 		Module:       module(),
@@ -81,18 +70,14 @@ func (svc *Server) Create(module core.Module) {
 	svc.Module = module
 }
 
-// Listen starts the TCP server on the address specified by the Addr field.
-//
-// It will listen for incoming connections and handle each connection in a
-// separate goroutine. The handler function will be called for each incoming
-// connection. The handler function will receive the connection as a parameter.
-//
-// The server will panic if there is an error when listening for connections or
-// if there is an error when accepting a connection.
 func (svc *Server) Listen() {
 	listener, err := net.Listen("tcp", svc.Addr)
 	if err != nil {
 		panic(err)
+	}
+	store := svc.Module.Ref(microservices.STORE).(*microservices.Store)
+	if store == nil {
+		panic("store not found")
 	}
 
 	go http.Serve(listener, nil)
@@ -101,19 +86,11 @@ func (svc *Server) Listen() {
 		if errr != nil {
 			panic(errr)
 		}
-		go svc.handler(conn)
+		go svc.handler(conn, store)
 	}
 }
 
-// handler processes an incoming TCP connection represented by the param.
-// It reads messages from the connection, deserializes them into a microservices.Message
-// structure, and finds the corresponding event provider in the module's data providers.
-// If the event provider is found, it executes the provider's factory function with the
-// message data. The function handles errors in reading and deserializing the message
-// by printing error messages and terminating the connection handling.
-
-func (svc *Server) handler(param interface{}) {
-	conn := param.(net.Conn)
+func (svc *Server) handler(conn net.Conn, store *microservices.Store) {
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
@@ -130,35 +107,45 @@ func (svc *Server) handler(param interface{}) {
 			fmt.Println("Error deserializing message: ", err)
 			return
 		}
-		fmt.Printf("Received message: %v from event %v\n", msg.Data, msg.Event)
+		if msg.Type == microservices.RPC {
+			svc.handlerRPC(store.Subscribers[string(microservices.RPC)], msg)
+		} else if msg.Type == microservices.PubSub {
+			svc.handlerPubSub(store.Subscribers[string(microservices.PubSub)], msg)
+		}
+	}
+}
 
-		data := microservices.ParseCtx(msg.Data, svc)
-		subscribers := common.Filter(svc.Module.GetDataProviders(), func(prd core.Provider) bool {
-			return prd.GetType() == core.EVENT
+func (svc *Server) handlerRPC(handlers []microservices.SubscribeHandler, msg microservices.Message) {
+	data := microservices.ParseCtx(msg.Data, svc)
+	subscriber := common.Filter(handlers, func(e microservices.SubscribeHandler) bool {
+		return e.Name == msg.Event
+	})
+	for _, sub := range subscriber {
+		sub.Factory(data)
+	}
+}
+
+func (svc *Server) handlerPubSub(handlers []microservices.SubscribeHandler, msg microservices.Message) {
+	data := microservices.ParseCtx(msg.Data, svc)
+	if msg.Event == "*" {
+		for _, provider := range handlers {
+			provider.Factory(data)
+		}
+	} else if strings.ContainsAny(msg.Event, "*") {
+		prefix := strings.TrimSuffix(msg.Event, "*")
+		fmt.Println(prefix)
+		for _, provider := range handlers {
+			if strings.HasPrefix(string(provider.Name), prefix) {
+				provider.Factory(data)
+			}
+		}
+	} else {
+		findEvent := slices.IndexFunc(handlers, func(e microservices.SubscribeHandler) bool {
+			return string(e.Name) == msg.Event
 		})
-		if msg.Event == "*" {
-			for _, provider := range subscribers {
-				fnc := provider.GetFactory()
-				fnc(data)
-			}
-		} else if strings.ContainsAny(msg.Event, "*") {
-			prefix := strings.TrimSuffix(msg.Event, "*")
-			fmt.Println(prefix)
-			for _, provider := range subscribers {
-				if strings.HasPrefix(string(provider.GetName()), prefix) {
-					fnc := provider.GetFactory()
-					fnc(data)
-				}
-			}
-		} else {
-			findEvent := slices.IndexFunc(subscribers, func(e core.Provider) bool {
-				return string(e.GetName()) == msg.Event
-			})
-			if findEvent != -1 {
-				provider := subscribers[findEvent]
-				fnc := provider.GetFactory()
-				fnc(data)
-			}
+		if findEvent != -1 {
+			provider := handlers[findEvent]
+			provider.Factory(data)
 		}
 	}
 }

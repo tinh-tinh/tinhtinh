@@ -41,7 +41,7 @@ func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 func (client *Client) Send(event string, data interface{}) error {
 	writer := bufio.NewWriter(client.Conn)
 
-	message := microservices.Message{Event: event, Data: data}
+	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
 	jsonData, err := client.Serializer(message)
 	if err != nil {
 		return err
@@ -58,6 +58,22 @@ func (client *Client) Send(event string, data interface{}) error {
 	return nil
 }
 
-func (client *Client) Broadcast(data interface{}) error {
-	return client.Send("*", data)
+func (client *Client) Publish(event string, data interface{}) error {
+	writer := bufio.NewWriter(client.Conn)
+
+	message := microservices.Message{Type: microservices.PubSub, Event: event, Data: data}
+	jsonData, err := client.Serializer(message)
+	if err != nil {
+		return err
+	}
+
+	jsonData = append(jsonData, '\n')
+	_, err = writer.Write(jsonData)
+	if err != nil {
+		return err
+	}
+
+	writer.Flush()
+	fmt.Printf("Publish message: %v for event %s\n", data, event)
+	return nil
 }
