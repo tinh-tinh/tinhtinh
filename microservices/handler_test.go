@@ -1,12 +1,9 @@
 package microservices_test
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -21,7 +18,7 @@ type Message struct {
 	Age  int    `json:"age"`
 }
 
-func Test_EventBase(t *testing.T) {
+func Test_RPC(t *testing.T) {
 	app := appServer("localhost:8080")
 
 	go func() {
@@ -36,32 +33,13 @@ func Test_EventBase(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	// Read output
-	reader, writer, err := os.Pipe()
-	require.Nil(t, err)
-
-	originalStdout := os.Stdout
-	defer func() {
-		os.Stdout = originalStdout // Restore original stdout after test
-		reader.Close()
-		writer.Close()
-	}()
-	os.Stdout = writer
-
 	// Test event based
 	resp, err := testClient.Get(testServer.URL + "/api/test")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	writer.Close() // Close writer to signal we're done writing
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, reader)
-	require.Nil(t, err)
-
-	// require.Equal(t, "Send message: {Alice 30} for event user.*\nReceived message: map[age:30 name:Alice] from event user.*\nuser.\nUser Created Data: {Alice 30}\nUser Updated Data: {Alice 30}\n", buf.String())
 }
 
-func Test_Response(t *testing.T) {
+func Test_Event(t *testing.T) {
 	app := appServer("localhost:4000")
 
 	go func() {
@@ -69,76 +47,17 @@ func Test_Response(t *testing.T) {
 	}()
 
 	// Allow some time for the server to start
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	clientApp := appClient("localhost:4000")
 	testServer := httptest.NewServer(clientApp.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	// Read output
-	reader, writer, err := os.Pipe()
-	require.Nil(t, err)
-
-	originalStdout := os.Stdout
-	defer func() {
-		os.Stdout = originalStdout // Restore original stdout after test
-		reader.Close()
-		writer.Close()
-	}()
-	os.Stdout = writer
-
 	// Test event based
-	resp, err := testClient.Get(testServer.URL + "/api/test/update")
+	resp, err := testClient.Get(testServer.URL + "/api/test/event")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	writer.Close() // Close writer to signal we're done writing
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, reader)
-	require.Nil(t, err)
-
-	// require.Equal(t, "Send message: {haha 30} for event user.updated\nReceived message: map[age:30 name:haha] from event user.updated\nUser Updated Data: {haha 30}\n", buf.String())
-}
-
-func Test_Broadcast(t *testing.T) {
-	app := appServer("localhost:5000")
-
-	go func() {
-		app.Listen()
-	}()
-
-	// Allow some time for the server to start
-	time.Sleep(100 * time.Millisecond)
-
-	clientApp := appClient("localhost:5000")
-	testServer := httptest.NewServer(clientApp.PrepareBeforeListen())
-	defer testServer.Close()
-	testClient := testServer.Client()
-
-	// Read output
-	reader, writer, err := os.Pipe()
-	require.Nil(t, err)
-
-	originalStdout := os.Stdout
-	defer func() {
-		os.Stdout = originalStdout // Restore original stdout after test
-		reader.Close()
-		writer.Close()
-	}()
-	os.Stdout = writer
-
-	// Test event based
-	resp, err := testClient.Get(testServer.URL + "/api/test/broadcast")
-	require.Nil(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	writer.Close() // Close writer to signal we're done writing
-	var buf bytes.Buffer
-	_, err = io.Copy(&buf, reader)
-	require.Nil(t, err)
-
-	// require.Equal(t, "Send message: {Broadcast 1 30} for event *\nReceived message: map[age:30 name:Broadcast 1] from event *\nUser Created Data: {Broadcast 1 30}\nUser Updated Data: {Broadcast 1 30}\n", buf.String())
 }
 
 func appServer(addr string) microservices.Service {
@@ -146,11 +65,11 @@ func appServer(addr string) microservices.Service {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		handler.OnResponse("user.created", func(ctx microservices.Ctx) {
-			fmt.Println("User Created Data:", ctx.Payload())
+			fmt.Println("User Created Data:", ctx.Payload(&Message{}))
 		})
 
 		handler.OnEvent("user.updated", func(ctx microservices.Ctx) {
-			fmt.Println("User Updated Data:", ctx.Payload())
+			fmt.Println("User Updated Data:", ctx.Payload(&Message{}))
 		})
 
 		return handler
@@ -158,6 +77,7 @@ func appServer(addr string) microservices.Service {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
+			Imports: []core.Modules{microservices.Register()},
 			Providers: []core.Providers{
 				appService,
 			},
@@ -175,7 +95,7 @@ func appClient(addr string) *core.App {
 	clientController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
-		ctrl.Get("update", func(ctx core.Ctx) error {
+		ctrl.Get("event", func(ctx core.Ctx) error {
 			client := microservices.Inject(module)
 			if client == nil {
 				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
@@ -186,7 +106,7 @@ func appClient(addr string) *core.App {
 			}
 
 			for _, msg := range messages {
-				client.Send("user.updated", msg)
+				client.Publish("user.updated", msg)
 			}
 
 			return ctx.JSON(core.Map{"data": "update"})
@@ -203,24 +123,7 @@ func appClient(addr string) *core.App {
 			}
 
 			for _, msg := range messages {
-				client.Send("user.*", msg)
-			}
-
-			return ctx.JSON(core.Map{"data": "ok"})
-		})
-
-		ctrl.Get("broadcast", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
-			if client == nil {
-				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
-			}
-			// Example JSON messages to send
-			messages := []Message{
-				{"Broadcast 1", 30},
-			}
-
-			for _, msg := range messages {
-				client.Broadcast(msg)
+				client.Send("user.created", msg)
 			}
 
 			return ctx.JSON(core.Map{"data": "ok"})

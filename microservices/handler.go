@@ -7,7 +7,31 @@ import (
 type Handler struct {
 	core.DynamicProvider
 	module core.Module
-	schema interface{}
+}
+
+const STORE core.Provide = "STORE"
+
+type SubscribeHandler struct {
+	Name    string
+	Factory Factory
+}
+
+type Store struct {
+	Subscribers map[string][]SubscribeHandler
+}
+
+func Register() core.Modules {
+	return func(module core.Module) core.Module {
+		handlerModule := module.New(core.NewModuleOptions{})
+
+		handlerModule.NewProvider(core.ProviderOptions{
+			Name:  STORE,
+			Value: &Store{Subscribers: make(map[string][]SubscribeHandler)},
+		})
+
+		handlerModule.Export(STORE)
+		return handlerModule
+	}
 }
 
 // NewHandler creates a new Handler with the given module and options.
@@ -19,21 +43,45 @@ func NewHandler(module core.Module, opt core.ProviderOptions) *Handler {
 	return provider
 }
 
-func (h *Handler) Schema(schema interface{}) *Handler {
-	h.schema = schema
-	return h
-}
-
 // OnResponse registers a provider with the given name and factory function to be
 // called when the response is ready. The provider will be registered with the
 // same scope as the handler.
 func (h *Handler) OnResponse(name string, fnc Factory) {
-	core.InitProviders(h.module, core.ProviderOptions{Name: core.Provide(name), Factory: ConvertFactory(fnc), Scope: h.Scope, Type: core.EVENT})
+	core.InitProviders(h.module, core.ProviderOptions{
+		Name: core.Provide(name),
+		Factory: func(param ...interface{}) interface{} {
+			store, ok := param[0].(*Store)
+			if !ok {
+				return nil
+			}
+			if store.Subscribers[string(RPC)] == nil {
+				store.Subscribers[string(RPC)] = []SubscribeHandler{}
+			}
+			store.Subscribers[string(RPC)] = append(store.Subscribers[string(RPC)], SubscribeHandler{Name: name, Factory: fnc})
+			return store.Subscribers
+		},
+		Inject: []core.Provide{STORE},
+		Scope:  h.Scope,
+	})
 }
 
 // OnEvent registers a provider with the given name and factory function to be
 // called when an event is triggered. The provider will be registered with the
 // same scope as the handler.
 func (h *Handler) OnEvent(name string, fnc Factory) {
-	core.InitProviders(h.module, core.ProviderOptions{Name: core.Provide(name), Factory: ConvertFactory(fnc), Scope: h.Scope, Type: core.EVENT})
+	core.InitProviders(h.module, core.ProviderOptions{
+		Name: core.Provide(name),
+		Factory: func(param ...interface{}) interface{} {
+			store, ok := param[0].(*Store)
+			if !ok {
+				return nil
+			}
+			if store.Subscribers[string(PubSub)] == nil {
+				store.Subscribers[string(PubSub)] = []SubscribeHandler{}
+			}
+			store.Subscribers[string(PubSub)] = append(store.Subscribers[string(PubSub)], SubscribeHandler{Name: name, Factory: fnc})
+			return store.Subscribers
+		},
+		Inject: []core.Provide{STORE}, Scope: h.Scope,
+	})
 }

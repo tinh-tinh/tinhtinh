@@ -48,6 +48,7 @@ func Test_HybridApp(t *testing.T) {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
+			Imports: []core.Modules{microservices.Register()},
 			Providers: []core.Providers{
 				appService,
 			},
@@ -72,7 +73,7 @@ func Test_HybridApp(t *testing.T) {
 	defer testServer2.Close()
 	testClient := testServer2.Client()
 
-	resp, err := testClient.Get(testServer2.URL + "/api/test/broadcast")
+	resp, err := testClient.Get(testServer2.URL + "/api/test")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }

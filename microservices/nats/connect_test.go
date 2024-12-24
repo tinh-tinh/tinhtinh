@@ -71,6 +71,7 @@ func OrderApp() *core.App {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
+			Imports:     []core.Modules{microservices.Register()},
 			Controllers: []core.Controllers{controller},
 			Providers: []core.Providers{
 				service,
@@ -93,7 +94,7 @@ func ProductApp(addr string) *core.App {
 		ctrl.Post("", func(ctx core.Ctx) error {
 			client := microservices.Inject(module)
 
-			go client.Send("order.created", &Order{
+			go client.Publish("order.created", &Order{
 				ID:   "order1",
 				Name: "order1",
 			})
@@ -153,7 +154,7 @@ func Test_Hybrid(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	resp, err = testClientOrder.Get(testOrderServer.URL + "/order-api/orders")
 	require.Nil(t, err)

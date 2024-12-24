@@ -1,6 +1,7 @@
 package redis_test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -50,6 +51,8 @@ func OrderApp() *core.App {
 				orderService.orders[data.ID] = true
 			}
 			orderService.mutex.Unlock()
+
+			fmt.Printf("Order created: %v\n", orderService.orders)
 		})
 
 		return handler
@@ -70,6 +73,7 @@ func OrderApp() *core.App {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
+			Imports:     []core.Modules{microservices.Register()},
 			Controllers: []core.Controllers{controller},
 			Providers: []core.Providers{
 				service,
@@ -152,15 +156,15 @@ func Test_Practice(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	resp, err = testClientOrder.Get(testOrderServer.URL + "/order-api/orders")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// data, err = io.ReadAll(resp.Body)
-	// require.Nil(t, err)
-	// require.Equal(t, `{"data":{"order1":true}}`, string(data))
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":{"order1":true}}`, string(data))
 }
 
 func Benchmark_Practice(b *testing.B) {

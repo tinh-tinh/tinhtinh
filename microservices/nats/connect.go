@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	nats_connect "github.com/nats-io/nats.go"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -42,7 +41,8 @@ func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 }
 
 func (c *Connect) Send(event string, data interface{}) error {
-	payload, err := c.Serializer(data)
+	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	payload, err := c.Serializer(message)
 	if err != nil {
 		return err
 	}
@@ -57,8 +57,21 @@ func (c *Connect) Send(event string, data interface{}) error {
 	return nil
 }
 
-func (c *Connect) Broadcast(data interface{}) error {
-	return c.Send("*", data)
+func (c *Connect) Publish(event string, data interface{}) error {
+	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	payload, err := c.Serializer(message)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Send payload: %v to event: %s\n", data, event)
+	err = c.Conn.Publish(event, payload)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return err
+	}
+
+	return nil
 }
 
 // Server usage
@@ -125,16 +138,38 @@ func (c *Connect) Create(module core.Module) {
 
 func (c *Connect) Listen() {
 	fmt.Println("Listening to NATS")
-	subscribers := common.Filter(c.Module.GetDataProviders(), func(prd core.Provider) bool {
-		return prd.GetType() == core.EVENT
-	})
-	for _, prd := range subscribers {
-		c.Conn.Subscribe(string(prd.GetName()), func(msg *nats_connect.Msg) {
-			fmt.Printf("Received message: %s on event: %s\n", string(msg.Data), string(prd.GetName()))
-			data := microservices.ParseCtx(string(msg.Data), c)
-			prd.GetFactory()(data)
-		})
+	store := c.Module.Ref(microservices.STORE).(*microservices.Store)
+	if store == nil {
+		panic("store not found")
 	}
+
+	if store.Subscribers[string(microservices.RPC)] != nil {
+		for _, sub := range store.Subscribers[string(microservices.RPC)] {
+			go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
+				c.Handler(msg, sub.Factory)
+			})
+		}
+	}
+
+	if store.Subscribers[string(microservices.PubSub)] != nil {
+		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
+			go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
+				c.Handler(msg, sub.Factory)
+			})
+		}
+	}
+}
+
+func (c *Connect) Handler(msg *nats_connect.Msg, factory microservices.Factory) {
+	var message microservices.Message
+	err := c.Deserializer([]byte(msg.Data), &message)
+	if err != nil {
+		fmt.Println("Error deserializing message: ", err)
+		return
+	}
+
+	data := microservices.ParseCtx(message.Data, c)
+	factory(data)
 }
 
 func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
