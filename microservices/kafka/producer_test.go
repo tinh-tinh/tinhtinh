@@ -11,7 +11,7 @@ func Test_Producer(t *testing.T) {
 	instance := kafka.New(kafka.Config{
 		Brokers: []string{"127.0.0.1:9092"},
 	})
-	producer := instance.Producer(10)
+	producer := instance.Producer()
 	producer.Publish(&sarama.ProducerMessage{
 		Topic: "order.updated",
 		Value: sarama.StringEncoder("abc"),
