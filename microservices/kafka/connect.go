@@ -3,6 +3,7 @@ package kafka
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 
 	"github.com/IBM/sarama"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
@@ -53,7 +54,7 @@ func (c *Connect) Send(event string, data interface{}) error {
 		return err
 	}
 	fmt.Printf("Send payload: %v to event: %s\n", string(payload), event)
-	producer := c.Conn.Producer(10)
+	producer := c.Conn.Producer()
 	producer.Publish(&sarama.ProducerMessage{
 		Topic: event,
 		Value: sarama.StringEncoder(string(payload)),
@@ -69,7 +70,7 @@ func (c *Connect) Publish(event string, data interface{}) error {
 		return err
 	}
 	fmt.Printf("Send payload: %v to event: %s\n", data, event)
-	producer := c.Conn.Producer(10)
+	producer := c.Conn.Producer()
 	producer.Publish(&sarama.ProducerMessage{
 		Topic: event,
 		Value: sarama.StringEncoder(string(payload)),
@@ -97,6 +98,7 @@ func Open(groupID string, opts ...microservices.ConnectOptions) core.Service {
 		if opts[0].Addr != "" {
 			conn := New(Config{
 				Brokers: []string{opts[0].Addr},
+				Version: sarama.V2_6_0_0.String(),
 			})
 			connect.Conn = conn
 		}
@@ -124,7 +126,7 @@ func (c *Connect) Listen() {
 
 	if store.Subscribers[string(microservices.RPC)] != nil {
 		for _, sub := range store.Subscribers[string(microservices.RPC)] {
-			go consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
+			consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
 				c.Handler(msg, sub.Factory)
 			})
 		}
@@ -132,7 +134,7 @@ func (c *Connect) Listen() {
 
 	if store.Subscribers[string(microservices.PubSub)] != nil {
 		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
-			go consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
+			consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
 				c.Handler(msg, sub.Factory)
 			})
 		}
@@ -149,6 +151,11 @@ func (c *Connect) Handler(msg *sarama.ConsumerMessage, factory microservices.Fac
 	}
 
 	fmt.Println(message)
-	data := microservices.ParseCtx(message.Data, c)
-	factory(data)
+	if !reflect.ValueOf(message).IsZero() {
+		data := microservices.ParseCtx(message.Data, c)
+		factory(data)
+	} else {
+		data := microservices.ParseCtx(string(msg.Value), c)
+		factory(data)
+	}
 }

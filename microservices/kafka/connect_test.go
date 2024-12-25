@@ -97,7 +97,7 @@ func ProductApp(addr string) *core.App {
 
 			client.Send("order.updated", &Order{
 				ID:   "order1",
-				Name: "order1",
+				Name: "order2",
 			})
 			return ctx.JSON(core.Map{
 				"data": []string{"product1", "product2"},
@@ -128,7 +128,7 @@ func ProductApp(addr string) *core.App {
 func Test_Practice(t *testing.T) {
 	orderApp := OrderApp()
 	orderApp.ConnectMicroservice(kafka.Open("order-app", microservices.ConnectOptions{
-		Addr: "localhost:9092",
+		Addr: "127.0.0.1:9092",
 	}))
 
 	orderApp.StartAllMicroservices()
@@ -155,7 +155,7 @@ func Test_Practice(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(1000 * time.Millisecond)
 
 	resp, err = testClientOrder.Get(testOrderServer.URL + "/order-api/orders")
 	require.Nil(t, err)
@@ -165,30 +165,3 @@ func Test_Practice(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, `{"data":{"order1":true}}`, string(data))
 }
-
-// func Benchmark_Practice(b *testing.B) {
-// 	orderApp := OrderApp()
-// 	orderApp.ConnectMicroservice(kafka.Open("order-app", microservices.ConnectOptions{
-// 		Addr: "localhost:9092",
-// 	}))
-
-// 	orderApp.StartAllMicroservices()
-// 	testOrderServer := httptest.NewServer(orderApp.PrepareBeforeListen())
-// 	defer testOrderServer.Close()
-
-// 	time.Sleep(100 * time.Millisecond)
-
-// 	productApp := ProductApp("localhost:9092")
-// 	testProductServer := httptest.NewServer(productApp.PrepareBeforeListen())
-// 	defer testProductServer.Close()
-
-// 	testClientProduct := testProductServer.Client()
-
-// 	b.RunParallel(func(p *testing.PB) {
-// 		for p.Next() {
-// 			resp, err := testClientProduct.Post(testProductServer.URL+"/product-api/products", "application/json", nil)
-// 			require.Nil(b, err)
-// 			require.Equal(b, http.StatusOK, resp.StatusCode)
-// 		}
-// 	})
-// }

@@ -65,11 +65,6 @@ func (c *Consumer) Subscribe(topics []string, handler Handler) {
 
 	c.channel.handler = handler
 	log.Println("Sarama consumer up and running!...")
-	// wg := &sync.WaitGroup{}
-	// wg.Add(1)
-
-	// go func() {
-	// defer wg.Done()
 	for {
 		if err := client.Consume(ctx, topics, &c.channel); err != nil {
 			if errors.Is(err, sarama.ErrClosedConsumerGroup) {
@@ -83,12 +78,8 @@ func (c *Consumer) Subscribe(topics []string, handler Handler) {
 		}
 		c.channel.ready = make(chan bool)
 	}
-	// }()
-
-	// <-c.channel.ready // Await till the consumer has been set up
 
 	cancel()
-	// wg.Wait()
 	if err = client.Close(); err != nil {
 		log.Panicf("Error closing client: %v", err)
 	}

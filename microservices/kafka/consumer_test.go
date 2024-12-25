@@ -23,7 +23,7 @@ func Test_Consumer(t *testing.T) {
 	})
 
 	time.Sleep(1000 * time.Millisecond)
-	producer := instance.Producer(1)
+	producer := instance.Producer()
 	producer.Publish(&sarama.ProducerMessage{
 		Topic: "sarama",
 		Value: sarama.StringEncoder("abc"),

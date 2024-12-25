@@ -10,11 +10,11 @@ import (
 )
 
 type Producer struct {
-	producers   int
-	txnProducer *txnProducer
+	numProducers int
+	txnProducer  *txnProducer
 }
 
-func (k *Kafka) Producer(producers int, configs ...*sarama.Config) *Producer {
+func (k *Kafka) Producer(configs ...*sarama.Config) *Producer {
 	tProducer := &txnProducer{
 		recordsRate: metrics.GetOrRegisterMeter("records.rate", nil),
 	}
@@ -38,19 +38,19 @@ func (k *Kafka) Producer(producers int, configs ...*sarama.Config) *Producer {
 		return producer
 	}
 	return &Producer{
-		txnProducer: tProducer,
-		producers:   producers,
+		txnProducer:  tProducer,
+		numProducers: 1,
 	}
 }
 
 func (p *Producer) Publish(msg *sarama.ProducerMessage) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
-	for i := 0; i < p.producers; i++ {
+
+	for i := 0; i < p.numProducers; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-
 			for {
 				select {
 				case <-ctx.Done():
@@ -61,7 +61,6 @@ func (p *Producer) Publish(msg *sarama.ProducerMessage) {
 			}
 		}()
 	}
-
 	cancel()
 	wg.Wait()
 
