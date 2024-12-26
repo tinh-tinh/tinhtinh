@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 
 	redis_store "github.com/redis/go-redis/v9"
@@ -146,7 +147,7 @@ func (c *Connect) Listen() {
 	if store.Subscribers[string(microservices.RPC)] != nil {
 		for _, sub := range store.Subscribers[string(microservices.RPC)] {
 			subscriber := c.Conn.Subscribe(c.Context, sub.Name)
-			go c.Handler(subscriber, sub.Factory)
+			go c.Handler(subscriber, sub)
 		}
 	}
 
@@ -158,12 +159,12 @@ func (c *Connect) Listen() {
 			} else {
 				subscriber = c.Conn.Subscribe(c.Context, sub.Name)
 			}
-			go c.Handler(subscriber, sub.Factory)
+			go c.Handler(subscriber, sub)
 		}
 	}
 }
 
-func (c *Connect) Handler(subscriber *redis_store.PubSub, factory microservices.Factory) {
+func (c *Connect) Handler(subscriber *redis_store.PubSub, sub microservices.SubscribeHandler) {
 	for {
 		msg, err := subscriber.ReceiveMessage(c.Context)
 		if err != nil {
@@ -176,8 +177,9 @@ func (c *Connect) Handler(subscriber *redis_store.PubSub, factory microservices.
 			return
 		}
 
-		data := microservices.ParseCtx(message.Data, c)
-		factory(data)
+		sub.Handle(c, message.Data)
+		// data := microservices.ParseCtx(message.Data, c)
+		// factory(data)
 	}
 }
 
@@ -187,4 +189,8 @@ func (c *Connect) Serializer(v interface{}) ([]byte, error) {
 
 func (c *Connect) Deserializer(data []byte, v interface{}) error {
 	return c.deserializer(data, v)
+}
+
+func (c *Connect) ErrorHandler(err error) {
+	log.Printf("Error when running tcp: %v\n", err)
 }

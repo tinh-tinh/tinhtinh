@@ -64,12 +64,14 @@ func appServer(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
-		handler.OnResponse("user.created", func(ctx microservices.Ctx) {
+		handler.OnResponse("user.created", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Payload(&Message{}))
+			return nil
 		})
 
-		handler.OnEvent("user.updated", func(ctx microservices.Ctx) {
+		handler.OnEvent("user.updated", func(ctx microservices.Ctx) error {
 			fmt.Println("User Updated Data:", ctx.Payload(&Message{}))
+			return nil
 		})
 
 		return handler

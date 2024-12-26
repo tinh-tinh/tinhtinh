@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"slices"
@@ -116,27 +117,25 @@ func (svc *Server) handler(conn net.Conn, store *microservices.Store) {
 }
 
 func (svc *Server) handlerRPC(handlers []microservices.SubscribeHandler, msg microservices.Message) {
-	data := microservices.ParseCtx(msg.Data, svc)
 	subscriber := common.Filter(handlers, func(e microservices.SubscribeHandler) bool {
 		return e.Name == msg.Event
 	})
 	for _, sub := range subscriber {
-		sub.Factory(data)
+		sub.Handle(svc, msg.Data)
 	}
 }
 
 func (svc *Server) handlerPubSub(handlers []microservices.SubscribeHandler, msg microservices.Message) {
-	data := microservices.ParseCtx(msg.Data, svc)
 	if msg.Event == "*" {
-		for _, provider := range handlers {
-			provider.Factory(data)
+		for _, sub := range handlers {
+			sub.Handle(svc, msg.Data)
 		}
 	} else if strings.ContainsAny(msg.Event, "*") {
 		prefix := strings.TrimSuffix(msg.Event, "*")
 		fmt.Println(prefix)
-		for _, provider := range handlers {
-			if strings.HasPrefix(string(provider.Name), prefix) {
-				provider.Factory(data)
+		for _, sub := range handlers {
+			if strings.HasPrefix(string(sub.Name), prefix) {
+				sub.Handle(svc, msg.Data)
 			}
 		}
 	} else {
@@ -144,8 +143,8 @@ func (svc *Server) handlerPubSub(handlers []microservices.SubscribeHandler, msg 
 			return string(e.Name) == msg.Event
 		})
 		if findEvent != -1 {
-			provider := handlers[findEvent]
-			provider.Factory(data)
+			sub := handlers[findEvent]
+			sub.Handle(svc, msg.Data)
 		}
 	}
 }
@@ -156,4 +155,8 @@ func (svc *Server) Serializer(v interface{}) ([]byte, error) {
 
 func (svc *Server) Deserializer(data []byte, v interface{}) error {
 	return svc.deserializer(data, v)
+}
+
+func (svc *Server) ErrorHandler(err error) {
+	log.Printf("Error when running tcp: %v\n", err)
 }

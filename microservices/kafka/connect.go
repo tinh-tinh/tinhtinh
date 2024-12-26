@@ -3,6 +3,7 @@ package kafka
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
 
 	"github.com/IBM/sarama"
@@ -127,7 +128,7 @@ func (c *Connect) Listen() {
 	if store.Subscribers[string(microservices.RPC)] != nil {
 		for _, sub := range store.Subscribers[string(microservices.RPC)] {
 			consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
-				c.Handler(msg, sub.Factory)
+				c.Handler(msg, sub)
 			})
 		}
 	}
@@ -135,13 +136,13 @@ func (c *Connect) Listen() {
 	if store.Subscribers[string(microservices.PubSub)] != nil {
 		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
 			consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
-				c.Handler(msg, sub.Factory)
+				c.Handler(msg, sub)
 			})
 		}
 	}
 }
 
-func (c *Connect) Handler(msg *sarama.ConsumerMessage, factory microservices.Factory) {
+func (c *Connect) Handler(msg *sarama.ConsumerMessage, sub microservices.SubscribeHandler) {
 	fmt.Println(string(msg.Value))
 	var message microservices.Message
 	err := c.Deserializer(msg.Value, &message)
@@ -152,10 +153,14 @@ func (c *Connect) Handler(msg *sarama.ConsumerMessage, factory microservices.Fac
 
 	fmt.Println(message)
 	if !reflect.ValueOf(message).IsZero() {
-		data := microservices.ParseCtx(message.Data, c)
-		factory(data)
+		sub.Handle(c, message.Data)
+		// data := microservices.ParseCtx(message.Data, c)
+		// factory(data)
 	} else {
-		data := microservices.ParseCtx(string(msg.Value), c)
-		factory(data)
+		sub.Handle(c, message.Data)
 	}
+}
+
+func (c *Connect) ErrorHandler(err error) {
+	log.Printf("Error when running tcp: %v\n", err)
 }
