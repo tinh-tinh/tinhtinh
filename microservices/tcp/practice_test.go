@@ -42,7 +42,7 @@ func OrderApp() *core.App {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		orderService := module.Ref(ORDER).(*OrderService)
-		handler.OnResponse("order.created", func(ctx microservices.Ctx) {
+		handler.OnResponse("order.created", func(ctx microservices.Ctx) error {
 			data := ctx.Payload(&Order{}).(*Order)
 
 			orderService.mutex.Lock()
@@ -51,6 +51,7 @@ func OrderApp() *core.App {
 			}
 
 			orderService.mutex.Unlock()
+			return nil
 		})
 
 		return handler

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 
@@ -225,7 +226,7 @@ func (c *Connect) Listen() {
 			if err != nil {
 				panic(err)
 			}
-			go c.Handler(ch, q.Name, sub.Factory)
+			go c.Handler(ch, q.Name, sub)
 		}
 	}
 
@@ -240,12 +241,12 @@ func (c *Connect) Listen() {
 			if err != nil {
 				panic(err)
 			}
-			go c.Handler(ch, q.Name, sub.Factory)
+			go c.Handler(ch, q.Name, sub)
 		}
 	}
 }
 
-func (c *Connect) Handler(ch *amqp091.Channel, q string, factory microservices.Factory) {
+func (c *Connect) Handler(ch *amqp091.Channel, q string, sub microservices.SubscribeHandler) {
 	msgs, err := ch.Consume(
 		q,     // queue
 		"",    // consumer
@@ -267,11 +268,15 @@ func (c *Connect) Handler(ch *amqp091.Channel, q string, factory microservices.F
 		}
 		fmt.Println(message)
 		if !reflect.ValueOf(message).IsZero() {
-			data := microservices.ParseCtx(message.Data, c)
-			factory(data)
+			sub.Handle(c, message.Data)
+			// data := microservices.ParseCtx(message.Data, c)
+			// factory(data)
 		} else {
-			data := microservices.ParseCtx(string(d.Body), c)
-			factory(data)
+			sub.Handle(c, message.Data)
 		}
 	}
+}
+
+func (c *Connect) ErrorHandler(err error) {
+	log.Printf("Error when running tcp: %v\n", err)
 }

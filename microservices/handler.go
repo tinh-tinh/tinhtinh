@@ -4,17 +4,21 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
+func NewHandler(module core.Module, opt core.ProviderOptions) *Handler {
+	provider := &Handler{}
+	provider.module = module
+
+	return provider
+}
+
 type Handler struct {
 	core.DynamicProvider
-	module core.Module
+	module            core.Module
+	middlewares       []Middleware
+	globalMiddlewares []Middleware
 }
 
 const STORE core.Provide = "STORE"
-
-type SubscribeHandler struct {
-	Name    string
-	Factory Factory
-}
 
 type Store struct {
 	Subscribers map[string][]SubscribeHandler
@@ -34,19 +38,10 @@ func Register() core.Modules {
 	}
 }
 
-// NewHandler creates a new Handler with the given module and options.
-// It returns the created Handler.
-func NewHandler(module core.Module, opt core.ProviderOptions) *Handler {
-	provider := &Handler{}
-	provider.module = module
-
-	return provider
-}
-
 // OnResponse registers a provider with the given name and factory function to be
 // called when the response is ready. The provider will be registered with the
 // same scope as the handler.
-func (h *Handler) OnResponse(name string, fnc Factory) {
+func (h *Handler) OnResponse(name string, fnc FactoryFunc) {
 	core.InitProviders(h.module, core.ProviderOptions{
 		Name: core.Provide(name),
 		Factory: func(param ...interface{}) interface{} {
@@ -57,18 +52,23 @@ func (h *Handler) OnResponse(name string, fnc Factory) {
 			if store.Subscribers[string(RPC)] == nil {
 				store.Subscribers[string(RPC)] = []SubscribeHandler{}
 			}
-			store.Subscribers[string(RPC)] = append(store.Subscribers[string(RPC)], SubscribeHandler{Name: name, Factory: fnc})
+			store.Subscribers[string(RPC)] = append(store.Subscribers[string(RPC)], SubscribeHandler{
+				Name:        name,
+				Factory:     fnc,
+				Middlewares: append(h.globalMiddlewares, h.middlewares...),
+			})
 			return store.Subscribers
 		},
 		Inject: []core.Provide{STORE},
 		Scope:  h.Scope,
 	})
+	h.middlewares = nil
 }
 
 // OnEvent registers a provider with the given name and factory function to be
 // called when an event is triggered. The provider will be registered with the
 // same scope as the handler.
-func (h *Handler) OnEvent(name string, fnc Factory) {
+func (h *Handler) OnEvent(name string, fnc FactoryFunc) {
 	core.InitProviders(h.module, core.ProviderOptions{
 		Name: core.Provide(name),
 		Factory: func(param ...interface{}) interface{} {
@@ -79,9 +79,14 @@ func (h *Handler) OnEvent(name string, fnc Factory) {
 			if store.Subscribers[string(PubSub)] == nil {
 				store.Subscribers[string(PubSub)] = []SubscribeHandler{}
 			}
-			store.Subscribers[string(PubSub)] = append(store.Subscribers[string(PubSub)], SubscribeHandler{Name: name, Factory: fnc})
+			store.Subscribers[string(PubSub)] = append(store.Subscribers[string(PubSub)], SubscribeHandler{
+				Name:        name,
+				Factory:     fnc,
+				Middlewares: append(h.globalMiddlewares, h.middlewares...),
+			})
 			return store.Subscribers
 		},
 		Inject: []core.Provide{STORE}, Scope: h.Scope,
 	})
+	h.middlewares = nil
 }

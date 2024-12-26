@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 
 	nats_connect "github.com/nats-io/nats.go"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
@@ -146,7 +147,7 @@ func (c *Connect) Listen() {
 	if store.Subscribers[string(microservices.RPC)] != nil {
 		for _, sub := range store.Subscribers[string(microservices.RPC)] {
 			go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
-				c.Handler(msg, sub.Factory)
+				c.Handler(msg, sub)
 			})
 		}
 	}
@@ -154,13 +155,13 @@ func (c *Connect) Listen() {
 	if store.Subscribers[string(microservices.PubSub)] != nil {
 		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
 			go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
-				c.Handler(msg, sub.Factory)
+				c.Handler(msg, sub)
 			})
 		}
 	}
 }
 
-func (c *Connect) Handler(msg *nats_connect.Msg, factory microservices.Factory) {
+func (c *Connect) Handler(msg *nats_connect.Msg, sub microservices.SubscribeHandler) {
 	var message microservices.Message
 	err := c.Deserializer([]byte(msg.Data), &message)
 	if err != nil {
@@ -168,8 +169,9 @@ func (c *Connect) Handler(msg *nats_connect.Msg, factory microservices.Factory) 
 		return
 	}
 
-	data := microservices.ParseCtx(message.Data, c)
-	factory(data)
+	sub.Handle(c, message.Data)
+	// data := microservices.ParseCtx(message.Data, c)
+	// factory(data)
 }
 
 func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
@@ -178,4 +180,8 @@ func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
 
 func (svc *Connect) Deserializer(data []byte, v interface{}) error {
 	return svc.deserializer(data, v)
+}
+
+func (c *Connect) ErrorHandler(err error) {
+	log.Printf("Error when running tcp: %v\n", err)
 }

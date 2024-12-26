@@ -43,7 +43,7 @@ func OrderApp() *core.App {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		orderService := module.Ref(ORDER).(*OrderService)
-		handler.OnEvent("order.created", func(ctx microservices.Ctx) {
+		handler.OnEvent("order.created", func(ctx microservices.Ctx) error {
 			data := ctx.Payload(&Order{}).(*Order)
 
 			orderService.mutex.Lock()
@@ -51,6 +51,7 @@ func OrderApp() *core.App {
 				orderService.orders[data.ID] = true
 			}
 			orderService.mutex.Unlock()
+			return nil
 		})
 
 		return handler
@@ -169,8 +170,9 @@ func Test_Standalone(t *testing.T) {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
-		handler.OnEvent("order.*", func(ctx microservices.Ctx) {
+		handler.OnEvent("order.*", func(ctx microservices.Ctx) error {
 			fmt.Println("User Event Data:", ctx.Payload(&Order{}))
+			return nil
 		})
 
 		return handler

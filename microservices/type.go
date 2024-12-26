@@ -23,6 +23,7 @@ type Service interface {
 	Listen()
 	Serializer(v interface{}) ([]byte, error)
 	Deserializer(data []byte, v interface{}) error
+	ErrorHandler(err error)
 }
 
 type ConnectOptions struct {
