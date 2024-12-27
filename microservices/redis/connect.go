@@ -13,11 +13,12 @@ import (
 )
 
 type Connect struct {
-	Context      context.Context
-	Module       core.Module
-	serializer   core.Encode
-	deserializer core.Decode
-	Conn         *redis_store.Client
+	clientHeaders map[string]string
+	Context       context.Context
+	Module        core.Module
+	serializer    core.Encode
+	deserializer  core.Decode
+	Conn          *redis_store.Client
 }
 
 // Client usage
@@ -29,10 +30,11 @@ func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 	})
 
 	connect := &Connect{
-		Context:      context.Background(),
-		Conn:         conn,
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
+		Context:       context.Background(),
+		Conn:          conn,
+		serializer:    json.Marshal,
+		deserializer:  json.Unmarshal,
+		clientHeaders: make(map[string]string),
 	}
 	if opt.Deserializer != nil {
 		connect.deserializer = opt.Deserializer
@@ -49,7 +51,12 @@ func (c *Connect) Close() {
 }
 
 func (c *Connect) Send(event string, data interface{}) error {
-	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	message := microservices.Message{
+		Type:    microservices.RPC,
+		Headers: c.clientHeaders,
+		Event:   event,
+		Data:    data,
+	}
 	payload, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -63,7 +70,12 @@ func (c *Connect) Send(event string, data interface{}) error {
 }
 
 func (c *Connect) Publish(event string, data interface{}) error {
-	message := microservices.Message{Type: microservices.PubSub, Event: event, Data: data}
+	message := microservices.Message{
+		Type:    microservices.PubSub,
+		Headers: c.clientHeaders,
+		Event:   event,
+		Data:    data,
+	}
 	payload, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -74,6 +86,15 @@ func (c *Connect) Publish(event string, data interface{}) error {
 	}
 	fmt.Printf("Publish mesage: %v for event %s\n", data, event)
 	return nil
+}
+
+func (c *Connect) SetHeaders(key string, value string) microservices.ClientProxy {
+	c.clientHeaders[key] = value
+	return c
+}
+
+func (c *Connect) GetHeaders(key string) string {
+	return c.clientHeaders[key]
 }
 
 // Server usage
@@ -177,9 +198,7 @@ func (c *Connect) Handler(subscriber *redis_store.PubSub, sub microservices.Subs
 			return
 		}
 
-		sub.Handle(c, message.Data)
-		// data := microservices.ParseCtx(message.Data, c)
-		// factory(data)
+		sub.Handle(c, message)
 	}
 }
 

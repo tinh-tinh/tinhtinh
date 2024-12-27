@@ -90,3 +90,7 @@ func (h *Handler) OnEvent(name string, fnc FactoryFunc) {
 	})
 	h.middlewares = nil
 }
+
+func (h *Handler) Ref(name core.Provide, ctx ...core.Ctx) interface{} {
+	return h.module.Ref(name, ctx...)
+}

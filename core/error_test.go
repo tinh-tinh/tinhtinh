@@ -18,7 +18,7 @@ func Test_DefaultErrorHandler(t *testing.T) {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			panic(exception.Throw("test", http.StatusInternalServerError))
+			panic(exception.ThrowHttp("test", http.StatusInternalServerError))
 		})
 
 		return ctrl

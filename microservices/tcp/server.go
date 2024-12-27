@@ -121,21 +121,21 @@ func (svc *Server) handlerRPC(handlers []microservices.SubscribeHandler, msg mic
 		return e.Name == msg.Event
 	})
 	for _, sub := range subscriber {
-		sub.Handle(svc, msg.Data)
+		sub.Handle(svc, msg)
 	}
 }
 
 func (svc *Server) handlerPubSub(handlers []microservices.SubscribeHandler, msg microservices.Message) {
 	if msg.Event == "*" {
 		for _, sub := range handlers {
-			sub.Handle(svc, msg.Data)
+			sub.Handle(svc, msg)
 		}
 	} else if strings.ContainsAny(msg.Event, "*") {
 		prefix := strings.TrimSuffix(msg.Event, "*")
 		fmt.Println(prefix)
 		for _, sub := range handlers {
 			if strings.HasPrefix(string(sub.Name), prefix) {
-				sub.Handle(svc, msg.Data)
+				sub.Handle(svc, msg)
 			}
 		}
 	} else {
@@ -144,7 +144,7 @@ func (svc *Server) handlerPubSub(handlers []microservices.SubscribeHandler, msg 
 		})
 		if findEvent != -1 {
 			sub := handlers[findEvent]
-			sub.Handle(svc, msg.Data)
+			sub.Handle(svc, msg)
 		}
 	}
 }

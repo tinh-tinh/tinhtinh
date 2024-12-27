@@ -14,6 +14,7 @@ type Client struct {
 	Conn         net.Conn
 	Serializer   core.Encode
 	Deserializer core.Decode
+	Headers      map[string]string
 	Wildcard     bool
 	Delimiter    string
 }
@@ -27,6 +28,7 @@ func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 		Conn:         conn,
 		Serializer:   json.Marshal,
 		Deserializer: json.Unmarshal,
+		Headers:      make(map[string]string),
 	}
 	if opt.Deserializer != nil {
 		client.Deserializer = opt.Deserializer
@@ -41,7 +43,12 @@ func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 func (client *Client) Send(event string, data interface{}) error {
 	writer := bufio.NewWriter(client.Conn)
 
-	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	message := microservices.Message{
+		Type:    microservices.RPC,
+		Headers: client.Headers,
+		Event:   event,
+		Data:    data,
+	}
 	jsonData, err := client.Serializer(message)
 	if err != nil {
 		return err
@@ -61,7 +68,12 @@ func (client *Client) Send(event string, data interface{}) error {
 func (client *Client) Publish(event string, data interface{}) error {
 	writer := bufio.NewWriter(client.Conn)
 
-	message := microservices.Message{Type: microservices.PubSub, Event: event, Data: data}
+	message := microservices.Message{
+		Type:    microservices.PubSub,
+		Headers: client.Headers,
+		Event:   event,
+		Data:    data,
+	}
 	jsonData, err := client.Serializer(message)
 	if err != nil {
 		return err
@@ -76,4 +88,13 @@ func (client *Client) Publish(event string, data interface{}) error {
 	writer.Flush()
 	fmt.Printf("Publish message: %v for event %s\n", data, event)
 	return nil
+}
+
+func (client *Client) SetHeaders(key string, value string) microservices.ClientProxy {
+	client.Headers[key] = value
+	return client
+}
+
+func (client *Client) GetHeaders(key string) string {
+	return client.Headers[key]
 }

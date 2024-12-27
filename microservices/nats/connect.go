@@ -12,11 +12,12 @@ import (
 )
 
 type Connect struct {
-	Conn         *nats_connect.Conn
-	Module       core.Module
-	Context      context.Context
-	serializer   core.Encode
-	deserializer core.Decode
+	clientHeaders map[string]string
+	Conn          *nats_connect.Conn
+	Module        core.Module
+	Context       context.Context
+	serializer    core.Encode
+	deserializer  core.Decode
 }
 
 // Client usage
@@ -27,9 +28,10 @@ func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 	}
 
 	connect := &Connect{
-		Conn:         nc,
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
+		Conn:          nc,
+		serializer:    json.Marshal,
+		deserializer:  json.Unmarshal,
+		clientHeaders: make(map[string]string),
 	}
 	if opt.Deserializer != nil {
 		connect.deserializer = opt.Deserializer
@@ -42,7 +44,12 @@ func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 }
 
 func (c *Connect) Send(event string, data interface{}) error {
-	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	message := microservices.Message{
+		Type:    microservices.RPC,
+		Headers: c.clientHeaders,
+		Event:   event,
+		Data:    data,
+	}
 	payload, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -59,7 +66,12 @@ func (c *Connect) Send(event string, data interface{}) error {
 }
 
 func (c *Connect) Publish(event string, data interface{}) error {
-	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	message := microservices.Message{
+		Type:    microservices.PubSub,
+		Event:   event,
+		Data:    data,
+		Headers: c.clientHeaders,
+	}
 	payload, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -73,6 +85,15 @@ func (c *Connect) Publish(event string, data interface{}) error {
 	}
 
 	return nil
+}
+
+func (c *Connect) SetHeaders(key string, value string) microservices.ClientProxy {
+	c.clientHeaders[key] = value
+	return c
+}
+
+func (c *Connect) GetHeaders(key string) string {
+	return c.clientHeaders[key]
 }
 
 // Server usage
@@ -169,7 +190,7 @@ func (c *Connect) Handler(msg *nats_connect.Msg, sub microservices.SubscribeHand
 		return
 	}
 
-	sub.Handle(c, message.Data)
+	sub.Handle(c, message)
 	// data := microservices.ParseCtx(message.Data, c)
 	// factory(data)
 }

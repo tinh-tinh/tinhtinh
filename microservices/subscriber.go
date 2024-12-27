@@ -37,7 +37,7 @@ func ParseFactory(factory Factory) Factory {
 	})
 }
 
-func (s *SubscribeHandler) Handle(svc Service, data interface{}) {
+func (s *SubscribeHandler) Handle(svc Service, data Message) {
 	var mergeHandler Factory
 	mergeHandler = ParseFactory(s.Factory)
 
