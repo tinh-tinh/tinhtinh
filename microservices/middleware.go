@@ -19,7 +19,6 @@ func (h *Handler) Registry() {
 func ParseCtxMiddleware(ctxMid Middleware) middlewareRaw {
 	return func(f Factory) Factory {
 		return FactoryFunc(func(ctx Ctx) error {
-			ctx.SetFactory(f)
 			fmt.Println("Ctx is ", ctx)
 			var err error
 			defer func() {
@@ -32,7 +31,7 @@ func ParseCtxMiddleware(ctxMid Middleware) middlewareRaw {
 			if err != nil {
 				return err
 			}
-			return nil
+			return f.Handle(ctx)
 		})
 	}
 }

@@ -12,11 +12,12 @@ import (
 )
 
 type Connect struct {
-	Conn         *Kafka
-	Module       core.Module
-	serializer   core.Encode
-	deserializer core.Decode
-	GroupID      string
+	clientHeaders map[string]string
+	Conn          *Kafka
+	Module        core.Module
+	serializer    core.Encode
+	deserializer  core.Decode
+	GroupID       string
 }
 
 // Client usage
@@ -25,9 +26,10 @@ func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 		Brokers: []string{opt.Addr},
 	})
 	connect := &Connect{
-		Conn:         instance,
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
+		Conn:          instance,
+		serializer:    json.Marshal,
+		deserializer:  json.Unmarshal,
+		clientHeaders: make(map[string]string),
 	}
 	if opt.Deserializer != nil {
 		connect.deserializer = opt.Deserializer
@@ -48,7 +50,12 @@ func (c *Connect) Deserializer(data []byte, v interface{}) error {
 }
 
 func (c *Connect) Send(event string, data interface{}) error {
-	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	message := microservices.Message{
+		Type:    microservices.RPC,
+		Headers: c.clientHeaders,
+		Event:   event,
+		Data:    data,
+	}
 	payload, err := c.Serializer(message)
 	if err != nil {
 		fmt.Println(err)
@@ -64,7 +71,12 @@ func (c *Connect) Send(event string, data interface{}) error {
 }
 
 func (c *Connect) Publish(event string, data interface{}) error {
-	message := microservices.Message{Type: microservices.PubSub, Event: event, Data: data}
+	message := microservices.Message{
+		Type:    microservices.PubSub,
+		Headers: c.clientHeaders,
+		Event:   event,
+		Data:    data,
+	}
 	payload, err := c.Serializer(message)
 	if err != nil {
 		fmt.Println(err)
@@ -77,6 +89,15 @@ func (c *Connect) Publish(event string, data interface{}) error {
 		Value: sarama.StringEncoder(string(payload)),
 	})
 	return nil
+}
+
+func (c *Connect) SetHeaders(key string, value string) microservices.ClientProxy {
+	c.clientHeaders[key] = value
+	return c
+}
+
+func (c *Connect) GetHeaders(key string) string {
+	return c.clientHeaders[key]
 }
 
 // Server usage
@@ -152,12 +173,12 @@ func (c *Connect) Handler(msg *sarama.ConsumerMessage, sub microservices.Subscri
 	}
 
 	fmt.Println(message)
-	if !reflect.ValueOf(message).IsZero() {
-		sub.Handle(c, message.Data)
-		// data := microservices.ParseCtx(message.Data, c)
-		// factory(data)
+	if reflect.ValueOf(message).IsZero() {
+		sub.Handle(c, microservices.Message{
+			Data: msg.Value,
+		})
 	} else {
-		sub.Handle(c, message.Data)
+		sub.Handle(c, message)
 	}
 }
 

@@ -10,124 +10,124 @@ type Http struct {
 	Msg    string
 }
 
-func Throw(msg string, status int) Http {
+func ThrowHttp(msg string, status int) Http {
 	return Http{Status: status, Msg: msg}
 }
 
 func BadRequest(msg string) Http {
-	return Throw(msg, http.StatusBadRequest)
+	return ThrowHttp(msg, http.StatusBadRequest)
 }
 
 func Unauthorized(msg string) Http {
-	return Throw(msg, http.StatusUnauthorized)
+	return ThrowHttp(msg, http.StatusUnauthorized)
 }
 
 func Forbidden(msg string) Http {
-	return Throw(msg, http.StatusForbidden)
+	return ThrowHttp(msg, http.StatusForbidden)
 }
 
 func NotFound(msg string) Http {
-	return Throw(msg, http.StatusNotFound)
+	return ThrowHttp(msg, http.StatusNotFound)
 }
 
 func MethodNotAllowed(msg string) Http {
-	return Throw(msg, http.StatusMethodNotAllowed)
+	return ThrowHttp(msg, http.StatusMethodNotAllowed)
 }
 
 func NotAcceptable(msg string) Http {
-	return Throw(msg, http.StatusNotAcceptable)
+	return ThrowHttp(msg, http.StatusNotAcceptable)
 }
 
 func RequestTimeout(msg string) Http {
-	return Throw(msg, http.StatusRequestTimeout)
+	return ThrowHttp(msg, http.StatusRequestTimeout)
 }
 
 func Conflict(msg string) Http {
-	return Throw(msg, http.StatusConflict)
+	return ThrowHttp(msg, http.StatusConflict)
 }
 
 func Gone(msg string) Http {
-	return Throw(msg, http.StatusGone)
+	return ThrowHttp(msg, http.StatusGone)
 }
 
 func LengthRequired(msg string) Http {
-	return Throw(msg, http.StatusLengthRequired)
+	return ThrowHttp(msg, http.StatusLengthRequired)
 }
 
 func PreconditionFailed(msg string) Http {
-	return Throw(msg, http.StatusPreconditionFailed)
+	return ThrowHttp(msg, http.StatusPreconditionFailed)
 }
 
 func ContentTooLarge(msg string) Http {
-	return Throw(msg, http.StatusRequestEntityTooLarge)
+	return ThrowHttp(msg, http.StatusRequestEntityTooLarge)
 }
 
 func RequestURITooLong(msg string) Http {
-	return Throw(msg, http.StatusRequestURITooLong)
+	return ThrowHttp(msg, http.StatusRequestURITooLong)
 }
 
 func UnsupportedMediaType(msg string) Http {
-	return Throw(msg, http.StatusUnsupportedMediaType)
+	return ThrowHttp(msg, http.StatusUnsupportedMediaType)
 }
 
 func RequestedRangeNotSatisfiable(msg string) Http {
-	return Throw(msg, http.StatusRequestedRangeNotSatisfiable)
+	return ThrowHttp(msg, http.StatusRequestedRangeNotSatisfiable)
 }
 
 func ExpectationFailed(msg string) Http {
-	return Throw(msg, http.StatusExpectationFailed)
+	return ThrowHttp(msg, http.StatusExpectationFailed)
 }
 
 func IamATeapot(msg string) Http {
-	return Throw(msg, http.StatusTeapot)
+	return ThrowHttp(msg, http.StatusTeapot)
 }
 
 func UnprocessableEntity(msg string) Http {
-	return Throw(msg, http.StatusUnprocessableEntity)
+	return ThrowHttp(msg, http.StatusUnprocessableEntity)
 }
 
 func Locked(msg string) Http {
-	return Throw(msg, http.StatusLocked)
+	return ThrowHttp(msg, http.StatusLocked)
 }
 
 func FailedDependency(msg string) Http {
-	return Throw(msg, http.StatusFailedDependency)
+	return ThrowHttp(msg, http.StatusFailedDependency)
 }
 
 func UpgradeRequired(msg string) Http {
-	return Throw(msg, http.StatusUpgradeRequired)
+	return ThrowHttp(msg, http.StatusUpgradeRequired)
 }
 
 func PreconditionRequired(msg string) Http {
-	return Throw(msg, http.StatusPreconditionRequired)
+	return ThrowHttp(msg, http.StatusPreconditionRequired)
 }
 
 func TooManyRequests(msg string) Http {
-	return Throw(msg, http.StatusTooManyRequests)
+	return ThrowHttp(msg, http.StatusTooManyRequests)
 }
 
 func InternalServer(msg string) Http {
-	return Throw(msg, http.StatusInternalServerError)
+	return ThrowHttp(msg, http.StatusInternalServerError)
 }
 
 func NotImplemented(msg string) Http {
-	return Throw(msg, http.StatusNotImplemented)
+	return ThrowHttp(msg, http.StatusNotImplemented)
 }
 
 func BadGateway(msg string) Http {
-	return Throw(msg, http.StatusBadGateway)
+	return ThrowHttp(msg, http.StatusBadGateway)
 }
 
 func ServiceUnavailable(msg string) Http {
-	return Throw(msg, http.StatusServiceUnavailable)
+	return ThrowHttp(msg, http.StatusServiceUnavailable)
 }
 
 func GatewayTimeout(msg string) Http {
-	return Throw(msg, http.StatusGatewayTimeout)
+	return ThrowHttp(msg, http.StatusGatewayTimeout)
 }
 
 func HttpVersionNotSupported(msg string) Http {
-	return Throw(msg, http.StatusHTTPVersionNotSupported)
+	return ThrowHttp(msg, http.StatusHTTPVersionNotSupported)
 }
 
 func (e Http) Error() string {

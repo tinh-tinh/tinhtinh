@@ -14,9 +14,10 @@ const (
 )
 
 type Message struct {
-	Type  EventType   `json:"type"`
-	Event string      `json:"event"`
-	Data  interface{} `json:"data"`
+	Type    EventType         `json:"type"`
+	Event   string            `json:"event"`
+	Headers map[string]string `json:"headers"`
+	Data    interface{}       `json:"data"`
 }
 
 type Service interface {
@@ -35,6 +36,8 @@ type ConnectOptions struct {
 }
 
 type ClientProxy interface {
+	SetHeaders(key string, value string) ClientProxy
+	GetHeaders(key string) string
 	Send(event string, data interface{}) error
 	Publish(event string, data interface{}) error
 }

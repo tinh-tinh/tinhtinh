@@ -14,11 +14,12 @@ import (
 )
 
 type Connect struct {
-	Conn         *amqp091.Connection
-	Module       core.Module
-	Context      context.Context
-	serializer   core.Encode
-	deserializer core.Decode
+	clientHeaders map[string]string
+	Conn          *amqp091.Connection
+	Module        core.Module
+	Context       context.Context
+	serializer    core.Encode
+	deserializer  core.Decode
 }
 
 // Client usage
@@ -29,10 +30,11 @@ func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
 	}
 
 	connect := &Connect{
-		Context:      context.Background(),
-		Conn:         conn,
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
+		Context:       context.Background(),
+		Conn:          conn,
+		serializer:    json.Marshal,
+		deserializer:  json.Unmarshal,
+		clientHeaders: make(map[string]string),
 	}
 	if opt.Deserializer != nil {
 		connect.deserializer = opt.Deserializer
@@ -69,7 +71,12 @@ func (c *Connect) Send(event string, data interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	message := microservices.Message{
+		Type:    microservices.RPC,
+		Event:   event,
+		Data:    data,
+		Headers: c.clientHeaders,
+	}
 	body, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -116,7 +123,12 @@ func (c *Connect) Publish(event string, data interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	message := microservices.Message{Type: microservices.RPC, Event: event, Data: data}
+	message := microservices.Message{
+		Type:    microservices.PubSub,
+		Event:   event,
+		Data:    data,
+		Headers: c.clientHeaders,
+	}
 	body, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -143,6 +155,15 @@ func (c *Connect) Serializer(v interface{}) ([]byte, error) {
 
 func (c *Connect) Deserializer(data []byte, v interface{}) error {
 	return c.deserializer(data, v)
+}
+
+func (c *Connect) SetHeaders(key string, value string) microservices.ClientProxy {
+	c.clientHeaders[key] = value
+	return c
+}
+
+func (c *Connect) GetHeaders(key string) string {
+	return c.clientHeaders[key]
 }
 
 // Server usage
@@ -267,12 +288,12 @@ func (c *Connect) Handler(ch *amqp091.Channel, q string, sub microservices.Subsc
 			continue
 		}
 		fmt.Println(message)
-		if !reflect.ValueOf(message).IsZero() {
-			sub.Handle(c, message.Data)
-			// data := microservices.ParseCtx(message.Data, c)
-			// factory(data)
+		if reflect.ValueOf(message).IsZero() {
+			sub.Handle(c, microservices.Message{
+				Data: d.Body,
+			})
 		} else {
-			sub.Handle(c, message.Data)
+			sub.Handle(c, message)
 		}
 	}
 }

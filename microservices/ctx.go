@@ -6,41 +6,41 @@ import (
 )
 
 type Ctx interface {
+	Headers(key string) string
 	Payload(data ...interface{}) interface{}
 	ErrorHandler(err error)
 	Set(key interface{}, value interface{})
 	Get(key interface{}) interface{}
 	Next() error
-	SetFactory(f Factory)
 }
 
 type DefaultCtx struct {
-	payload interface{}
+	message Message
 	service Service
-	factory Factory
 	context context.Context
 }
 
-func NewCtx(data interface{}, service Service) Ctx {
+func NewCtx(data Message, service Service) Ctx {
 	return &DefaultCtx{
-		payload: data,
+		message: data,
 		service: service,
 		context: context.Background(),
 	}
 }
 
 func (c *DefaultCtx) Payload(data ...interface{}) interface{} {
+	payload := c.message.Data
 	if len(data) > 0 {
 		schema := data[0]
-		if reflect.TypeOf(c.payload).Kind() == reflect.String {
-			_ = c.service.Deserializer([]byte(c.payload.(string)), schema)
+		if reflect.TypeOf(payload).Kind() == reflect.String {
+			_ = c.service.Deserializer([]byte(payload.(string)), schema)
 			return schema
 		}
-		dataBytes, _ := c.service.Serializer(c.payload)
+		dataBytes, _ := c.service.Serializer(payload)
 		_ = c.service.Deserializer(dataBytes, schema)
 		return schema
 	}
-	return c.payload
+	return payload
 }
 
 func (c *DefaultCtx) ErrorHandler(err error) {
@@ -48,7 +48,7 @@ func (c *DefaultCtx) ErrorHandler(err error) {
 }
 
 func (c *DefaultCtx) Next() error {
-	return c.factory.Handle(c)
+	return nil
 }
 
 func (c *DefaultCtx) Set(key interface{}, val interface{}) {
@@ -60,6 +60,6 @@ func (c *DefaultCtx) Get(key interface{}) interface{} {
 	return c.context.Value(key)
 }
 
-func (c *DefaultCtx) SetFactory(factory Factory) {
-	c.factory = factory
+func (c *DefaultCtx) Headers(key string) string {
+	return c.message.Headers[key]
 }
