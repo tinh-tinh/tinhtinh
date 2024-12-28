@@ -20,7 +20,7 @@ func (e Rpc) Error() string {
 	return string(data)
 }
 
-func AdapterHttpRpc(err error) Rpc {
+func AdapterRpcError(err error) Rpc {
 	var e Rpc
 	er := json.Unmarshal([]byte(err.Error()), &e)
 	if er != nil {

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"slices"
@@ -13,6 +12,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
 
 type Server struct {
@@ -20,6 +20,8 @@ type Server struct {
 	Module       core.Module
 	serializer   core.Encode
 	deserializer core.Decode
+	errorHandler microservices.ErrorHandler
+	logger       *logger.Logger
 }
 
 func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microservices.Service {
@@ -27,6 +29,7 @@ func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microser
 		Module:       module(),
 		serializer:   json.Marshal,
 		deserializer: json.Unmarshal,
+		logger:       logger.Create(logger.Options{}),
 	}
 
 	if len(opts) > 0 {
@@ -40,6 +43,16 @@ func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microser
 		if opts[0].Addr != "" {
 			svc.Addr = opts[0].Addr
 		}
+		if opts[0].ErrorHandler != nil {
+			svc.errorHandler = opts[0].ErrorHandler
+		}
+		if opts[0].Logger != nil {
+			svc.logger = opts[0].Logger
+		}
+	}
+
+	if svc.errorHandler == nil {
+		svc.errorHandler = microservices.DefaultErrorHandler(svc.logger)
 	}
 
 	return svc
@@ -158,5 +171,5 @@ func (svc *Server) Deserializer(data []byte, v interface{}) error {
 }
 
 func (svc *Server) ErrorHandler(err error) {
-	log.Printf("Error when running tcp: %v\n", err)
+	svc.errorHandler(err)
 }

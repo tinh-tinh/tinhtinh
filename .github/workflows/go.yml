@@ -37,7 +37,7 @@ jobs:
       run: go test -cover ./...
 
     - name: Remove temp file
-      run: rm -rf middleware/logger/logs
+      run: 	rm -rf middleware/logger/logs common/exception/logs
 
   test-redis:
     runs-on: ubuntu-latest
