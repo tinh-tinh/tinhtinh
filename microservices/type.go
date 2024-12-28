@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
 
 type EventType string
@@ -31,8 +32,9 @@ type ConnectOptions struct {
 	Addr         string
 	Serializer   core.Encode
 	Deserializer core.Decode
-	RetryAttemp  int
 	Timeout      time.Duration
+	ErrorHandler ErrorHandler
+	Logger       *logger.Logger
 }
 
 type ClientProxy interface {

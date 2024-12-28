@@ -29,6 +29,7 @@ func ParseCtxMiddleware(ctxMid Middleware) middlewareRaw {
 			}()
 			err = ctxMid(ctx)
 			if err != nil {
+				ctx.ErrorHandler(err)
 				return err
 			}
 			return f.Handle(ctx)

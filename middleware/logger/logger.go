@@ -44,6 +44,9 @@ func Create(opt Options) *Logger {
 	if opt.Path == "" {
 		opt.Path = "logs"
 	}
+	if opt.Max == 0 {
+		opt.Max = 20
+	}
 	return &Logger{
 		Path:   opt.Path,
 		Rotate: opt.Rotate,

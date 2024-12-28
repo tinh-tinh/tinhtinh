@@ -31,6 +31,7 @@ func ParseFactory(factory Factory) Factory {
 
 		err = factory.Handle(ctx)
 		if err != nil {
+			ctx.ErrorHandler(err)
 			return err
 		}
 		return nil
