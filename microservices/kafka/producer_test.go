@@ -8,7 +8,7 @@ import (
 )
 
 func Test_Producer(t *testing.T) {
-	instance := kafka.New(kafka.Config{
+	instance := kafka.NewInstance(kafka.Config{
 		Brokers: []string{"127.0.0.1:9092"},
 	})
 	producer := instance.Producer()

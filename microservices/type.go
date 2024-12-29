@@ -1,12 +1,5 @@
 package microservices
 
-import (
-	"time"
-
-	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
-)
-
 type EventType string
 
 const (
@@ -28,18 +21,12 @@ type Service interface {
 	ErrorHandler(err error)
 }
 
-type ConnectOptions struct {
-	Addr         string
-	Serializer   core.Encode
-	Deserializer core.Decode
-	Timeout      time.Duration
-	ErrorHandler ErrorHandler
-	Logger       *logger.Logger
+type ClientProxy interface {
+	Send(event string, data interface{}, headers ...Header) error
+	Publish(event string, data interface{}, headers ...Header) error
 }
 
-type ClientProxy interface {
-	SetHeaders(key string, value string) ClientProxy
-	GetHeaders(key string) string
-	Send(event string, data interface{}) error
-	Publish(event string, data interface{}) error
+type TcpOptions struct {
+	Config
+	Addr string
 }

@@ -38,7 +38,7 @@ func appGuard(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule, microservices.ConnectOptions{
+	app := tcp.New(appModule, microservices.TcpOptions{
 		Addr: addr,
 	})
 
@@ -57,10 +57,19 @@ func clientGuard(addr string, event string) *core.App {
 			// Example JSON messages to send
 			messages := []Message{
 				{"haha", 30},
+				{"hihi", 30},
+				{"haha", 30},
+				{"hihi", 30},
+				{"haha", 30},
+				{"hihi", 30},
 			}
 
-			for _, msg := range messages {
-				client.SetHeaders("key", "value").Send(event, msg)
+			for i, msg := range messages {
+				if i%2 == 0 {
+					client.Send(event, msg, microservices.Header{"key": "value"})
+				} else {
+					client.Send(event, msg)
+				}
 			}
 
 			return ctx.JSON(core.Map{"data": "update"})
@@ -71,9 +80,13 @@ func clientGuard(addr string, event string) *core.App {
 
 	module := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(microservices.ConnectOptions{
-				Addr: addr,
-			}))},
+			Imports: []core.Modules{
+				microservices.RegisterClient(
+					tcp.NewClient(microservices.TcpOptions{
+						Addr: addr,
+					}),
+				),
+			},
 			Controllers: []core.Controllers{
 				controller,
 			},
@@ -105,4 +118,6 @@ func Test_Guard(t *testing.T) {
 	resp, err := testClient.Get(testServer.URL + "/api/test")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	time.Sleep(100 * time.Millisecond)
 }

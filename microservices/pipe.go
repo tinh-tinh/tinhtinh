@@ -2,6 +2,7 @@ package microservices
 
 import (
 	"github.com/tinh-tinh/tinhtinh/v2/common/exception"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
@@ -9,9 +10,11 @@ type CtxKey string
 
 const PIPE CtxKey = "pipe"
 
-func PipeMiddleware(value interface{}) Middleware {
+func PipeMiddleware(dto core.PipeDto) Middleware {
 	return func(ctx Ctx) error {
-		schema := ctx.Payload(value)
+		payload := dto.GetValue()
+		schema := ctx.Payload(payload)
+
 		err := validator.Scanner(schema)
 		if err != nil {
 			panic(exception.ThrowRpc(err.Error()))
@@ -21,7 +24,13 @@ func PipeMiddleware(value interface{}) Middleware {
 	}
 }
 
-func (h *Handler) Pipe(value interface{}) *Handler {
+func (h *Handler) Pipe(value core.PipeDto) *Handler {
 	h.middlewares = append(h.middlewares, PipeMiddleware(value))
 	return h
+}
+
+func Payload[P any](dto P) core.PipeDto {
+	return &core.Pipe[P]{
+		In: core.InBody,
+	}
 }

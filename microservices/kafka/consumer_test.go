@@ -10,7 +10,7 @@ import (
 )
 
 func Test_Consumer(t *testing.T) {
-	instance := kafka.New(kafka.Config{
+	instance := kafka.NewInstance(kafka.Config{
 		Brokers: []string{"127.0.0.1:9092"},
 	})
 	consumer := instance.Consumer(kafka.ConsumerConfig{

@@ -19,7 +19,6 @@ func (h *Handler) Registry() {
 func ParseCtxMiddleware(ctxMid Middleware) middlewareRaw {
 	return func(f Factory) Factory {
 		return FactoryFunc(func(ctx Ctx) error {
-			fmt.Println("Ctx is ", ctx)
 			var err error
 			defer func() {
 				if r := recover(); r != nil {
