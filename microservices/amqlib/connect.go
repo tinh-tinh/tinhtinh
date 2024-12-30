@@ -2,51 +2,51 @@ package amqlib
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
 	"time"
 
 	"github.com/rabbitmq/amqp091-go"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
+
+type Options struct {
+	microservices.Config
+	Addr string
+}
 
 type Connect struct {
 	clientHeaders map[string]string
 	Conn          *amqp091.Connection
 	Module        core.Module
 	Context       context.Context
-	serializer    core.Encode
-	deserializer  core.Decode
+	config        microservices.Config
 }
 
 // Client usage
-func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
+func NewClient(opt Options) microservices.ClientProxy {
 	conn, err := amqp091.Dial(opt.Addr)
 	if err != nil {
 		panic(err)
 	}
 
 	connect := &Connect{
-		Context:       context.Background(),
-		Conn:          conn,
-		serializer:    json.Marshal,
-		deserializer:  json.Unmarshal,
-		clientHeaders: make(map[string]string),
+		Context: context.Background(),
+		Conn:    conn,
+		config:  opt.Config,
 	}
-	if opt.Deserializer != nil {
-		connect.deserializer = opt.Deserializer
-	}
-	if opt.Serializer != nil {
-		connect.serializer = opt.Serializer
+
+	if reflect.ValueOf(connect.config).IsZero() {
+		connect.config = microservices.DefaultConfig()
 	}
 
 	return connect
 }
 
-func (c *Connect) Send(event string, data interface{}) error {
+func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
 	defer c.Conn.Close()
 
 	ch, err := c.Conn.Channel()
@@ -75,8 +75,15 @@ func (c *Connect) Send(event string, data interface{}) error {
 		Type:    microservices.RPC,
 		Event:   event,
 		Data:    data,
-		Headers: c.clientHeaders,
+		Headers: common.CloneMap(c.config.Header),
 	}
+
+	if len(headers) > 0 {
+		for _, v := range headers {
+			common.MergeMaps(message.Headers, v)
+		}
+	}
+
 	body, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -98,7 +105,7 @@ func (c *Connect) Send(event string, data interface{}) error {
 	return nil
 }
 
-func (c *Connect) Publish(event string, data interface{}) error {
+func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
 	defer c.Conn.Close()
 
 	ch, err := c.Conn.Channel()
@@ -150,11 +157,11 @@ func (c *Connect) Publish(event string, data interface{}) error {
 }
 
 func (c *Connect) Serializer(v interface{}) ([]byte, error) {
-	return c.serializer(v)
+	return c.config.Serializer(v)
 }
 
 func (c *Connect) Deserializer(data []byte, v interface{}) error {
-	return c.deserializer(data, v)
+	return c.config.Deserializer(data, v)
 }
 
 func (c *Connect) SetHeaders(key string, value string) microservices.ClientProxy {
@@ -167,28 +174,45 @@ func (c *Connect) GetHeaders(key string) string {
 }
 
 // Server usage
-func Open(opts ...microservices.ConnectOptions) core.Service {
+func New(module core.ModuleParam, opts ...Options) core.Service {
 	connect := &Connect{
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
-		Context:      context.Background(),
+		Module:  module(),
+		config:  microservices.DefaultConfig(),
+		Context: context.Background(),
 	}
 
 	if len(opts) > 0 {
-		if opts[0].Serializer != nil {
-			connect.serializer = opts[0].Serializer
-		}
-
-		if opts[0].Deserializer != nil {
-			connect.deserializer = opts[0].Deserializer
-		}
-
 		if opts[0].Addr != "" {
 			conn, err := amqp091.Dial(opts[0].Addr)
 			if err != nil {
 				panic(err)
 			}
 			connect.Conn = conn
+		}
+		if !reflect.ValueOf(opts[0].Config).IsZero() {
+			connect.config = microservices.ParseConfig(opts[0].Config)
+		}
+	}
+
+	return connect
+}
+
+func Open(opts ...Options) core.Service {
+	connect := &Connect{
+		config:  microservices.DefaultConfig(),
+		Context: context.Background(),
+	}
+
+	if len(opts) > 0 {
+		if opts[0].Addr != "" {
+			conn, err := amqp091.Dial(opts[0].Addr)
+			if err != nil {
+				panic(err)
+			}
+			connect.Conn = conn
+		}
+		if !reflect.ValueOf(opts[0].Config).IsZero() {
+			connect.config = microservices.ParseConfig(opts[0].Config)
 		}
 	}
 

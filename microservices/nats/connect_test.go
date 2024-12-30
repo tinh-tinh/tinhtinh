@@ -110,7 +110,7 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(nats.NewClient(microservices.ConnectOptions{
+				microservices.RegisterClient(nats.NewClient(nats.Options{
 					Addr: addr,
 				})),
 			},
@@ -127,7 +127,7 @@ func ProductApp(addr string) *core.App {
 
 func Test_Hybrid(t *testing.T) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(nats.Open(microservices.ConnectOptions{
+	orderApp.ConnectMicroservice(nats.Open(nats.Options{
 		Addr: "localhost:4222",
 	}))
 
@@ -187,7 +187,7 @@ func Test_Standalone(t *testing.T) {
 		})
 		return module
 	}
-	app := nats.New(appModule, microservices.ConnectOptions{
+	app := nats.New(appModule, nats.Options{
 		Addr: "localhost:4222",
 	})
 
@@ -208,7 +208,7 @@ func Test_Standalone(t *testing.T) {
 
 func Benchmark_Practice(b *testing.B) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(nats.Open(microservices.ConnectOptions{
+	orderApp.ConnectMicroservice(nats.Open(nats.Options{
 		Addr: "localhost:4222",
 	}))
 

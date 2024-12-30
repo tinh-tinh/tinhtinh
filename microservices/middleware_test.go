@@ -39,7 +39,7 @@ func appMiddleware(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule, microservices.ConnectOptions{
+	app := tcp.New(appModule, microservices.TcpOptions{
 		Addr: addr,
 	})
 
@@ -72,7 +72,7 @@ func clientMiddleware(addr string, event string) *core.App {
 
 	module := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(microservices.ConnectOptions{
+			Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(microservices.TcpOptions{
 				Addr: addr,
 			}))},
 			Controllers: []core.Controllers{

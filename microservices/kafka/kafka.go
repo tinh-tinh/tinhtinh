@@ -19,7 +19,7 @@ type Kafka struct {
 	Version sarama.KafkaVersion
 }
 
-func New(config Config) *Kafka {
+func NewInstance(config Config) *Kafka {
 	if config.Verbose {
 		sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)
 	}

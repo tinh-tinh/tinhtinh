@@ -2,75 +2,50 @@ package tcp
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
+	"reflect"
 	"slices"
 	"strings"
 
 	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
-	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
 
 type Server struct {
-	Addr         string
-	Module       core.Module
-	serializer   core.Encode
-	deserializer core.Decode
-	errorHandler microservices.ErrorHandler
-	logger       *logger.Logger
+	Addr   string
+	Module core.Module
+	config microservices.Config
 }
 
-func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microservices.Service {
+func New(module core.ModuleParam, opts ...microservices.TcpOptions) microservices.Service {
 	svc := &Server{
-		Module:       module(),
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
-		logger:       logger.Create(logger.Options{}),
+		Module: module(),
+		config: microservices.DefaultConfig(),
 	}
 
 	if len(opts) > 0 {
-		if opts[0].Serializer != nil {
-			svc.serializer = opts[0].Serializer
-		}
-
-		if opts[0].Deserializer != nil {
-			svc.deserializer = opts[0].Deserializer
+		if !reflect.ValueOf(opts[0].Config).IsZero() {
+			svc.config = microservices.ParseConfig(opts[0].Config)
 		}
 		if opts[0].Addr != "" {
 			svc.Addr = opts[0].Addr
 		}
-		if opts[0].ErrorHandler != nil {
-			svc.errorHandler = opts[0].ErrorHandler
-		}
-		if opts[0].Logger != nil {
-			svc.logger = opts[0].Logger
-		}
-	}
-
-	if svc.errorHandler == nil {
-		svc.errorHandler = microservices.DefaultErrorHandler(svc.logger)
 	}
 
 	return svc
 }
 
-func Open(opts ...microservices.ConnectOptions) core.Service {
+func Open(opts ...microservices.TcpOptions) core.Service {
 	svc := &Server{
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
+		config: microservices.DefaultConfig(),
 	}
 
 	if len(opts) > 0 {
-		if opts[0].Serializer != nil {
-			svc.serializer = opts[0].Serializer
-		}
-
-		if opts[0].Deserializer != nil {
-			svc.deserializer = opts[0].Deserializer
+		if !reflect.ValueOf(opts[0].Config).IsZero() {
+			svc.config = opts[0].Config
 		}
 		if opts[0].Addr != "" {
 			svc.Addr = opts[0].Addr
@@ -116,7 +91,7 @@ func (svc *Server) handler(conn net.Conn, store *microservices.Store) {
 		}
 
 		var msg microservices.Message
-		err = svc.deserializer([]byte(message), &msg)
+		err = svc.config.Deserializer([]byte(message), &msg)
 		if err != nil {
 			fmt.Println("Error deserializing message: ", err)
 			return
@@ -163,13 +138,13 @@ func (svc *Server) handlerPubSub(handlers []microservices.SubscribeHandler, msg 
 }
 
 func (svc *Server) Serializer(v interface{}) ([]byte, error) {
-	return svc.serializer(v)
+	return svc.config.Serializer(v)
 }
 
 func (svc *Server) Deserializer(data []byte, v interface{}) error {
-	return svc.deserializer(data, v)
+	return svc.config.Deserializer(data, v)
 }
 
 func (svc *Server) ErrorHandler(err error) {
-	svc.errorHandler(err)
+	svc.config.ErrorHandler(err)
 }

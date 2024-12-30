@@ -14,7 +14,7 @@ import (
 )
 
 type User struct {
-	Name string `json:"name" validate:"isName"`
+	Name string `json:"name" validate:"isAlpha"`
 	Age  int    `json:"age" validate:"isInt"`
 }
 
@@ -37,13 +37,15 @@ func Test_Pipe(t *testing.T) {
 	resp, err := testClient.Get(testServer.URL + "/api/test")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	time.Sleep(100 * time.Millisecond)
 }
 
 func appPipe(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
-		handler.Pipe(&User{}).OnResponse("user.created", func(ctx microservices.Ctx) error {
+		handler.Pipe(microservices.Payload(User{})).OnResponse("user.created", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
 			return nil
 		})
@@ -60,7 +62,7 @@ func appPipe(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule, microservices.ConnectOptions{
+	app := tcp.New(appModule, microservices.TcpOptions{
 		Addr: addr,
 	})
 
@@ -77,8 +79,9 @@ func clientPipe(addr string) *core.App {
 				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
 			}
 			// Example JSON messages to send
-			messages := []Message{
-				{"Alice", 30},
+			messages := []core.Map{
+				{"name": "#$%^$#^", "age": 30},
+				{"name": "Alice", "age": 25},
 			}
 
 			for _, msg := range messages {
@@ -93,7 +96,7 @@ func clientPipe(addr string) *core.App {
 
 	clientModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(microservices.ConnectOptions{
+			Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(microservices.TcpOptions{
 				Addr: addr,
 			}))},
 			Controllers: []core.Controllers{

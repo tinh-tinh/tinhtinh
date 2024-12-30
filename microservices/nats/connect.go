@@ -2,54 +2,60 @@ package nats
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
+	"reflect"
 
 	nats_connect "github.com/nats-io/nats.go"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
+type Options struct {
+	microservices.Config
+	Addr string
+	nats_connect.Option
+}
+
 type Connect struct {
-	clientHeaders map[string]string
-	Conn          *nats_connect.Conn
-	Module        core.Module
-	Context       context.Context
-	serializer    core.Encode
-	deserializer  core.Decode
+	Conn    *nats_connect.Conn
+	Module  core.Module
+	Context context.Context
+	config  microservices.Config
 }
 
 // Client usage
-func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
-	nc, err := nats_connect.Connect(opt.Addr)
+func NewClient(opt Options) microservices.ClientProxy {
+	nc, err := nats_connect.Connect(opt.Addr, opt.Option)
 	if err != nil {
 		panic(err)
 	}
 
 	connect := &Connect{
-		Conn:          nc,
-		serializer:    json.Marshal,
-		deserializer:  json.Unmarshal,
-		clientHeaders: make(map[string]string),
+		Conn:   nc,
+		config: opt.Config,
 	}
-	if opt.Deserializer != nil {
-		connect.deserializer = opt.Deserializer
-	}
-	if opt.Serializer != nil {
-		connect.serializer = opt.Serializer
+
+	if reflect.ValueOf(connect.config).IsZero() {
+		connect.config = microservices.DefaultConfig()
 	}
 
 	return connect
 }
 
-func (c *Connect) Send(event string, data interface{}) error {
+func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
 	message := microservices.Message{
 		Type:    microservices.RPC,
-		Headers: c.clientHeaders,
+		Headers: common.CloneMap(c.config.Header),
 		Event:   event,
 		Data:    data,
 	}
+	if len(headers) > 0 {
+		for _, v := range headers {
+			common.MergeMaps(message.Headers, v)
+		}
+	}
+
 	payload, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -65,13 +71,19 @@ func (c *Connect) Send(event string, data interface{}) error {
 	return nil
 }
 
-func (c *Connect) Publish(event string, data interface{}) error {
+func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
 	message := microservices.Message{
 		Type:    microservices.PubSub,
 		Event:   event,
 		Data:    data,
-		Headers: c.clientHeaders,
+		Headers: common.CloneMap(c.config.Header),
 	}
+	if len(headers) > 0 {
+		for _, v := range headers {
+			common.MergeMaps(message.Headers, v)
+		}
+	}
+
 	payload, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -87,71 +99,50 @@ func (c *Connect) Publish(event string, data interface{}) error {
 	return nil
 }
 
-func (c *Connect) SetHeaders(key string, value string) microservices.ClientProxy {
-	c.clientHeaders[key] = value
-	return c
-}
-
-func (c *Connect) GetHeaders(key string) string {
-	return c.clientHeaders[key]
-}
-
 // Server usage
-func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microservices.Service {
-	svc := &Connect{
-		Module:       module(),
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
-		Context:      context.Background(),
+func New(module core.ModuleParam, opts ...Options) microservices.Service {
+	connect := &Connect{
+		Module:  module(),
+		config:  microservices.DefaultConfig(),
+		Context: context.Background(),
 	}
 
 	if len(opts) > 0 {
-		if opts[0].Serializer != nil {
-			svc.serializer = opts[0].Serializer
-		}
-
-		if opts[0].Deserializer != nil {
-			svc.deserializer = opts[0].Deserializer
-		}
-
 		if opts[0].Addr != "" {
-			nc, err := nats_connect.Connect(opts[0].Addr)
+			nc, err := nats_connect.Connect(opts[0].Addr, opts[0].Option)
 			if err != nil {
 				panic(err)
 			}
-			svc.Conn = nc
+			connect.Conn = nc
+		}
+		if !reflect.ValueOf(opts[0].Config).IsZero() {
+			connect.config = microservices.ParseConfig(opts[0].Config)
 		}
 	}
 
-	return svc
+	return connect
 }
 
-func Open(opts ...microservices.ConnectOptions) core.Service {
-	svc := &Connect{
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
-		Context:      context.Background(),
+func Open(opts ...Options) core.Service {
+	connect := &Connect{
+		config:  microservices.DefaultConfig(),
+		Context: context.Background(),
 	}
 
 	if len(opts) > 0 {
-		if opts[0].Serializer != nil {
-			svc.serializer = opts[0].Serializer
-		}
-
-		if opts[0].Deserializer != nil {
-			svc.deserializer = opts[0].Deserializer
-		}
-
 		if opts[0].Addr != "" {
-			nc, err := nats_connect.Connect(opts[0].Addr)
+			nc, err := nats_connect.Connect(opts[0].Addr, opts[0].Option)
 			if err != nil {
 				panic(err)
 			}
-			svc.Conn = nc
+			connect.Conn = nc
+		}
+		if !reflect.ValueOf(opts[0].Config).IsZero() {
+			connect.config = microservices.ParseConfig(opts[0].Config)
 		}
 	}
 
-	return svc
+	return connect
 }
 
 func (c *Connect) Create(module core.Module) {
@@ -196,13 +187,13 @@ func (c *Connect) Handler(msg *nats_connect.Msg, sub microservices.SubscribeHand
 }
 
 func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
-	return svc.serializer(v)
+	return svc.config.Serializer(v)
 }
 
 func (svc *Connect) Deserializer(data []byte, v interface{}) error {
-	return svc.deserializer(data, v)
+	return svc.config.Deserializer(data, v)
 }
 
 func (c *Connect) ErrorHandler(err error) {
-	log.Printf("Error when running tcp: %v\n", err)
+	c.config.ErrorHandler(err)
 }

@@ -109,7 +109,7 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(amqlib.NewClient(microservices.ConnectOptions{
+				microservices.RegisterClient(amqlib.NewClient(amqlib.Options{
 					Addr: addr,
 				})),
 			},
@@ -126,7 +126,7 @@ func ProductApp(addr string) *core.App {
 
 func Test_Practice(t *testing.T) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(amqlib.Open(microservices.ConnectOptions{
+	orderApp.ConnectMicroservice(amqlib.Open(amqlib.Options{
 		Addr: "amqp://guest:guest@localhost:5672/",
 	}))
 

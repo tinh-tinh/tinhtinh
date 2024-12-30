@@ -111,8 +111,10 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(kafka.NewClient(microservices.ConnectOptions{
-					Addr: addr,
+				microservices.RegisterClient(kafka.NewClient(kafka.Options{
+					Options: kafka.Config{
+						Brokers: []string{addr},
+					},
 				})),
 			},
 			Controllers: []core.Controllers{controller},
@@ -128,8 +130,11 @@ func ProductApp(addr string) *core.App {
 
 func Test_Practice(t *testing.T) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(kafka.Open("order-app", microservices.ConnectOptions{
-		Addr: "127.0.0.1:9092",
+	orderApp.ConnectMicroservice(kafka.Open(kafka.Options{
+		Options: kafka.Config{
+			Brokers: []string{"127.0.0.1:9092"},
+		},
+		GroupID: "order--app",
 	}))
 
 	orderApp.StartAllMicroservices()

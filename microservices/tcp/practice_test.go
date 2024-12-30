@@ -110,7 +110,7 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(tcp.NewClient(microservices.ConnectOptions{
+				microservices.RegisterClient(tcp.NewClient(microservices.TcpOptions{
 					Addr: addr,
 				})),
 			},
@@ -127,7 +127,7 @@ func ProductApp(addr string) *core.App {
 
 func Test_Practice(t *testing.T) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(tcp.Open(microservices.ConnectOptions{
+	orderApp.ConnectMicroservice(tcp.Open(microservices.TcpOptions{
 		Addr: "localhost:3006",
 	}))
 

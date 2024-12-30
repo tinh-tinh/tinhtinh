@@ -20,7 +20,6 @@ func (f FactoryFunc) Handle(ctx Ctx) error {
 
 func ParseFactory(factory Factory) Factory {
 	return FactoryFunc(func(ctx Ctx) error {
-		fmt.Println("Ctx is ", ctx)
 		var err error
 		defer func() {
 			if r := recover(); r != nil {

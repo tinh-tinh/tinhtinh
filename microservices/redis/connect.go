@@ -2,45 +2,40 @@ package redis
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"log"
+	"reflect"
 	"strings"
 
 	redis_store "github.com/redis/go-redis/v9"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
+type Options struct {
+	microservices.Config
+	*redis_store.Options
+}
+
 type Connect struct {
-	clientHeaders map[string]string
-	Context       context.Context
-	Module        core.Module
-	serializer    core.Encode
-	deserializer  core.Decode
-	Conn          *redis_store.Client
+	Context context.Context
+	Module  core.Module
+	Conn    *redis_store.Client
+	config  microservices.Config
 }
 
 // Client usage
-func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
-	conn := redis_store.NewClient(&redis_store.Options{
-		Addr:     opt.Addr,
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
+func NewClient(opt Options) microservices.ClientProxy {
+	conn := redis_store.NewClient(opt.Options)
 
 	connect := &Connect{
-		Context:       context.Background(),
-		Conn:          conn,
-		serializer:    json.Marshal,
-		deserializer:  json.Unmarshal,
-		clientHeaders: make(map[string]string),
+		Context: context.Background(),
+		Conn:    conn,
+		config:  opt.Config,
 	}
-	if opt.Deserializer != nil {
-		connect.deserializer = opt.Deserializer
-	}
-	if opt.Serializer != nil {
-		connect.serializer = opt.Serializer
+
+	if reflect.ValueOf(connect.config).IsZero() {
+		connect.config = microservices.DefaultConfig()
 	}
 
 	return connect
@@ -50,13 +45,19 @@ func (c *Connect) Close() {
 	c.Conn.Close()
 }
 
-func (c *Connect) Send(event string, data interface{}) error {
+func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
 	message := microservices.Message{
 		Type:    microservices.RPC,
-		Headers: c.clientHeaders,
+		Headers: common.CloneMap(c.config.Header),
 		Event:   event,
 		Data:    data,
 	}
+	if len(headers) > 0 {
+		for _, v := range headers {
+			common.MergeMaps(message.Headers, v)
+		}
+	}
+
 	payload, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -69,13 +70,19 @@ func (c *Connect) Send(event string, data interface{}) error {
 	return nil
 }
 
-func (c *Connect) Publish(event string, data interface{}) error {
+func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
 	message := microservices.Message{
 		Type:    microservices.PubSub,
-		Headers: c.clientHeaders,
+		Headers: common.CloneMap(c.config.Header),
 		Event:   event,
 		Data:    data,
 	}
+	if len(headers) > 0 {
+		for _, v := range headers {
+			common.MergeMaps(message.Headers, v)
+		}
+	}
+
 	payload, err := c.Serializer(message)
 	if err != nil {
 		return err
@@ -88,67 +95,40 @@ func (c *Connect) Publish(event string, data interface{}) error {
 	return nil
 }
 
-func (c *Connect) SetHeaders(key string, value string) microservices.ClientProxy {
-	c.clientHeaders[key] = value
-	return c
-}
-
-func (c *Connect) GetHeaders(key string) string {
-	return c.clientHeaders[key]
-}
-
 // Server usage
-func New(module core.ModuleParam, opts ...microservices.ConnectOptions) microservices.Service {
+func New(module core.ModuleParam, opts ...Options) microservices.Service {
 	connect := &Connect{
-		Module:       module(),
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
+		Context: context.Background(),
+		Module:  module(),
+		config:  microservices.DefaultConfig(),
 	}
 
 	if len(opts) > 0 {
-		if opts[0].Serializer != nil {
-			connect.serializer = opts[0].Serializer
-		}
-
-		if opts[0].Deserializer != nil {
-			connect.deserializer = opts[0].Deserializer
-		}
-		if opts[0].Addr != "" {
-			conn := redis_store.NewClient(&redis_store.Options{
-				Addr:     opts[0].Addr,
-				Password: "", // no password set
-				DB:       0,  // use default DB
-			})
+		if opts[0].Options != nil {
+			conn := redis_store.NewClient(opts[0].Options)
 			connect.Conn = conn
+		}
+		if !reflect.ValueOf(opts[0].Config).IsZero() {
+			connect.config = microservices.ParseConfig(opts[0].Config)
 		}
 	}
 
 	return connect
 }
 
-func Open(opts ...microservices.ConnectOptions) core.Service {
+func Open(opts ...Options) core.Service {
 	connect := &Connect{
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
-		Context:      context.Background(),
+		Context: context.Background(),
+		config:  microservices.DefaultConfig(),
 	}
 
 	if len(opts) > 0 {
-		if opts[0].Serializer != nil {
-			connect.serializer = opts[0].Serializer
-		}
-
-		if opts[0].Deserializer != nil {
-			connect.deserializer = opts[0].Deserializer
-		}
-
-		if opts[0].Addr != "" {
-			conn := redis_store.NewClient(&redis_store.Options{
-				Addr:     opts[0].Addr,
-				Password: "", // no password set
-				DB:       0,  // use default DB
-			})
+		if opts[0].Options != nil {
+			conn := redis_store.NewClient(opts[0].Options)
 			connect.Conn = conn
+		}
+		if !reflect.ValueOf(opts[0].Config).IsZero() {
+			connect.config = microservices.ParseConfig(opts[0].Config)
 		}
 	}
 
@@ -203,13 +183,13 @@ func (c *Connect) Handler(subscriber *redis_store.PubSub, sub microservices.Subs
 }
 
 func (c *Connect) Serializer(v interface{}) ([]byte, error) {
-	return c.serializer(v)
+	return c.config.Serializer(v)
 }
 
 func (c *Connect) Deserializer(data []byte, v interface{}) error {
-	return c.deserializer(data, v)
+	return c.config.Deserializer(data, v)
 }
 
 func (c *Connect) ErrorHandler(err error) {
-	log.Printf("Error when running tcp: %v\n", err)
+	c.config.ErrorHandler(err)
 }

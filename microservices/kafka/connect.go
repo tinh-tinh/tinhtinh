@@ -1,61 +1,65 @@
 package kafka
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"reflect"
 
 	"github.com/IBM/sarama"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
+type Options struct {
+	microservices.Config
+	Options Config
+	GroupID string
+}
+
 type Connect struct {
-	clientHeaders map[string]string
-	Conn          *Kafka
-	Module        core.Module
-	serializer    core.Encode
-	deserializer  core.Decode
-	GroupID       string
+	Conn    *Kafka
+	Module  core.Module
+	config  microservices.Config
+	GroupID string
 }
 
 // Client usage
-func NewClient(opt microservices.ConnectOptions) microservices.ClientProxy {
-	instance := New(Config{
-		Brokers: []string{opt.Addr},
-	})
+func NewClient(opt Options) microservices.ClientProxy {
+	instance := NewInstance(opt.Options)
 	connect := &Connect{
-		Conn:          instance,
-		serializer:    json.Marshal,
-		deserializer:  json.Unmarshal,
-		clientHeaders: make(map[string]string),
+		Conn:   instance,
+		config: opt.Config,
 	}
-	if opt.Deserializer != nil {
-		connect.deserializer = opt.Deserializer
-	}
-	if opt.Serializer != nil {
-		connect.serializer = opt.Serializer
+
+	if reflect.ValueOf(connect.config).IsZero() {
+		connect.config = microservices.DefaultConfig()
 	}
 
 	return connect
 }
 
 func (c *Connect) Serializer(v interface{}) ([]byte, error) {
-	return c.serializer(v)
+	return c.config.Serializer(v)
 }
 
 func (c *Connect) Deserializer(data []byte, v interface{}) error {
-	return c.deserializer(data, v)
+	return c.config.Deserializer(data, v)
 }
 
-func (c *Connect) Send(event string, data interface{}) error {
+func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
 	message := microservices.Message{
 		Type:    microservices.RPC,
-		Headers: c.clientHeaders,
+		Headers: common.CloneMap(c.config.Header),
 		Event:   event,
 		Data:    data,
 	}
+	if len(headers) > 0 {
+		for _, v := range headers {
+			common.MergeMaps(message.Headers, v)
+		}
+	}
+
 	payload, err := c.Serializer(message)
 	if err != nil {
 		fmt.Println(err)
@@ -70,13 +74,20 @@ func (c *Connect) Send(event string, data interface{}) error {
 	return nil
 }
 
-func (c *Connect) Publish(event string, data interface{}) error {
+func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
 	message := microservices.Message{
 		Type:    microservices.PubSub,
-		Headers: c.clientHeaders,
+		Headers: common.CloneMap(c.config.Header),
 		Event:   event,
 		Data:    data,
 	}
+
+	if len(headers) > 0 {
+		for _, v := range headers {
+			common.MergeMaps(message.Headers, v)
+		}
+	}
+
 	payload, err := c.Serializer(message)
 	if err != nil {
 		fmt.Println(err)
@@ -91,37 +102,43 @@ func (c *Connect) Publish(event string, data interface{}) error {
 	return nil
 }
 
-func (c *Connect) SetHeaders(key string, value string) microservices.ClientProxy {
-	c.clientHeaders[key] = value
-	return c
-}
-
-func (c *Connect) GetHeaders(key string) string {
-	return c.clientHeaders[key]
-}
-
 // Server usage
-func Open(groupID string, opts ...microservices.ConnectOptions) core.Service {
+func New(module core.ModuleParam, opts ...Options) core.Service {
 	connect := &Connect{
-		serializer:   json.Marshal,
-		deserializer: json.Unmarshal,
-		GroupID:      groupID,
+		config: microservices.DefaultConfig(),
+		Module: module(),
 	}
 
 	if len(opts) > 0 {
-		if opts[0].Serializer != nil {
-			connect.serializer = opts[0].Serializer
+		if opts[0].GroupID != "" {
+			connect.GroupID = opts[0].GroupID
 		}
-
-		if opts[0].Deserializer != nil {
-			connect.deserializer = opts[0].Deserializer
+		if !reflect.ValueOf(opts[0].Config).IsZero() {
+			connect.config = microservices.ParseConfig(opts[0].Config)
 		}
+		if !reflect.ValueOf(opts[0].Options).IsZero() {
+			conn := NewInstance(opts[0].Options)
+			connect.Conn = conn
+		}
+	}
 
-		if opts[0].Addr != "" {
-			conn := New(Config{
-				Brokers: []string{opts[0].Addr},
-				Version: sarama.V2_6_0_0.String(),
-			})
+	return connect
+}
+
+func Open(opts ...Options) core.Service {
+	connect := &Connect{
+		config: microservices.DefaultConfig(),
+	}
+
+	if len(opts) > 0 {
+		if opts[0].GroupID != "" {
+			connect.GroupID = opts[0].GroupID
+		}
+		if !reflect.ValueOf(opts[0].Config).IsZero() {
+			connect.config = microservices.ParseConfig(opts[0].Config)
+		}
+		if !reflect.ValueOf(opts[0].Options).IsZero() {
+			conn := NewInstance(opts[0].Options)
 			connect.Conn = conn
 		}
 	}
