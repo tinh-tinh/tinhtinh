@@ -134,7 +134,7 @@ func Test_Practice(t *testing.T) {
 		Options: kafka.Config{
 			Brokers: []string{"127.0.0.1:9092"},
 		},
-		GroupID: "order--app",
+		GroupID: "order-app",
 	}))
 
 	orderApp.StartAllMicroservices()
