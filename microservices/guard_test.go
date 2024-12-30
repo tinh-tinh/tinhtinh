@@ -38,7 +38,7 @@ func appGuard(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule, microservices.TcpOptions{
+	app := tcp.New(appModule, microservices.Options{
 		Addr: addr,
 	})
 
@@ -82,7 +82,7 @@ func clientGuard(addr string, event string) *core.App {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
 				microservices.RegisterClient(
-					tcp.NewClient(microservices.TcpOptions{
+					tcp.NewClient(tcp.Options{
 						Addr: addr,
 					}),
 				),

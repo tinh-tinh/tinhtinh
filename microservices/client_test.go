@@ -20,7 +20,7 @@ func Test_Client(t *testing.T) {
 
 	go http.Serve(listener, nil)
 	module := core.NewModule(core.NewModuleOptions{
-		Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(microservices.TcpOptions{
+		Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(tcp.Options{
 			Addr: "localhost:8000",
 		}))},
 	})
@@ -59,7 +59,7 @@ func Test_HybridApp(t *testing.T) {
 	}
 
 	app := core.CreateFactory(appModule)
-	app.ConnectMicroservice(tcp.Open(microservices.TcpOptions{
+	app.ConnectMicroservice(tcp.Open(microservices.Options{
 		Addr: "localhost:3005",
 	}))
 

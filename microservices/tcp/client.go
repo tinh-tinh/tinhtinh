@@ -5,21 +5,29 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"time"
 
 	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
+
+type Options struct {
+	microservices.Config
+	Addr string
+}
 
 type Client struct {
 	config microservices.Config
 	Conn   net.Conn
 }
 
-func NewClient(opt microservices.TcpOptions) microservices.ClientProxy {
+func NewClient(opt Options) microservices.ClientProxy {
 	conn, err := net.Dial("tcp", opt.Addr)
 	if err != nil {
 		panic(err)
 	}
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
 	client := &Client{
 		Conn:   conn,
 		config: opt.Config,
