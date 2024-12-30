@@ -62,7 +62,7 @@ func appPipe(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule, microservices.TcpOptions{
+	app := tcp.New(appModule, microservices.Options{
 		Addr: addr,
 	})
 
@@ -96,7 +96,7 @@ func clientPipe(addr string) *core.App {
 
 	clientModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(microservices.TcpOptions{
+			Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(tcp.Options{
 				Addr: addr,
 			}))},
 			Controllers: []core.Controllers{

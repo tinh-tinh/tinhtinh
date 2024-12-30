@@ -210,7 +210,7 @@ func (app *App) Listen(port int) {
 		Handler: handler,
 	}
 
-	log.Printf("Server running on http://localhost:%d/%s\n", port, app.Prefix)
+	log.Printf("Server running on http://localhost:%d%s\n", port, app.Prefix)
 
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {

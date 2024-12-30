@@ -26,7 +26,7 @@ type ClientProxy interface {
 	Publish(event string, data interface{}, headers ...Header) error
 }
 
-type TcpOptions struct {
+type Options struct {
 	Config
 	Addr string
 }
