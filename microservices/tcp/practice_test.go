@@ -127,7 +127,7 @@ func ProductApp(addr string) *core.App {
 
 func Test_Practice(t *testing.T) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(tcp.Open(microservices.Options{
+	orderApp.ConnectMicroservice(tcp.Open(tcp.Options{
 		Addr: "localhost:3006",
 	}))
 

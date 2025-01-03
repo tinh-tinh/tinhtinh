@@ -25,8 +25,3 @@ type ClientProxy interface {
 	Send(event string, data interface{}, headers ...Header) error
 	Publish(event string, data interface{}, headers ...Header) error
 }
-
-type Options struct {
-	Config
-	Addr string
-}
