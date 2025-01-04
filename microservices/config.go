@@ -2,7 +2,6 @@ package microservices
 
 import (
 	"encoding/json"
-	"time"
 
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
@@ -13,7 +12,6 @@ type Header map[string]string
 type Config struct {
 	Serializer   core.Encode
 	Deserializer core.Decode
-	Timeout      time.Duration
 	Header       Header
 	ErrorHandler ErrorHandler
 	Logger       *logger.Logger

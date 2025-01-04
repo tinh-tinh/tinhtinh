@@ -149,6 +149,8 @@ func DirectoryApp() *core.App {
 
 			payload := ctx.Payload(&User{}).(*User)
 			directoryService.directories[tenantID] = append(directoryService.directories[tenantID], payload)
+
+			fmt.Printf("Receive payload is %v\n", payload)
 			return nil
 		})
 

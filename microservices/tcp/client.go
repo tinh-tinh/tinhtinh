@@ -1,7 +1,6 @@
 package tcp
 
 import (
-	"bufio"
 	"fmt"
 	"net"
 	"reflect"
@@ -13,7 +12,8 @@ import (
 
 type Options struct {
 	microservices.Config
-	Addr string
+	Addr    string
+	Timeout time.Duration
 }
 
 type Client struct {
@@ -26,23 +26,24 @@ func NewClient(opt Options) microservices.ClientProxy {
 	if err != nil {
 		panic(err)
 	}
-	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	if reflect.ValueOf(opt.Config).IsZero() {
+		opt.Config = microservices.DefaultConfig()
+	}
+
+	if opt.Timeout > 0 {
+		conn.SetDeadline(time.Now().Add(opt.Timeout))
+	}
 
 	client := &Client{
 		Conn:   conn,
 		config: opt.Config,
 	}
 
-	if reflect.ValueOf(client.config).IsZero() {
-		client.config = microservices.ParseConfig(opt.Config)
-	}
-
 	return client
 }
 
 func (client *Client) Send(event string, data interface{}, headers ...microservices.Header) error {
-	writer := bufio.NewWriter(client.Conn)
-
 	message := microservices.Message{
 		Type:    microservices.RPC,
 		Headers: common.CloneMap(client.config.Header),
@@ -57,23 +58,22 @@ func (client *Client) Send(event string, data interface{}, headers ...microservi
 
 	jsonData, err := client.config.Serializer(message)
 	if err != nil {
+		client.config.ErrorHandler(err)
 		return err
 	}
 
 	jsonData = append(jsonData, '\n')
-	_, err = writer.Write(jsonData)
+	_, err = client.Conn.Write(jsonData)
 	if err != nil {
+		client.config.ErrorHandler(err)
 		return err
 	}
 
-	writer.Flush()
 	fmt.Printf("Send message: %v for event %s\n", data, event)
 	return nil
 }
 
 func (client *Client) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	writer := bufio.NewWriter(client.Conn)
-
 	message := microservices.Message{
 		Type:    microservices.PubSub,
 		Headers: common.CloneMap(client.config.Header),
@@ -92,12 +92,13 @@ func (client *Client) Publish(event string, data interface{}, headers ...microse
 	}
 
 	jsonData = append(jsonData, '\n')
-	_, err = writer.Write(jsonData)
+
+	_, err = client.Conn.Write(jsonData)
 	if err != nil {
+		client.config.ErrorHandler(err)
 		return err
 	}
 
-	writer.Flush()
 	fmt.Printf("Publish message: %v for event %s\n", data, event)
 	return nil
 }
