@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/v2/common/exception"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices/tcp"
@@ -15,6 +16,9 @@ import (
 
 func appMiddleware(addr string) microservices.Service {
 	middleware := func(ctx microservices.Ctx) error {
+		if ctx.Headers("key") != "value" {
+			return exception.ThrowRpc("error")
+		}
 		ctx.Set("key", "value")
 		return ctx.Next()
 	}
@@ -39,7 +43,7 @@ func appMiddleware(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule, microservices.Options{
+	app := tcp.New(appModule, tcp.Options{
 		Addr: addr,
 	})
 
@@ -58,10 +62,18 @@ func clientMiddleware(addr string, event string) *core.App {
 			// Example JSON messages to send
 			messages := []Message{
 				{"haha", 30},
+				{"haha", 30},
+				{"haha", 30},
+				{"haha", 30},
+				{"haha", 30},
 			}
 
-			for _, msg := range messages {
-				client.Send(event, msg)
+			for i, msg := range messages {
+				if i%2 == 0 {
+					go client.Send(event, msg, microservices.Header{"key": "value"})
+				} else {
+					client.Send(event, msg)
+				}
 			}
 
 			return ctx.JSON(core.Map{"data": "update"})

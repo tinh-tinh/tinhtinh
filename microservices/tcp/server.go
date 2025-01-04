@@ -20,7 +20,7 @@ type Server struct {
 	config microservices.Config
 }
 
-func New(module core.ModuleParam, opts ...microservices.Options) microservices.Service {
+func New(module core.ModuleParam, opts ...Options) microservices.Service {
 	svc := &Server{
 		Module: module(),
 		config: microservices.DefaultConfig(),
@@ -38,7 +38,7 @@ func New(module core.ModuleParam, opts ...microservices.Options) microservices.S
 	return svc
 }
 
-func Open(opts ...microservices.Options) core.Service {
+func Open(opts ...Options) core.Service {
 	svc := &Server{
 		config: microservices.DefaultConfig(),
 	}

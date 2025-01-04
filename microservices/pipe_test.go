@@ -62,7 +62,7 @@ func appPipe(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule, microservices.Options{
+	app := tcp.New(appModule, tcp.Options{
 		Addr: addr,
 	})
 

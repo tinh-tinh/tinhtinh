@@ -11,9 +11,10 @@ func (h *Handler) Use(middlewares ...Middleware) *Handler {
 	return h
 }
 
-func (h *Handler) Registry() {
+func (h *Handler) Registry() *Handler {
 	h.globalMiddlewares = append(h.globalMiddlewares, h.middlewares...)
 	h.middlewares = nil
+	return h
 }
 
 func ParseCtxMiddleware(ctxMid Middleware) middlewareRaw {

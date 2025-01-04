@@ -75,7 +75,7 @@ func (client *Client) Publish(event string, data interface{}, headers ...microse
 	writer := bufio.NewWriter(client.Conn)
 
 	message := microservices.Message{
-		Type:    microservices.RPC,
+		Type:    microservices.PubSub,
 		Headers: common.CloneMap(client.config.Header),
 		Event:   event,
 		Data:    data,
