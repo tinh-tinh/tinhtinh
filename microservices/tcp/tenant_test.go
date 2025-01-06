@@ -70,7 +70,7 @@ func AuthApp(addr string) *core.App {
 				if u.Email == user.Email && u.Password == user.Password {
 					tenantID := ctx.Headers("x-tenant-id")
 
-					go client.Publish("user.logined", user, microservices.Header{"x-tenant-id": tenantID})
+					go client.Publish("user.*", user, microservices.Header{"x-tenant-id": tenantID})
 					return ctx.JSON(core.Map{"data": u})
 				}
 			}
@@ -90,7 +90,8 @@ func AuthApp(addr string) *core.App {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
 				microservices.RegisterClient(tcp.NewClient(tcp.Options{
-					Addr: addr,
+					Addr:    addr,
+					Timeout: 200 * time.Millisecond,
 				})),
 			},
 			Controllers: []core.Controllers{controller},
