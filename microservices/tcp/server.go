@@ -64,8 +64,8 @@ func (svc *Server) Listen() {
 	if err != nil {
 		panic(err)
 	}
-	store := svc.Module.Ref(microservices.STORE).(*microservices.Store)
-	if store == nil {
+	store, ok := svc.Module.Ref(microservices.STORE).(*microservices.Store)
+	if !ok {
 		panic("store not found")
 	}
 

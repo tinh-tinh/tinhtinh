@@ -29,6 +29,8 @@ func NewClient(opt Options) microservices.ClientProxy {
 
 	if reflect.ValueOf(opt.Config).IsZero() {
 		opt.Config = microservices.DefaultConfig()
+	} else {
+		opt.Config = microservices.ParseConfig(opt.Config)
 	}
 
 	if opt.Timeout > 0 {
