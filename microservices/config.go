@@ -3,6 +3,7 @@ package microservices
 import (
 	"encoding/json"
 
+	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
@@ -15,6 +16,7 @@ type Config struct {
 	Header       Header
 	ErrorHandler ErrorHandler
 	Logger       *logger.Logger
+	CompressAlg  compress.Alg
 }
 
 func DefaultConfig() Config {
