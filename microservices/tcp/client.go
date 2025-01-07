@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
@@ -22,7 +21,13 @@ type Client struct {
 }
 
 func NewClient(opt Options) microservices.ClientProxy {
-	conn, err := net.Dial("tcp", opt.Addr)
+	var conn net.Conn
+	var err error
+	if opt.Timeout > 0 {
+		conn, err = net.DialTimeout("tcp", opt.Addr, opt.Timeout)
+	} else {
+		conn, err = net.Dial("tcp", opt.Addr)
+	}
 	if err != nil {
 		panic(err)
 	}
@@ -33,10 +38,6 @@ func NewClient(opt Options) microservices.ClientProxy {
 		opt.Config = microservices.ParseConfig(opt.Config)
 	}
 
-	if opt.Timeout > 0 {
-		conn.SetDeadline(time.Now().Add(opt.Timeout))
-	}
-
 	client := &Client{
 		Conn:   conn,
 		config: opt.Config,
@@ -45,27 +46,27 @@ func NewClient(opt Options) microservices.ClientProxy {
 	return client
 }
 
-func (client *Client) Send(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
-		Type:    microservices.RPC,
-		Headers: common.CloneMap(client.config.Header),
-		Event:   event,
-		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	jsonData, err := client.config.Serializer(message)
+func (client *Client) Timeout(duration time.Duration) microservices.ClientProxy {
+	err := client.Conn.SetDeadline(time.Now().Add(duration))
 	if err != nil {
 		client.config.ErrorHandler(err)
+	}
+	return client
+}
+
+func (client *Client) Send(event string, data interface{}, headers ...microservices.Header) error {
+	payload, err := microservices.EncodeMessage(client, microservices.Message{
+		Type:    microservices.RPC,
+		Headers: microservices.AssignHeader(client.config.Header, headers...),
+		Event:   event,
+		Data:    data,
+	})
+	if err != nil {
+		client.Serializer(err)
 		return err
 	}
-
-	jsonData = append(jsonData, '\n')
-	_, err = client.Conn.Write(jsonData)
+	payload = append(payload, '\n')
+	_, err = client.Conn.Write(payload)
 	if err != nil {
 		client.config.ErrorHandler(err)
 		return err
@@ -76,26 +77,18 @@ func (client *Client) Send(event string, data interface{}, headers ...microservi
 }
 
 func (client *Client) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
+	payload, err := microservices.EncodeMessage(client, microservices.Message{
 		Type:    microservices.PubSub,
-		Headers: common.CloneMap(client.config.Header),
+		Headers: microservices.AssignHeader(client.config.Header, headers...),
 		Event:   event,
 		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	jsonData, err := client.config.Serializer(message)
+	})
 	if err != nil {
+		client.Serializer(err)
 		return err
 	}
-
-	jsonData = append(jsonData, '\n')
-
-	_, err = client.Conn.Write(jsonData)
+	payload = append(payload, '\n')
+	_, err = client.Conn.Write(payload)
 	if err != nil {
 		client.config.ErrorHandler(err)
 		return err
@@ -103,4 +96,12 @@ func (client *Client) Publish(event string, data interface{}, headers ...microse
 
 	fmt.Printf("Publish message: %v for event %s\n", data, event)
 	return nil
+}
+
+func (c *Client) Serializer(v interface{}) ([]byte, error) {
+	return c.config.Serializer(v)
+}
+
+func (c *Client) Deserializer(data []byte, v interface{}) error {
+	return c.config.Deserializer(data, v)
 }

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	nats_connect "github.com/nats-io/nats.go"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -22,6 +22,7 @@ type Connect struct {
 	Module  core.Module
 	Context context.Context
 	config  microservices.Config
+	timeout time.Duration
 }
 
 // Client usage
@@ -43,60 +44,74 @@ func NewClient(opt Options) microservices.ClientProxy {
 	return connect
 }
 
+func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
+	c.timeout = duration
+	return c
+}
+
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
+	payload, err := microservices.EncodeMessage(c, microservices.Message{
 		Type:    microservices.RPC,
-		Headers: common.CloneMap(c.config.Header),
+		Headers: microservices.AssignMap(c.config.Header, headers...),
 		Event:   event,
 		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
+	})
 	if err != nil {
+		c.Serializer(err)
 		return err
 	}
 
-	fmt.Printf("Send payload: %v to event: %s\n", data, event)
-	err = c.Conn.Publish(event, payload)
+	ctx, cancel := context.WithTimeout(c.Context, c.timeout)
+	defer cancel()
+
+	err = c.emit(ctx, event, payload)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return err
 	}
 
+	fmt.Printf("Send payload: %v to event: %s\n", data, event)
 	return nil
 }
 
 func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
+	payload, err := microservices.EncodeMessage(c, microservices.Message{
 		Type:    microservices.PubSub,
+		Headers: microservices.AssignMap(c.config.Header, headers...),
 		Event:   event,
 		Data:    data,
-		Headers: common.CloneMap(c.config.Header),
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
+	})
 	if err != nil {
+		c.Serializer(err)
 		return err
 	}
 
-	fmt.Printf("Send payload: %v to event: %s\n", data, event)
-	err = c.Conn.Publish(event, payload)
+	ctx, cancel := context.WithTimeout(c.Context, c.timeout)
+	defer cancel()
+
+	err = c.emit(ctx, event, payload)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return err
 	}
 
+	fmt.Printf("Publish payload: %v to event: %s\n", data, event)
 	return nil
+}
+
+func (c *Connect) emit(ctx context.Context, event string, payload []byte) error {
+	done := make(chan error, 1)
+	go func() {
+		err := c.Conn.Publish(event, payload)
+		done <- err
+	}()
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("publish operation timed out: %w", ctx.Err())
+	case err := <-done:
+		return err
+	}
 }
 
 // Server usage
@@ -159,7 +174,8 @@ func (c *Connect) Listen() {
 	if store.Subscribers[string(microservices.RPC)] != nil {
 		for _, sub := range store.Subscribers[string(microservices.RPC)] {
 			go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
-				c.Handler(msg, sub)
+				message := microservices.DecodeMessage(c, msg.Data)
+				sub.Handle(c, message)
 			})
 		}
 	}
@@ -167,23 +183,11 @@ func (c *Connect) Listen() {
 	if store.Subscribers[string(microservices.PubSub)] != nil {
 		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
 			go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
-				c.Handler(msg, sub)
+				message := microservices.DecodeMessage(c, msg.Data)
+				sub.Handle(c, message)
 			})
 		}
 	}
-}
-
-func (c *Connect) Handler(msg *nats_connect.Msg, sub microservices.SubscribeHandler) {
-	var message microservices.Message
-	err := c.Deserializer([]byte(msg.Data), &message)
-	if err != nil {
-		fmt.Println("Error deserializing message: ", err)
-		return
-	}
-
-	sub.Handle(c, message)
-	// data := microservices.ParseCtx(message.Data, c)
-	// factory(data)
 }
 
 func (svc *Connect) Serializer(v interface{}) ([]byte, error) {

@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	redis_store "github.com/redis/go-redis/v9"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -28,41 +27,28 @@ type Connect struct {
 func NewClient(opt Options) microservices.ClientProxy {
 	conn := redis_store.NewClient(opt.Options)
 
+	if reflect.ValueOf(opt.Config).IsZero() {
+		opt.Config = microservices.DefaultConfig()
+	} else {
+		opt.Config = microservices.ParseConfig(opt.Config)
+	}
+
 	connect := &Connect{
 		Context: context.Background(),
 		Conn:    conn,
 		config:  opt.Config,
 	}
 
-	if reflect.ValueOf(connect.config).IsZero() {
-		connect.config = microservices.DefaultConfig()
-	}
-
 	return connect
 }
 
-func (c *Connect) Close() {
-	c.Conn.Close()
-}
-
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
+	err := c.emit(event, microservices.Message{
 		Type:    microservices.RPC,
-		Headers: common.CloneMap(c.config.Header),
+		Headers: microservices.AssignHeader(c.config.Header, headers...),
 		Event:   event,
 		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
-	if err != nil {
-		return err
-	}
-	err = c.Conn.Publish(c.Context, event, payload).Err()
+	})
 	if err != nil {
 		return err
 	}
@@ -71,27 +57,30 @@ func (c *Connect) Send(event string, data interface{}, headers ...microservices.
 }
 
 func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
+	err := c.emit(event, microservices.Message{
 		Type:    microservices.PubSub,
-		Headers: common.CloneMap(c.config.Header),
+		Headers: microservices.AssignHeader(c.config.Header, headers...),
 		Event:   event,
 		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
-	if err != nil {
-		return err
-	}
-	err = c.Conn.Publish(c.Context, event, payload).Err()
+	})
 	if err != nil {
 		return err
 	}
 	fmt.Printf("Publish mesage: %v for event %s\n", data, event)
+	return nil
+}
+
+func (c *Connect) emit(event string, message microservices.Message) error {
+	payload, err := microservices.EncodeMessage(c, message)
+	if err != nil {
+		c.Serializer(err)
+		return err
+	}
+
+	err = c.Conn.Publish(c.Context, event, payload).Err()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -171,13 +160,7 @@ func (c *Connect) Handler(subscriber *redis_store.PubSub, sub microservices.Subs
 		if err != nil {
 			return
 		}
-		var message microservices.Message
-		err = c.Deserializer([]byte(msg.Payload), &message)
-		if err != nil {
-			fmt.Println("Error deserializing message: ", err)
-			return
-		}
-
+		message := microservices.DecodeMessage(c, []byte(msg.Payload))
 		sub.Handle(c, message)
 	}
 }

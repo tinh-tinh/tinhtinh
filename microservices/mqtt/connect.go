@@ -3,6 +3,7 @@ package mqtt
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	mqtt_store "github.com/eclipse/paho.mqtt.golang"
 	"github.com/tinh-tinh/tinhtinh/v2/common"
@@ -11,9 +12,10 @@ import (
 )
 
 type Connect struct {
-	Module core.Module
-	client mqtt_store.Client
-	config microservices.Config
+	Module  core.Module
+	client  mqtt_store.Client
+	config  microservices.Config
+	timeout time.Duration
 }
 
 type Options struct {
@@ -36,21 +38,20 @@ func NewClient(opt Options) microservices.ClientProxy {
 	return connect
 }
 
+func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
+	c.timeout = duration
+	return c
+}
+
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
+	payload, err := microservices.FormatMessage(c, microservices.Message{
 		Type:    microservices.RPC,
-		Headers: common.CloneMap(c.config.Header),
+		Headers: microservices.AssignMap(c.config.Header, headers...),
 		Event:   event,
 		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
+	})
 	if err != nil {
+		c.Serializer(err)
 		return err
 	}
 
@@ -66,22 +67,17 @@ func (c *Connect) Send(event string, data interface{}, headers ...microservices.
 }
 
 func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
-		Type:    microservices.PubSub,
-		Headers: common.CloneMap(c.config.Header),
+	payload, err := microservices.FormatMessage(c, microservices.Message{
+		Type:    microservices.RPC,
+		Headers: microservices.AssignMap(c.config.Header, headers...),
 		Event:   event,
 		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
+	})
 	if err != nil {
+		c.Serializer(err)
 		return err
 	}
+
 	if token := c.client.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}

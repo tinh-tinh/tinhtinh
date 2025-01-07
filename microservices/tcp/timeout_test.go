@@ -49,3 +49,53 @@ func Test_Timeout(t *testing.T) {
 
 	time.Sleep(200 * time.Millisecond)
 }
+
+// func Test_Timeout_Send(t *testing.T) {
+// 	serverModule := func() core.Module {
+// 		module := core.NewModule(core.NewModuleOptions{
+// 			Imports: []core.Modules{microservices.Register()},
+// 		})
+// 		return module
+// 	}
+
+// 	server := tcp.New(serverModule, tcp.Options{
+// 		Addr: "localhost:9001",
+// 	})
+// 	go server.Listen()
+
+// 	clientController := func(module core.Module) core.Controller {
+// 		ctrl := module.NewController("test")
+
+// 		client := microservices.Inject(module)
+// 		ctrl.Get("", func(ctx core.Ctx) error {
+// 			go client.Timeout(100*time.Millisecond).Send("abc", 1000)
+// 			return ctx.JSON(core.Map{"data": "ok"})
+// 		})
+
+// 		return ctrl
+// 	}
+
+// 	clientModule := func() core.Module {
+// 		module := core.NewModule(core.NewModuleOptions{
+// 			Imports: []core.Modules{
+// 				microservices.RegisterClient(tcp.NewClient(tcp.Options{
+// 					Addr: "localhost:9001",
+// 				})),
+// 			},
+// 			Controllers: []core.Controllers{clientController},
+// 		})
+
+// 		return module
+// 	}
+
+// 	app := core.CreateFactory(clientModule)
+// 	app.SetGlobalPrefix("api")
+
+// 	testServer := httptest.NewServer(app.PrepareBeforeListen())
+// 	defer testServer.Close()
+
+// 	testClient := testServer.Client()
+// 	resp, err := testClient.Get(testServer.URL + "/api/test")
+// 	require.Nil(t, err)
+// 	require.Equal(t, http.StatusOK, resp.StatusCode)
+// }
