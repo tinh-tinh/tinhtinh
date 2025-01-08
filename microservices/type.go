@@ -1,19 +1,5 @@
 package microservices
 
-type EventType string
-
-const (
-	RPC    EventType = "rpc"
-	PubSub EventType = "pubsub"
-)
-
-type Message struct {
-	Type    EventType         `json:"type"`
-	Event   string            `json:"event"`
-	Headers map[string]string `json:"headers"`
-	Data    interface{}       `json:"data"`
-}
-
 type Service interface {
 	Listen()
 	Serializer(v interface{}) ([]byte, error)
@@ -22,6 +8,10 @@ type Service interface {
 }
 
 type ClientProxy interface {
+	Emit(event string, message Message) error
+	Headers() Header
+	Serializer(v interface{}) ([]byte, error)
+	Deserializer(data []byte, v interface{}) error
 	Send(event string, data interface{}, headers ...Header) error
 	Publish(event string, data interface{}, headers ...Header) error
 }

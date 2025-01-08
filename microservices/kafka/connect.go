@@ -2,11 +2,9 @@ package kafka
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 
 	"github.com/IBM/sarama"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -29,71 +27,42 @@ func NewClient(opt Options) microservices.ClientProxy {
 	instance := NewInstance(opt.Options)
 	connect := &Connect{
 		Conn:   instance,
-		config: opt.Config,
-	}
-
-	if reflect.ValueOf(connect.config).IsZero() {
-		connect.config = microservices.DefaultConfig()
+		config: microservices.NewConfig(opt.Config),
 	}
 
 	return connect
 }
 
-func (c *Connect) Serializer(v interface{}) ([]byte, error) {
-	return c.config.Serializer(v)
+func (c *Connect) Headers() microservices.Header {
+	return c.config.Header
 }
 
-func (c *Connect) Deserializer(data []byte, v interface{}) error {
-	return c.config.Deserializer(data, v)
+func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
+	return svc.config.Serializer(v)
+}
+
+func (svc *Connect) Deserializer(data []byte, v interface{}) error {
+	return svc.config.Deserializer(data, v)
+}
+
+func (c *Connect) ErrorHandler(err error) {
+	c.config.ErrorHandler(err)
 }
 
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
-		Type:    microservices.RPC,
-		Headers: common.CloneMap(c.config.Header),
-		Event:   event,
-		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	fmt.Printf("Send payload: %v to event: %s\n", string(payload), event)
-	producer := c.Conn.Producer()
-	producer.Publish(&sarama.ProducerMessage{
-		Topic: event,
-		Value: sarama.StringEncoder(string(payload)),
-	})
-	return nil
+	return microservices.DefaultSend(c)(event, data, headers...)
 }
 
 func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
-		Type:    microservices.PubSub,
-		Headers: common.CloneMap(c.config.Header),
-		Event:   event,
-		Data:    data,
-	}
+	return microservices.DefaultPublish(c)(event, data, headers...)
+}
 
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
+func (c *Connect) Emit(event string, message microservices.Message) error {
+	payload, err := microservices.EncodeMessage(c, message)
 	if err != nil {
-		fmt.Println(err)
+		c.ErrorHandler(err)
 		return err
 	}
-	fmt.Printf("Send payload: %v to event: %s\n", data, event)
 	producer := c.Conn.Producer()
 	producer.Publish(&sarama.ProducerMessage{
 		Topic: event,
@@ -163,16 +132,16 @@ func (c *Connect) Listen() {
 		Oldest:   true,
 	})
 
-	if store.Subscribers[string(microservices.RPC)] != nil {
-		for _, sub := range store.Subscribers[string(microservices.RPC)] {
+	if store.GetRPC() != nil {
+		for _, sub := range store.GetRPC() {
 			consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
 				c.Handler(msg, sub)
 			})
 		}
 	}
 
-	if store.Subscribers[string(microservices.PubSub)] != nil {
-		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
+	if store.GetPubSub() != nil {
+		for _, sub := range store.GetPubSub() {
 			consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
 				c.Handler(msg, sub)
 			})
@@ -180,14 +149,8 @@ func (c *Connect) Listen() {
 	}
 }
 
-func (c *Connect) Handler(msg *sarama.ConsumerMessage, sub microservices.SubscribeHandler) {
-	fmt.Println(string(msg.Value))
-	var message microservices.Message
-	err := c.Deserializer(msg.Value, &message)
-	if err != nil {
-		fmt.Println("Error deserializing message: ", err)
-		return
-	}
+func (c *Connect) Handler(msg *sarama.ConsumerMessage, sub *microservices.SubscribeHandler) {
+	message := microservices.DecodeMessage(c, msg.Value)
 
 	fmt.Println(message)
 	if reflect.ValueOf(message).IsZero() {
@@ -197,8 +160,4 @@ func (c *Connect) Handler(msg *sarama.ConsumerMessage, sub microservices.Subscri
 	} else {
 		sub.Handle(c, message)
 	}
-}
-
-func (c *Connect) ErrorHandler(err error) {
-	log.Printf("Error when running tcp: %v\n", err)
 }

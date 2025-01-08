@@ -2,6 +2,7 @@ package microservices
 
 import (
 	"encoding/json"
+	"reflect"
 
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
@@ -58,4 +59,13 @@ func ParseConfig(cfg ...Config) Config {
 	}
 
 	return defaultConfig
+}
+
+func NewConfig(config Config) Config {
+	if reflect.ValueOf(config).IsZero() {
+		config = DefaultConfig()
+	} else {
+		config = ParseConfig(config)
+	}
+	return config
 }
