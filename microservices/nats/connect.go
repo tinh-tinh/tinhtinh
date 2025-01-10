@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	nats_connect "github.com/nats-io/nats.go"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -33,69 +32,47 @@ func NewClient(opt Options) microservices.ClientProxy {
 
 	connect := &Connect{
 		Conn:   nc,
-		config: opt.Config,
-	}
-
-	if reflect.ValueOf(connect.config).IsZero() {
-		connect.config = microservices.DefaultConfig()
+		config: microservices.NewConfig(opt.Config),
 	}
 
 	return connect
 }
 
+func (c *Connect) Headers() microservices.Header {
+	return c.config.Header
+}
+
+func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
+	return svc.config.Serializer(v)
+}
+
+func (svc *Connect) Deserializer(data []byte, v interface{}) error {
+	return svc.config.Deserializer(data, v)
+}
+
+func (c *Connect) ErrorHandler(err error) {
+	c.config.ErrorHandler(err)
+}
+
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
-		Type:    microservices.RPC,
-		Headers: common.CloneMap(c.config.Header),
-		Event:   event,
-		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Send payload: %v to event: %s\n", data, event)
-	err = c.Conn.Publish(event, payload)
-	if err != nil {
-		fmt.Println("Error: ", err)
-		return err
-	}
-
-	return nil
+	return microservices.DefaultSend(c)(event, data, headers...)
 }
 
 func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
-		Type:    microservices.PubSub,
-		Event:   event,
-		Data:    data,
-		Headers: common.CloneMap(c.config.Header),
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
+	return microservices.DefaultPublish(c)(event, data, headers...)
+}
 
-	payload, err := c.Serializer(message)
+func (c *Connect) Emit(event string, message microservices.Message) error {
+	payload, err := microservices.EncodeMessage(c, message)
 	if err != nil {
+		c.ErrorHandler(err)
 		return err
 	}
-
-	fmt.Printf("Send payload: %v to event: %s\n", data, event)
 	err = c.Conn.Publish(event, payload)
 	if err != nil {
-		fmt.Println("Error: ", err)
+		c.ErrorHandler(err)
 		return err
 	}
-
 	return nil
 }
 
@@ -156,16 +133,16 @@ func (c *Connect) Listen() {
 		panic("store not found")
 	}
 
-	if store.Subscribers[string(microservices.RPC)] != nil {
-		for _, sub := range store.Subscribers[string(microservices.RPC)] {
+	if store.GetRPC() != nil {
+		for _, sub := range store.GetRPC() {
 			go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
 				c.Handler(msg, sub)
 			})
 		}
 	}
 
-	if store.Subscribers[string(microservices.PubSub)] != nil {
-		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
+	if store.GetPubSub() != nil {
+		for _, sub := range store.GetPubSub() {
 			go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
 				c.Handler(msg, sub)
 			})
@@ -173,27 +150,7 @@ func (c *Connect) Listen() {
 	}
 }
 
-func (c *Connect) Handler(msg *nats_connect.Msg, sub microservices.SubscribeHandler) {
-	var message microservices.Message
-	err := c.Deserializer([]byte(msg.Data), &message)
-	if err != nil {
-		fmt.Println("Error deserializing message: ", err)
-		return
-	}
-
+func (c *Connect) Handler(msg *nats_connect.Msg, sub *microservices.SubscribeHandler) {
+	message := microservices.DecodeMessage(c, msg.Data)
 	sub.Handle(c, message)
-	// data := microservices.ParseCtx(message.Data, c)
-	// factory(data)
-}
-
-func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
-	return svc.config.Serializer(v)
-}
-
-func (svc *Connect) Deserializer(data []byte, v interface{}) error {
-	return svc.config.Deserializer(data, v)
-}
-
-func (c *Connect) ErrorHandler(err error) {
-	c.config.ErrorHandler(err)
 }

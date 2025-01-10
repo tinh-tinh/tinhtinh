@@ -24,85 +24,54 @@ type Options struct {
 func NewClient(opt Options) microservices.ClientProxy {
 	conn := mqtt_store.NewClient(opt.ClientOptions)
 
-	if reflect.ValueOf(opt.Config).IsZero() {
-		opt.Config = microservices.DefaultConfig()
-	}
-
 	connect := &Connect{
 		client: conn,
-		config: opt.Config,
+		config: microservices.NewConfig(opt.Config),
 	}
 
 	return connect
 }
 
-func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
-		Type:    microservices.RPC,
-		Headers: common.CloneMap(c.config.Header),
-		Event:   event,
-		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
-	if err != nil {
-		return err
-	}
-
-	if token := c.client.Connect(); token.Wait() && token.Error() != nil {
-		return token.Error()
-	}
-
-	token := c.client.Publish(event, 0, false, payload)
-	token.Wait()
-
-	c.client.Disconnect(250)
-	return nil
+func (c *Connect) Headers() microservices.Header {
+	return c.config.Header
 }
 
-func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
-		Type:    microservices.PubSub,
-		Headers: common.CloneMap(c.config.Header),
-		Event:   event,
-		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	payload, err := c.Serializer(message)
-	if err != nil {
-		return err
-	}
-	if token := c.client.Connect(); token.Wait() && token.Error() != nil {
-		return token.Error()
-	}
-
-	token := c.client.Publish(event, 0, false, payload)
-	token.Wait()
-
-	c.client.Disconnect(250)
-	return nil
+func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
+	return svc.config.Serializer(v)
 }
 
-func (c *Connect) Serializer(v interface{}) ([]byte, error) {
-	return c.config.Serializer(v)
-}
-
-func (c *Connect) Deserializer(data []byte, v interface{}) error {
-	return c.config.Deserializer(data, v)
+func (svc *Connect) Deserializer(data []byte, v interface{}) error {
+	return svc.config.Deserializer(data, v)
 }
 
 func (c *Connect) ErrorHandler(err error) {
 	c.config.ErrorHandler(err)
+}
+
+func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
+	return microservices.DefaultSend(c)(event, data, headers...)
+}
+
+func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
+	return microservices.DefaultPublish(c)(event, data, headers...)
+}
+
+func (c *Connect) Emit(event string, message microservices.Message) error {
+	payload, err := microservices.EncodeMessage(c, message)
+	if err != nil {
+		c.ErrorHandler(err)
+		return err
+	}
+	if token := c.client.Connect(); token.Wait() && token.Error() != nil {
+		c.ErrorHandler(err)
+		return token.Error()
+	}
+
+	token := c.client.Publish(event, 0, false, payload)
+	token.Wait()
+
+	c.client.Disconnect(250)
+	return nil
 }
 
 // Server usage
@@ -156,8 +125,8 @@ func (c *Connect) Listen() {
 		panic(token.Error())
 	}
 
-	if store.Subscribers[string(microservices.RPC)] != nil {
-		for _, sub := range store.Subscribers[string(microservices.RPC)] {
+	if store.GetRPC() != nil {
+		for _, sub := range store.GetRPC() {
 			token := c.client.Subscribe(sub.Name, 0, func(client mqtt_store.Client, m mqtt_store.Message) {
 				c.handler(m, sub)
 			})
@@ -169,8 +138,8 @@ func (c *Connect) Listen() {
 		}
 	}
 
-	if store.Subscribers[string(microservices.PubSub)] != nil {
-		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
+	if store.GetPubSub() != nil {
+		for _, sub := range store.GetPubSub() {
 			token := c.client.Subscribe(sub.Name, 0, func(client mqtt_store.Client, m mqtt_store.Message) {
 				c.handler(m, sub)
 			})
@@ -183,13 +152,7 @@ func (c *Connect) Listen() {
 	}
 }
 
-func (c *Connect) handler(msg mqtt_store.Message, sub microservices.SubscribeHandler) {
-	var message microservices.Message
-	err := c.Deserializer(msg.Payload(), &message)
-	if err != nil {
-		fmt.Println("Error deserializing message: ", err)
-		return
-	}
-
+func (c *Connect) handler(msg mqtt_store.Message, sub *microservices.SubscribeHandler) {
+	message := microservices.DecodeMessage(c, msg.Payload())
 	sub.Handle(c, message)
 }

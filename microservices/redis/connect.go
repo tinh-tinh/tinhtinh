@@ -2,12 +2,10 @@ package redis
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 
 	redis_store "github.com/redis/go-redis/v9"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -31,11 +29,7 @@ func NewClient(opt Options) microservices.ClientProxy {
 	connect := &Connect{
 		Context: context.Background(),
 		Conn:    conn,
-		config:  opt.Config,
-	}
-
-	if reflect.ValueOf(connect.config).IsZero() {
-		connect.config = microservices.DefaultConfig()
+		config:  microservices.NewConfig(opt.Config),
 	}
 
 	return connect
@@ -45,53 +39,41 @@ func (c *Connect) Close() {
 	c.Conn.Close()
 }
 
-func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
-		Type:    microservices.RPC,
-		Headers: common.CloneMap(c.config.Header),
-		Event:   event,
-		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
+func (c *Connect) Headers() microservices.Header {
+	return c.config.Header
+}
 
-	payload, err := c.Serializer(message)
-	if err != nil {
-		return err
-	}
-	err = c.Conn.Publish(c.Context, event, payload).Err()
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Send mesage: %v for event: %s\n", data, event)
-	return nil
+func (c *Connect) Serializer(v interface{}) ([]byte, error) {
+	return c.config.Serializer(v)
+}
+
+func (c *Connect) Deserializer(data []byte, v interface{}) error {
+	return c.config.Deserializer(data, v)
+}
+
+func (c *Connect) ErrorHandler(err error) {
+	c.config.ErrorHandler(err)
+}
+
+func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
+	return microservices.DefaultSend(c)(event, data, headers...)
 }
 
 func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	message := microservices.Message{
-		Type:    microservices.PubSub,
-		Headers: common.CloneMap(c.config.Header),
-		Event:   event,
-		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
+	return microservices.DefaultPublish(c)(event, data, headers...)
+}
 
-	payload, err := c.Serializer(message)
+func (c *Connect) Emit(event string, message microservices.Message) error {
+	payload, err := microservices.EncodeMessage(c, message)
 	if err != nil {
+		c.ErrorHandler(err)
 		return err
 	}
 	err = c.Conn.Publish(c.Context, event, payload).Err()
 	if err != nil {
+		c.ErrorHandler(err)
 		return err
 	}
-	fmt.Printf("Publish mesage: %v for event %s\n", data, event)
 	return nil
 }
 
@@ -145,16 +127,16 @@ func (c *Connect) Listen() {
 		panic("store not found")
 	}
 
-	if store.Subscribers[string(microservices.RPC)] != nil {
-		for _, sub := range store.Subscribers[string(microservices.RPC)] {
+	if store.GetRPC() != nil {
+		for _, sub := range store.GetRPC() {
 			subscriber := c.Conn.Subscribe(c.Context, sub.Name)
 			go c.Handler(subscriber, sub)
 		}
 	}
 
-	if store.Subscribers[string(microservices.PubSub)] != nil {
+	if store.GetPubSub() != nil {
 		var subscriber *redis_store.PubSub
-		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
+		for _, sub := range store.GetPubSub() {
 			if strings.HasSuffix(sub.Name, "*") {
 				subscriber = c.Conn.PSubscribe(c.Context, sub.Name)
 			} else {
@@ -165,31 +147,14 @@ func (c *Connect) Listen() {
 	}
 }
 
-func (c *Connect) Handler(subscriber *redis_store.PubSub, sub microservices.SubscribeHandler) {
+func (c *Connect) Handler(subscriber *redis_store.PubSub, sub *microservices.SubscribeHandler) {
 	for {
 		msg, err := subscriber.ReceiveMessage(c.Context)
 		if err != nil {
 			return
 		}
-		var message microservices.Message
-		err = c.Deserializer([]byte(msg.Payload), &message)
-		if err != nil {
-			fmt.Println("Error deserializing message: ", err)
-			return
-		}
 
+		message := microservices.DecodeMessage(c, []byte(msg.Payload))
 		sub.Handle(c, message)
 	}
-}
-
-func (c *Connect) Serializer(v interface{}) ([]byte, error) {
-	return c.config.Serializer(v)
-}
-
-func (c *Connect) Deserializer(data []byte, v interface{}) error {
-	return c.config.Deserializer(data, v)
-}
-
-func (c *Connect) ErrorHandler(err error) {
-	c.config.ErrorHandler(err)
 }
