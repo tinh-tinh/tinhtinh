@@ -32,11 +32,11 @@ func NewClient(opt Options) microservices.ClientProxy {
 		config:  microservices.NewConfig(opt.Config),
 	}
 
-	return connect
-}
+	if err := connect.Conn.Ping(connect.Context).Err(); err != nil {
+		panic(err)
+	}
 
-func (c *Connect) Close() {
-	c.Conn.Close()
+	return connect
 }
 
 func (c *Connect) Headers() microservices.Header {
@@ -95,6 +95,10 @@ func New(module core.ModuleParam, opts ...Options) microservices.Service {
 		}
 	}
 
+	if err := connect.Conn.Ping(connect.Context).Err(); err != nil {
+		panic(err)
+	}
+
 	return connect
 }
 
@@ -122,8 +126,8 @@ func (c *Connect) Create(module core.Module) {
 }
 
 func (c *Connect) Listen() {
-	store := c.Module.Ref(microservices.STORE).(*microservices.Store)
-	if store == nil {
+	store, ok := c.Module.Ref(microservices.STORE).(*microservices.Store)
+	if !ok {
 		panic("store not found")
 	}
 
