@@ -9,7 +9,7 @@ func DefaultSend(c ClientProxy) ReqFnc {
 		err := c.Emit(event, Message{
 			Type:    RPC,
 			Event:   event,
-			Headers: AssignHeader(c.Headers(), headers...),
+			Headers: AssignHeader(c.Config().Header, headers...),
 			Data:    data,
 		})
 		if err != nil {
@@ -25,7 +25,7 @@ func DefaultPublish(c ClientProxy) ReqFnc {
 		err := c.Emit(event, Message{
 			Type:    PubSub,
 			Event:   event,
-			Headers: AssignHeader(c.Headers(), headers...),
+			Headers: AssignHeader(c.Config().Header, headers...),
 			Data:    data,
 		})
 		if err != nil {

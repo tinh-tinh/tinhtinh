@@ -2,6 +2,7 @@ package microservices
 
 type Service interface {
 	Listen()
+	Config() Config
 	Serializer(v interface{}) ([]byte, error)
 	Deserializer(data []byte, v interface{}) error
 	ErrorHandler(err error)
@@ -9,7 +10,7 @@ type Service interface {
 
 type ClientProxy interface {
 	Emit(event string, message Message) error
-	Headers() Header
+	Config() Config
 	Serializer(v interface{}) ([]byte, error)
 	Deserializer(data []byte, v interface{}) error
 	Send(event string, data interface{}, headers ...Header) error

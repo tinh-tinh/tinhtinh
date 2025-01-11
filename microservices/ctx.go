@@ -1,7 +1,10 @@
 package microservices
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
+	"io"
 	"reflect"
 )
 
@@ -28,10 +31,29 @@ func NewCtx(data Message, service Service) Ctx {
 	}
 }
 
+func (c *DefaultCtx) marshallCompress(data interface{}) {
+	buf := bytes.NewBuffer(c.message.Bytes)
+	dec := gob.NewDecoder(buf)
+
+	for {
+		err := dec.Decode(data)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return
+		}
+	}
+}
+
 func (c *DefaultCtx) Payload(data ...interface{}) interface{} {
 	payload := c.message.Data
 	if len(data) > 0 {
 		schema := data[0]
+		if c.message.Data == nil && c.message.Bytes != nil {
+			c.marshallCompress(schema)
+			return schema
+		}
 		if reflect.TypeOf(payload).Kind() == reflect.String {
 			_ = c.service.Deserializer([]byte(payload.(string)), schema)
 			return schema

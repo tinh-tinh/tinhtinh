@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
@@ -16,6 +17,7 @@ type Config struct {
 	Header       Header
 	ErrorHandler ErrorHandler
 	Logger       *logger.Logger
+	CompressAlg  compress.Alg
 }
 
 func DefaultConfig() Config {
@@ -55,6 +57,10 @@ func ParseConfig(cfg ...Config) Config {
 			if cfg[0].ErrorHandler == nil {
 				defaultConfig.ErrorHandler = DefaultErrorHandler(cfg[0].Logger)
 			}
+		}
+
+		if cfg[0].CompressAlg != "" {
+			defaultConfig.CompressAlg = cfg[0].CompressAlg
 		}
 	}
 

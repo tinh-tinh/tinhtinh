@@ -36,8 +36,8 @@ func NewClient(opt Options) microservices.ClientProxy {
 	return client
 }
 
-func (client *Client) Headers() microservices.Header {
-	return client.config.Header
+func (client *Client) Config() microservices.Config {
+	return client.config
 }
 
 func (client *Client) Send(event string, data interface{}, headers ...microservices.Header) error {
