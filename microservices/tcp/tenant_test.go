@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices/tcp"
@@ -92,6 +93,9 @@ func AuthApp(addr string) *core.App {
 				microservices.RegisterClient(tcp.NewClient(tcp.Options{
 					Addr:    addr,
 					Timeout: 200 * time.Millisecond,
+					Config: microservices.Config{
+						CompressAlg: compress.Gzip,
+					},
 				})),
 			},
 			Controllers: []core.Controllers{controller},
@@ -207,6 +211,9 @@ func Test_Tenant(t *testing.T) {
 	directoryApp := DirectoryApp()
 	directoryApp.ConnectMicroservice(tcp.Open(tcp.Options{
 		Addr: "localhost:4001",
+		Config: microservices.Config{
+			CompressAlg: compress.Gzip,
+		},
 	}))
 	directoryApp.StartAllMicroservices()
 

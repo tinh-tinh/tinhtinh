@@ -132,6 +132,10 @@ func (svc *Server) handlerPubSub(handlers []*microservices.SubscribeHandler, msg
 	}
 }
 
+func (svc *Server) Config() microservices.Config {
+	return svc.config
+}
+
 func (svc *Server) Serializer(v interface{}) ([]byte, error) {
 	return svc.config.Serializer(v)
 }

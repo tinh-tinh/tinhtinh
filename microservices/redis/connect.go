@@ -39,8 +39,8 @@ func NewClient(opt Options) microservices.ClientProxy {
 	return connect
 }
 
-func (c *Connect) Headers() microservices.Header {
-	return c.config.Header
+func (c *Connect) Config() microservices.Config {
+	return c.config
 }
 
 func (c *Connect) Serializer(v interface{}) ([]byte, error) {

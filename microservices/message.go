@@ -1,6 +1,9 @@
 package microservices
 
-import "github.com/tinh-tinh/tinhtinh/v2/common"
+import (
+	"github.com/tinh-tinh/tinhtinh/v2/common"
+	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
+)
 
 type EventType string
 
@@ -14,9 +17,18 @@ type Message struct {
 	Event   string            `json:"event"`
 	Headers map[string]string `json:"headers"`
 	Data    interface{}       `json:"data"`
+	Bytes   []byte            `json:"bytes"`
 }
 
 func EncodeMessage(c ClientProxy, message Message) ([]byte, error) {
+	if c.Config().CompressAlg != "" {
+		encoder, err := compress.Encode(message.Data, c.Config().CompressAlg)
+		if err != nil {
+			return nil, err
+		}
+		message.Data = nil
+		message.Bytes = encoder
+	}
 	payload, err := c.Serializer(message)
 	if err != nil {
 		return nil, err
@@ -30,11 +42,18 @@ func DecodeMessage(c Service, data []byte) Message {
 	if err != nil {
 		panic(err)
 	}
+	if c.Config().CompressAlg != "" {
+		decoder, err := compress.Decode(msg.Bytes, c.Config().CompressAlg)
+		if err != nil {
+			panic(err)
+		}
+		msg.Bytes = decoder
+	}
 	return msg
 }
 
-func AssignHeader(orignal Header, toMerge ...Header) Header {
-	cloned := common.CloneMap(orignal)
+func AssignHeader(original Header, toMerge ...Header) Header {
+	cloned := common.CloneMap(original)
 	if len(toMerge) > 0 {
 		for _, v := range toMerge {
 			common.MergeMaps(cloned, v)
