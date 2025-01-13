@@ -1,11 +1,9 @@
 package mqtt
 
 import (
-	"fmt"
 	"reflect"
 
 	mqtt_store "github.com/eclipse/paho.mqtt.golang"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -132,7 +130,6 @@ func (c *Connect) Listen() {
 			})
 			token.Wait()
 			if token.Error() != nil {
-				fmt.Println(token.Error(), common.GetStructName(c.Module))
 				continue
 			}
 		}
@@ -145,7 +142,6 @@ func (c *Connect) Listen() {
 			})
 			token.Wait()
 			if token.Error() != nil {
-				fmt.Println(token.Error(), common.GetStructName(c.Module))
 				continue
 			}
 		}

@@ -32,7 +32,6 @@ func Test_Ctx(t *testing.T) {
 	ctx := microservices.NewCtx(message, svc)
 
 	payload := ctx.Payload(&User{}).(*User)
-	fmt.Println(payload)
 	require.Equal(t, "xyz@gmail.com", payload.Email)
 	require.Equal(t, "12345678@Tc", payload.Password)
 

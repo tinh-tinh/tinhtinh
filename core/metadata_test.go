@@ -1,7 +1,6 @@
 package core_test
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -22,7 +21,6 @@ func Test_Metadata(t *testing.T) {
 		ctrl := module.NewController("test").Guard(
 			func(ctrl core.RefProvider, ctx core.Ctx) bool {
 				roles, ok := ctx.GetMetadata(role_key).([]string)
-				fmt.Println(roles)
 				if !ok || len(roles) == 0 {
 					return true
 				}

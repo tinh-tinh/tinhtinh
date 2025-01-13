@@ -152,7 +152,6 @@ func (c *Connect) Listen() {
 func (c *Connect) Handler(msg *sarama.ConsumerMessage, sub *microservices.SubscribeHandler) {
 	message := microservices.DecodeMessage(c, msg.Value)
 
-	fmt.Println(message)
 	if reflect.ValueOf(message).IsZero() {
 		sub.Handle(c, microservices.Message{
 			Data: msg.Value,

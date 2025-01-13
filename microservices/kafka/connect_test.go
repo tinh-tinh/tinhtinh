@@ -1,7 +1,6 @@
 package kafka_test
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -45,7 +44,6 @@ func OrderApp() *core.App {
 		orderService := module.Ref(ORDER).(*OrderService)
 		handler.OnResponse("order.updated", func(ctx microservices.Ctx) error {
 			data := ctx.Payload(&Order{}).(*Order)
-			fmt.Println(data)
 
 			orderService.mutex.Lock()
 			if orderService.orders[data.ID] == nil {
