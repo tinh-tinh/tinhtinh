@@ -21,6 +21,7 @@ type Connect struct {
 	Module  core.Module
 	Context context.Context
 	config  microservices.Config
+	timeout time.Duration
 }
 
 // Client usage
@@ -43,20 +44,13 @@ func (c *Connect) Config() microservices.Config {
 	return c.config
 }
 
-func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
-	return svc.config.Serializer(v)
-}
-
-func (svc *Connect) Deserializer(data []byte, v interface{}) error {
-	return svc.config.Deserializer(data, v)
-}
-
-func (c *Connect) ErrorHandler(err error) {
-	c.config.ErrorHandler(err)
-}
-
 func (c *Connect) Emit(event string, message microservices.Message) error {
 	return nil
+}
+
+func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
+	c.timeout = duration
+	return c
 }
 
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
@@ -81,7 +75,10 @@ func (c *Connect) Send(event string, data interface{}, headers ...microservices.
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if c.timeout == 0 {
+		c.timeout = 5 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
 	body, err := microservices.EncodeMessage(c, microservices.Message{
@@ -106,6 +103,7 @@ func (c *Connect) Send(event string, data interface{}, headers ...microservices.
 		return err
 	}
 
+	c.timeout = 0
 	fmt.Printf("Send message: %v for event %s\n", data, event)
 	return nil
 }
@@ -132,7 +130,10 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if c.timeout == 0 {
+		c.timeout = 5 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
 	body, err := microservices.EncodeMessage(c, microservices.Message{
@@ -157,6 +158,7 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 		return err
 	}
 
+	c.timeout = 0
 	return nil
 }
 

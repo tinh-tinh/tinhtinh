@@ -3,6 +3,7 @@ package kafka
 import (
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
@@ -20,6 +21,7 @@ type Connect struct {
 	Module  core.Module
 	config  microservices.Config
 	GroupID string
+	timeout time.Duration
 }
 
 // Client usage
@@ -37,18 +39,6 @@ func (c *Connect) Config() microservices.Config {
 	return c.config
 }
 
-func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
-	return svc.config.Serializer(v)
-}
-
-func (svc *Connect) Deserializer(data []byte, v interface{}) error {
-	return svc.config.Deserializer(data, v)
-}
-
-func (c *Connect) ErrorHandler(err error) {
-	c.config.ErrorHandler(err)
-}
-
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
 	return microservices.DefaultSend(c)(event, data, headers...)
 }
@@ -57,10 +47,15 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 	return microservices.DefaultPublish(c)(event, data, headers...)
 }
 
+func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
+	c.timeout = duration
+	return c
+}
+
 func (c *Connect) Emit(event string, message microservices.Message) error {
 	payload, err := microservices.EncodeMessage(c, message)
 	if err != nil {
-		c.ErrorHandler(err)
+		c.config.ErrorHandler(err)
 		return err
 	}
 	producer := c.Conn.Producer()

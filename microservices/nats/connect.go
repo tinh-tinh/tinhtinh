@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	nats_connect "github.com/nats-io/nats.go"
+	"github.com/tinh-tinh/tinhtinh/v2/common/era"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -19,8 +21,8 @@ type Options struct {
 type Connect struct {
 	Conn    *nats_connect.Conn
 	Module  core.Module
-	Context context.Context
 	config  microservices.Config
+	timeout time.Duration
 }
 
 // Client usage
@@ -42,18 +44,6 @@ func (c *Connect) Config() microservices.Config {
 	return c.config
 }
 
-func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
-	return svc.config.Serializer(v)
-}
-
-func (svc *Connect) Deserializer(data []byte, v interface{}) error {
-	return svc.config.Deserializer(data, v)
-}
-
-func (c *Connect) ErrorHandler(err error) {
-	c.config.ErrorHandler(err)
-}
-
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
 	return microservices.DefaultSend(c)(event, data, headers...)
 }
@@ -62,15 +52,27 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 	return microservices.DefaultPublish(c)(event, data, headers...)
 }
 
+func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
+	c.timeout = duration
+	return c
+}
+
 func (c *Connect) Emit(event string, message microservices.Message) error {
 	payload, err := microservices.EncodeMessage(c, message)
 	if err != nil {
-		c.ErrorHandler(err)
+		c.config.ErrorHandler(err)
 		return err
 	}
-	err = c.Conn.Publish(event, payload)
+	if c.timeout > 0 {
+		err = era.TimeoutFunc(c.timeout, func(ctx context.Context) error {
+			err := c.Conn.Publish(event, payload)
+			return err
+		})
+	} else {
+		err = c.Conn.Publish(event, payload)
+	}
 	if err != nil {
-		c.ErrorHandler(err)
+		c.config.ErrorHandler(err)
 		return err
 	}
 	return nil
@@ -79,9 +81,8 @@ func (c *Connect) Emit(event string, message microservices.Message) error {
 // Server usage
 func New(module core.ModuleParam, opts ...Options) microservices.Service {
 	connect := &Connect{
-		Module:  module(),
-		config:  microservices.DefaultConfig(),
-		Context: context.Background(),
+		Module: module(),
+		config: microservices.DefaultConfig(),
 	}
 
 	if len(opts) > 0 {
@@ -102,8 +103,7 @@ func New(module core.ModuleParam, opts ...Options) microservices.Service {
 
 func Open(opts ...Options) core.Service {
 	connect := &Connect{
-		config:  microservices.DefaultConfig(),
-		Context: context.Background(),
+		config: microservices.DefaultConfig(),
 	}
 
 	if len(opts) > 0 {

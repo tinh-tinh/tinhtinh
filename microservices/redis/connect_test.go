@@ -374,3 +374,7 @@ func Test_Server_Error(t *testing.T) {
 		server.Listen()
 	})
 }
+
+func Test_Timeout(t *testing.T) {
+
+}

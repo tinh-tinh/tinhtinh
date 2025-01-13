@@ -29,7 +29,7 @@ func EncodeMessage(c ClientProxy, message Message) ([]byte, error) {
 		message.Data = nil
 		message.Bytes = encoder
 	}
-	payload, err := c.Serializer(message)
+	payload, err := c.Config().Serializer(message)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func EncodeMessage(c ClientProxy, message Message) ([]byte, error) {
 
 func DecodeMessage(c Service, data []byte) Message {
 	var msg Message
-	err := c.Deserializer(data, &msg)
+	err := c.Config().Deserializer(data, &msg)
 	if err != nil {
 		panic(err)
 	}

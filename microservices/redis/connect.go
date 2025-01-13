@@ -4,8 +4,10 @@ import (
 	"context"
 	"reflect"
 	"strings"
+	"time"
 
 	redis_store "github.com/redis/go-redis/v9"
+	"github.com/tinh-tinh/tinhtinh/v2/common/era"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -16,10 +18,11 @@ type Options struct {
 }
 
 type Connect struct {
-	Context context.Context
 	Module  core.Module
+	Context context.Context
 	Conn    *redis_store.Client
 	config  microservices.Config
+	timeout time.Duration
 }
 
 // Client usage
@@ -43,18 +46,6 @@ func (c *Connect) Config() microservices.Config {
 	return c.config
 }
 
-func (c *Connect) Serializer(v interface{}) ([]byte, error) {
-	return c.config.Serializer(v)
-}
-
-func (c *Connect) Deserializer(data []byte, v interface{}) error {
-	return c.config.Deserializer(data, v)
-}
-
-func (c *Connect) ErrorHandler(err error) {
-	c.config.ErrorHandler(err)
-}
-
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
 	return microservices.DefaultSend(c)(event, data, headers...)
 }
@@ -63,17 +54,30 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 	return microservices.DefaultPublish(c)(event, data, headers...)
 }
 
+func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
+	c.timeout = duration
+	return c
+}
+
 func (c *Connect) Emit(event string, message microservices.Message) error {
 	payload, err := microservices.EncodeMessage(c, message)
 	if err != nil {
-		c.ErrorHandler(err)
+		c.config.ErrorHandler(err)
 		return err
 	}
-	err = c.Conn.Publish(c.Context, event, payload).Err()
+	if c.timeout > 0 {
+		err = era.TimeoutFunc(c.timeout, func(ctx context.Context) error {
+			err := c.Conn.Publish(ctx, event, payload).Err()
+			return err
+		})
+	} else {
+		err = c.Conn.Publish(c.Context, event, payload).Err()
+	}
 	if err != nil {
-		c.ErrorHandler(err)
+		c.config.ErrorHandler(err)
 		return err
 	}
+	c.timeout = 0
 	return nil
 }
 
