@@ -2,7 +2,6 @@ package core_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -783,7 +782,6 @@ func Test_Ctx_Session(t *testing.T) {
 
 		ctrl.Get("", func(ctx core.Ctx) error {
 			data := ctx.Session("key")
-			fmt.Print(data)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
@@ -851,7 +849,6 @@ func Test_Cookie(t *testing.T) {
 
 		ctrl.Get("", func(ctx core.Ctx) error {
 			data := ctx.Cookies("key").Value
-			fmt.Print(data)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})

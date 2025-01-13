@@ -1,7 +1,6 @@
 package tcp_test
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -45,7 +44,7 @@ func Test_Timeout(t *testing.T) {
 
 	resp, err = testClientAuth.Do(req)
 	require.Nil(t, err)
-	fmt.Println(resp.StatusCode)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	time.Sleep(200 * time.Millisecond)
 }

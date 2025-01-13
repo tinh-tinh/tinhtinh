@@ -115,7 +115,6 @@ func (svc *Server) handlerPubSub(handlers []*microservices.SubscribeHandler, msg
 		}
 	} else if strings.ContainsAny(msg.Event, "*") {
 		prefix := strings.TrimSuffix(msg.Event, "*")
-		fmt.Println(prefix)
 		for _, sub := range handlers {
 			if strings.HasPrefix(string(sub.Name), prefix) {
 				sub.Handle(svc, msg)

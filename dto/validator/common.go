@@ -2,6 +2,7 @@ package validator
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"time"
@@ -101,7 +102,7 @@ func IsInt(str interface{}) bool {
 		_, err := strconv.Atoi(str.(string))
 		return err == nil
 	default:
-		fmt.Println(v)
+		log.Printf("%v is not be integer\n", v)
 		return false
 	}
 }
@@ -115,7 +116,7 @@ func IsFloat(str interface{}) bool {
 
 		return err == nil
 	default:
-		fmt.Println(v)
+		log.Printf("%v is not be float\n", v)
 		return false
 	}
 }
@@ -133,7 +134,7 @@ func IsDateString(str interface{}) bool {
 		_, err := time.Parse("2006-01-02", str.(string))
 		return err == nil
 	default:
-		fmt.Println(v)
+		log.Printf("%v is not be date\n", v)
 		return false
 	}
 }

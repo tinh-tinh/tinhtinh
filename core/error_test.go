@@ -1,8 +1,8 @@
 package core_test
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -47,7 +47,19 @@ func Test_DefaultErrorHandler(t *testing.T) {
 	data, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-	fmt.Println(string(data))
+
+	type ErrorData struct {
+		StatusCode int    `json:"statusCode"`
+		Error      string `json:"error"`
+		Timestamp  string `json:"timestamp"`
+		Path       string `json:"path"`
+	}
+	var errData ErrorData
+	err = json.Unmarshal(data, &errData)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, errData.StatusCode)
+	require.Equal(t, "test", errData.Error)
+	require.Equal(t, "/api/test", errData.Path)
 }
 
 func Test_ErrorHandler(t *testing.T) {

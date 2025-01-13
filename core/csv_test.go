@@ -1,7 +1,6 @@
 package core_test
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +34,6 @@ func Test_Csv(t *testing.T) {
 
 			data := core.ParseCsv(users, []string{"UserID", "FullName", "Email"})
 
-			fmt.Println(data)
 			return ctx.ExportCSV("users.csv", data)
 		})
 

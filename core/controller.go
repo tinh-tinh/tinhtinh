@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"net/http"
 	"runtime"
 	"strings"
@@ -214,7 +213,6 @@ func (c *DynamicController) free() {
 }
 
 func (c *DynamicController) Ref(name Provide, ctx ...Ctx) interface{} {
-	fmt.Printf("In here ctx is %v\n", ctx)
 	return c.module.Ref(name, ctx...)
 }
 

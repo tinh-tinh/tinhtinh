@@ -1,7 +1,6 @@
 package compress_test
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -76,12 +75,7 @@ func Test_Gzip(t *testing.T) {
 
 	require.Less(t, len(val), len(data))
 
-	valR, err := compress.Decode(val, compress.Gzip)
-	require.Nil(t, err)
-	fmt.Println(valR)
-
 	valRaw, err := compress.DecodeMarshall[BigStruct](val, compress.Gzip)
-	fmt.Println(valRaw)
 	require.Nil(t, err)
 
 	newPerson, ok := valRaw.(BigStruct)
