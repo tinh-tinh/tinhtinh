@@ -55,18 +55,18 @@ func (c *DefaultCtx) Payload(data ...interface{}) interface{} {
 			return schema
 		}
 		if reflect.TypeOf(payload).Kind() == reflect.String {
-			_ = c.service.Deserializer([]byte(payload.(string)), schema)
+			_ = c.service.Config().Deserializer([]byte(payload.(string)), schema)
 			return schema
 		}
-		dataBytes, _ := c.service.Serializer(payload)
-		_ = c.service.Deserializer(dataBytes, schema)
+		dataBytes, _ := c.service.Config().Serializer(payload)
+		_ = c.service.Config().Deserializer(dataBytes, schema)
 		return schema
 	}
 	return payload
 }
 
 func (c *DefaultCtx) ErrorHandler(err error) {
-	c.service.ErrorHandler(err)
+	c.service.Config().ErrorHandler(err)
 }
 
 func (c *DefaultCtx) Next() error {

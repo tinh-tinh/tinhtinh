@@ -48,22 +48,18 @@ func (client *Client) Publish(event string, data interface{}, headers ...microse
 	return microservices.DefaultPublish(client)(event, data, headers...)
 }
 
-func (client *Client) Serializer(v interface{}) ([]byte, error) {
-	return client.config.Serializer(v)
-}
-
-func (client *Client) Deserializer(data []byte, v interface{}) error {
-	return client.config.Deserializer(data, v)
-}
-
-func (client *Client) ErrorHandler(err error) {
-	client.config.ErrorHandler(err)
+func (client *Client) Timeout(duration time.Duration) microservices.ClientProxy {
+	err := client.Conn.SetWriteDeadline(time.Now().Add(duration))
+	if err != nil {
+		panic(err)
+	}
+	return client
 }
 
 func (client *Client) Emit(event string, message microservices.Message) error {
 	payload, err := microservices.EncodeMessage(client, message)
 	if err != nil {
-		client.ErrorHandler(err)
+		client.config.ErrorHandler(err)
 		return err
 	}
 

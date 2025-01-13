@@ -1,17 +1,21 @@
 package mqtt
 
 import (
+	"context"
 	"reflect"
+	"time"
 
 	mqtt_store "github.com/eclipse/paho.mqtt.golang"
+	"github.com/tinh-tinh/tinhtinh/v2/common/era"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
 type Connect struct {
-	Module core.Module
-	client mqtt_store.Client
-	config microservices.Config
+	Module  core.Module
+	client  mqtt_store.Client
+	config  microservices.Config
+	timeout time.Duration
 }
 
 type Options struct {
@@ -34,18 +38,6 @@ func (c *Connect) Config() microservices.Config {
 	return c.config
 }
 
-func (svc *Connect) Serializer(v interface{}) ([]byte, error) {
-	return svc.config.Serializer(v)
-}
-
-func (svc *Connect) Deserializer(data []byte, v interface{}) error {
-	return svc.config.Deserializer(data, v)
-}
-
-func (c *Connect) ErrorHandler(err error) {
-	c.config.ErrorHandler(err)
-}
-
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
 	return microservices.DefaultSend(c)(event, data, headers...)
 }
@@ -54,19 +46,47 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 	return microservices.DefaultPublish(c)(event, data, headers...)
 }
 
+func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
+	c.timeout = duration
+	return c
+}
+
 func (c *Connect) Emit(event string, message microservices.Message) error {
 	payload, err := microservices.EncodeMessage(c, message)
 	if err != nil {
-		c.ErrorHandler(err)
+		c.config.ErrorHandler(err)
 		return err
 	}
+
+	if c.timeout > 0 {
+		err = era.TimeoutFunc(c.timeout, func(ctx context.Context) error {
+			err := c.emit(event, payload)
+			return err
+		})
+	} else {
+		err = c.emit(event, payload)
+	}
+	if err != nil {
+		c.config.ErrorHandler(err)
+		return err
+	}
+	c.timeout = 0
+	return nil
+}
+
+func (c *Connect) emit(event string, payload []byte) error {
 	if token := c.client.Connect(); token.Wait() && token.Error() != nil {
-		c.ErrorHandler(err)
+		c.config.ErrorHandler(token.Error())
 		return token.Error()
 	}
 
 	token := c.client.Publish(event, 0, false, payload)
 	token.Wait()
+
+	if err := token.Error(); err != nil {
+		c.config.ErrorHandler(err)
+		return err
+	}
 
 	c.client.Disconnect(250)
 	return nil

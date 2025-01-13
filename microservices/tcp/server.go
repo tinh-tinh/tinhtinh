@@ -134,15 +134,3 @@ func (svc *Server) handlerPubSub(handlers []*microservices.SubscribeHandler, msg
 func (svc *Server) Config() microservices.Config {
 	return svc.config
 }
-
-func (svc *Server) Serializer(v interface{}) ([]byte, error) {
-	return svc.config.Serializer(v)
-}
-
-func (svc *Server) Deserializer(data []byte, v interface{}) error {
-	return svc.config.Deserializer(data, v)
-}
-
-func (svc *Server) ErrorHandler(err error) {
-	svc.config.ErrorHandler(err)
-}
