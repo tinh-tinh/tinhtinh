@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_Route(t *testing.T) {
@@ -37,7 +37,7 @@ func Test_IfSlashPrefixString(t *testing.T) {
 }
 
 func Test_registerRoutes(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -72,9 +72,9 @@ func Test_registerRoutes(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -132,4 +132,41 @@ func Test_registerRoutes(t *testing.T) {
 	data, err = io.ReadAll(resp.Body)
 	require.Nil(t, err)
 	require.Equal(t, `{"data":"5"}`, string(data))
+}
+
+func Test_Slash(t *testing.T) {
+	appController := func(module core.Module) core.Controller {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.JSON(core.Map{
+				"data": "1",
+			})
+		})
+
+		return ctrl
+	}
+
+	appModule := func() core.Module {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controllers{appController},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(appModule)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	resp, err := testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/ok")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }

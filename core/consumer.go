@@ -1,7 +1,7 @@
 package core
 
 import (
-	"github.com/tinh-tinh/tinhtinh/common"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 )
 
 const MethodAll = "ALL"
@@ -36,7 +36,7 @@ func (c *Consumer) Apply(middlewares ...Middleware) *Consumer {
 	return c
 }
 
-func (m *DynamicModule) Consumer(consumer *Consumer) *DynamicModule {
+func (m *DynamicModule) Consumer(consumer *Consumer) Module {
 	effectRoutes := []*Router{}
 	for _, i := range consumer.includes {
 		if i.Path == "*" && i.Method == MethodAll {

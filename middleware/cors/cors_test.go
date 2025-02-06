@@ -7,12 +7,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
-	"github.com/tinh-tinh/tinhtinh/middleware/cors"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/cors"
 )
 
-func appModule() *core.DynamicModule {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+func appModule() core.Module {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -25,7 +25,7 @@ func appModule() *core.DynamicModule {
 	}
 
 	return core.NewModule(core.NewModuleOptions{
-		Controllers: []core.Controller{appController},
+		Controllers: []core.Controllers{appController},
 	})
 }
 

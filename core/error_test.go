@@ -1,32 +1,32 @@
 package core_test
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/common/exception"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/common/exception"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_DefaultErrorHandler(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			panic(exception.Throw("test", http.StatusInternalServerError))
+			panic(exception.ThrowHttp("test", http.StatusInternalServerError))
 		})
 
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule
@@ -47,11 +47,23 @@ func Test_DefaultErrorHandler(t *testing.T) {
 	data, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-	fmt.Println(string(data))
+
+	type ErrorData struct {
+		StatusCode int    `json:"statusCode"`
+		Error      string `json:"error"`
+		Timestamp  string `json:"timestamp"`
+		Path       string `json:"path"`
+	}
+	var errData ErrorData
+	err = json.Unmarshal(data, &errData)
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, errData.StatusCode)
+	require.Equal(t, "test", errData.Error)
+	require.Equal(t, "/api/test", errData.Path)
 }
 
 func Test_ErrorHandler(t *testing.T) {
-	appController := func(module *core.DynamicModule) *core.DynamicController {
+	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -61,9 +73,9 @@ func Test_ErrorHandler(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{appController},
+			Controllers: []core.Controllers{appController},
 		})
 
 		return appModule

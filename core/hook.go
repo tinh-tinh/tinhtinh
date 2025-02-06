@@ -20,11 +20,11 @@ type Hook struct {
 
 // HookModule is a function that registers the given hooks to be run when the module is initialized.
 // The hooks are run in the order they are added to the module.
-type HookModule func(module *DynamicModule)
+type HookModule func(module Module)
 
 // OnInit registers the given hooks to be run when the module is initialized.
 // The hooks are run in the order they are added to the module.
-func (m *DynamicModule) OnInit(hooks ...HookModule) *DynamicModule {
+func (m *DynamicModule) OnInit(hooks ...HookModule) Module {
 	m.hooks = append(m.hooks, hooks...)
 	return m
 }

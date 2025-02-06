@@ -19,14 +19,14 @@ func SetMetadata(key string, value interface{}) *Metadata {
 
 // Metadata sets the given metadata for the controller. The metadata will be
 // merged with any existing metadata on the controller.
-func (controller *DynamicController) Metadata(meta ...*Metadata) *DynamicController {
+func (controller *DynamicController) Metadata(meta ...*Metadata) Controller {
 	controller.metadata = append(controller.metadata, meta...)
 	return controller
 }
 
 // GetMetadata returns the value associated with the given key in the request context's metadata.
 // If the given key is not present in the metadata, it returns nil.
-func (ctx *Ctx) GetMetadata(key string) interface{} {
+func (ctx *DefaultCtx) GetMetadata(key string) interface{} {
 	metaIdx := slices.IndexFunc(ctx.metadata, func(meta *Metadata) bool {
 		return meta.Key == key
 	})
@@ -38,7 +38,7 @@ func (ctx *Ctx) GetMetadata(key string) interface{} {
 
 // SetMetadata sets the given metadata for the request context. If the given
 // metadata is empty, it will clear the request context's metadata.
-func (ctx *Ctx) SetMetadata(meta ...*Metadata) *Ctx {
+func (ctx *DefaultCtx) SetMetadata(meta ...*Metadata) *DefaultCtx {
 	if len(meta) == 0 {
 		ctx.metadata = []*Metadata{}
 		return ctx

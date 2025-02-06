@@ -18,7 +18,7 @@ type middlewareRaw func(http.Handler) http.Handler
 // that can be used by http server. It provides a Ctx instance to the wrapped
 // middleware function and automatically sets the handler of the Ctx instance.
 func ParseCtxMiddleware(app *App, ctxMid Middleware) middlewareRaw {
-	ctx := app.pool.Get().(*Ctx)
+	ctx := app.pool.Get().(*DefaultCtx)
 	defer app.pool.Put(ctx)
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -28,12 +28,12 @@ func ParseCtxMiddleware(app *App, ctxMid Middleware) middlewareRaw {
 			defer func() {
 				if r := recover(); r != nil {
 					err = fmt.Errorf("%v", r)
-					app.errorHandler(err, *ctx)
+					app.errorHandler(err, ctx)
 				}
 			}()
-			err = ctxMid(*ctx)
+			err = ctxMid(ctx)
 			if err != nil {
-				app.errorHandler(err, *ctx)
+				app.errorHandler(err, ctx)
 				return
 			}
 		})
@@ -66,7 +66,7 @@ func (c *DynamicController) ParseMiddlewareRef(ref MiddlewareRef) Middleware {
 // middleware handlers are run before the module's controllers. The
 // controller middleware handlers are run before the controller's
 // handlers.
-func (c *DynamicController) Use(middleware ...Middleware) *DynamicController {
+func (c *DynamicController) Use(middleware ...Middleware) Controller {
 	c.middlewares = append(c.middlewares, middleware...)
 	return c
 }
@@ -84,7 +84,7 @@ func (c *DynamicController) Use(middleware ...Middleware) *DynamicController {
 // handler that takes a ctx as an argument and returns an error. If the
 // middleware handler returns an error, the request is rejected with the
 // error.
-func (c *DynamicController) UseRef(middlewareRefs ...MiddlewareRef) *DynamicController {
+func (c *DynamicController) UseRef(middlewareRefs ...MiddlewareRef) Controller {
 	for _, v := range middlewareRefs {
 		mid := c.ParseMiddlewareRef(v)
 		c.middlewares = append(c.middlewares, mid)
@@ -100,7 +100,7 @@ func (c *DynamicController) UseRef(middlewareRefs ...MiddlewareRef) *DynamicCont
 // the module's controllers. The module middleware handlers are run before the
 // module's routers. The module middleware handlers are run before the module's
 // handlers.
-func (module *DynamicModule) Use(middlewares ...Middleware) *DynamicModule {
+func (module *DynamicModule) Use(middlewares ...Middleware) Module {
 	module.Middlewares = append(module.Middlewares, middlewares...)
 	for _, middleware := range middlewares {
 		for _, router := range module.Routers {
@@ -117,7 +117,7 @@ func (module *DynamicModule) ParseMiddlewareRef(ref MiddlewareRef) Middleware {
 	}
 }
 
-func (module *DynamicModule) UseRef(middlewareRefs ...MiddlewareRef) *DynamicModule {
+func (module *DynamicModule) UseRef(middlewareRefs ...MiddlewareRef) Module {
 	for _, v := range middlewareRefs {
 		mid := module.ParseMiddlewareRef(v)
 		module.Middlewares = append(module.Middlewares, mid)

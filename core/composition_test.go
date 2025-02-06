@@ -8,12 +8,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_Compose(t *testing.T) {
 	// Guard
-	guard := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
+	guard := func(ctrl core.RefProvider, ctx core.Ctx) bool {
 		return ctx.Query("key") == "value"
 	}
 
@@ -29,7 +29,7 @@ func Test_Compose(t *testing.T) {
 	}
 
 	composite := core.Composition().Guard(guard).Pipe(core.Query(FilterDto{})).Metadata(roleFnc("admin"))
-	controller := func(module *core.DynamicModule) *core.DynamicController {
+	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Composition(composite).Get("", func(ctx core.Ctx) error {
@@ -41,9 +41,9 @@ func Test_Compose(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{controller},
+			Controllers: []core.Controllers{controller},
 		})
 
 		return appModule

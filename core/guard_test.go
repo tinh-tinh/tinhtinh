@@ -7,26 +7,26 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 const Key core.CtxKey = "key"
 
 func TestGuard(t *testing.T) {
-	guardInCtrl := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
+	guardInCtrl := func(ctrl core.RefProvider, ctx core.Ctx) bool {
 		return ctx.Query("ctrl") == "value"
 	}
 
-	guardInModule := func(module core.RefProvider, ctx *core.Ctx) bool {
+	guardInModule := func(module core.RefProvider, ctx core.Ctx) bool {
 		return ctx.Query("module") == "value"
 	}
 
-	guardWithCtx := func(ctrl core.RefProvider, ctx *core.Ctx) bool {
+	guardWithCtx := func(ctrl core.RefProvider, ctx core.Ctx) bool {
 		ctx.Set(Key, ctx.Query("ctx"))
 		return true
 	}
 
-	authCtrl := func(module *core.DynamicModule) *core.DynamicController {
+	authCtrl := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Guard(guardInCtrl).Get("", func(ctx core.Ctx) error {
@@ -50,9 +50,9 @@ func TestGuard(t *testing.T) {
 		return ctrl
 	}
 
-	module := func() *core.DynamicModule {
+	module := func() core.Module {
 		appModule := core.NewModule(core.NewModuleOptions{
-			Controllers: []core.Controller{authCtrl},
+			Controllers: []core.Controllers{authCtrl},
 			Guards:      []core.Guard{guardInModule},
 		}).Guard(guardWithCtx)
 

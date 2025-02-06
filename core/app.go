@@ -14,10 +14,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/common"
-	"github.com/tinh-tinh/tinhtinh/common/color"
-	"github.com/tinh-tinh/tinhtinh/middleware/cors"
-	"github.com/tinh-tinh/tinhtinh/middleware/session"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
+	"github.com/tinh-tinh/tinhtinh/v2/common/color"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/cors"
+	"github.com/tinh-tinh/tinhtinh/v2/middleware/session"
 )
 
 type App struct {
@@ -29,7 +29,7 @@ type App struct {
 	Mux *http.ServeMux
 	// Module is the module that the App uses to initialize itself.
 	// The App uses this Module to initialize itself.
-	Module *DynamicModule
+	Module Module
 	// cors is the CORS middleware.
 	cors *cors.Cors
 	// version is the type version of the API.
@@ -48,9 +48,10 @@ type App struct {
 	// errorHandler is the error handler that the App uses to initialize itself.
 	errorHandler ErrorHandler
 	timeout      time.Duration
+	Services     []Service
 }
 
-type ModuleParam func() *DynamicModule
+type ModuleParam func() Module
 type AppOptions struct {
 	// Encoder is the encoder that the App uses to initialize itself.
 	Encoder Encode
@@ -61,6 +62,11 @@ type AppOptions struct {
 	// ErrorHandler is the error handler that the App uses to initialize itself.
 	ErrorHandler ErrorHandler
 	Timeout      time.Duration
+}
+
+type Service interface {
+	Create(module Module)
+	Listen()
 }
 
 // CreateFactory creates a new App with the given module and options.
@@ -204,7 +210,7 @@ func (app *App) Listen(port int) {
 		Handler: handler,
 	}
 
-	log.Printf("Server running on http://localhost:%d/%s\n", port, app.Prefix)
+	log.Printf("Server running on http://localhost:%d%s\n", port, app.Prefix)
 
 	go func() {
 		if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
@@ -234,5 +240,16 @@ func (app *App) Listen(port int) {
 		if hook.RunAt == AFTER_SHUTDOWN {
 			hook.fnc()
 		}
+	}
+}
+
+func (app *App) ConnectMicroservice(svc Service) {
+	svc.Create(app.Module)
+	app.Services = append(app.Services, svc)
+}
+
+func (app *App) StartAllMicroservices() {
+	for _, svc := range app.Services {
+		go svc.Listen()
 	}
 }

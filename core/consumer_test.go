@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/core"
+	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_Consumer(t *testing.T) {
@@ -41,7 +41,7 @@ func Test_Consumer(t *testing.T) {
 		return ctx.Next()
 	}
 
-	userController := func(module *core.DynamicModule) *core.DynamicController {
+	userController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("user")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -65,9 +65,9 @@ func Test_Consumer(t *testing.T) {
 		return ctrl
 	}
 
-	userModule := func(module *core.DynamicModule) *core.DynamicModule {
+	userModule := func(module core.Module) core.Module {
 		user := module.New(core.NewModuleOptions{
-			Controllers: []core.Controller{userController},
+			Controllers: []core.Controllers{userController},
 		})
 
 		user.Consumer(core.NewConsumer().Apply(userMiddleware).Include(core.RoutesPath{
@@ -83,7 +83,7 @@ func Test_Consumer(t *testing.T) {
 		return user
 	}
 
-	postController := func(module *core.DynamicModule) *core.DynamicController {
+	postController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("post")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
@@ -107,9 +107,9 @@ func Test_Consumer(t *testing.T) {
 		return ctrl
 	}
 
-	postModule := func(module *core.DynamicModule) *core.DynamicModule {
+	postModule := func(module core.Module) core.Module {
 		post := module.New(core.NewModuleOptions{
-			Controllers: []core.Controller{postController},
+			Controllers: []core.Controllers{postController},
 		})
 
 		post.Consumer(core.NewConsumer().Apply(userMiddleware).Exclude(core.RoutesPath{
@@ -123,9 +123,9 @@ func Test_Consumer(t *testing.T) {
 		return post
 	}
 
-	appModule := func() *core.DynamicModule {
+	appModule := func() core.Module {
 		app := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Module{userModule, postModule},
+			Imports: []core.Modules{userModule, postModule},
 		})
 
 		app.Consumer(core.NewConsumer().Apply(tenantMiddleware).Include(core.RoutesPath{

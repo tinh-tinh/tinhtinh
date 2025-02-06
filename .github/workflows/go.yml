@@ -5,13 +5,13 @@ name: Go
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "v2" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "master", "v2" ]
 
 jobs:
 
-  build:
+  test-root:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -37,4 +37,165 @@ jobs:
       run: go test -cover ./...
 
     - name: Remove temp file
-      run: rm -rf middleware/logger/logs
+      run: 	rm -rf middleware/logger/logs common/exception/logs
+
+  test-redis:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.22.x' ]
+
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      redis:
+        # Docker Hub image
+        image: redis
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps port 6379 on service container to the host
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22.0'
+
+    - name: Test Redis
+      run: cd microservices/redis; go test -cover ./...
+
+  test-nats:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.22.x' ]
+
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      nats:
+        # Docker Hub image
+        image: nats:latest
+        ports:
+          # Maps port 6379 on service container to the host
+          - 4222:4222
+
+    steps:
+    # Checkout code
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22.0'
+
+    # Verify NATS Server is Running
+    - name: Verify NATS Server
+      run: |
+        echo "Checking if NATS server is running on port 4222..."
+        nc -zv 127.0.0.1 4222
+
+    - name: Test NATS
+      run: cd microservices/nats; go test -cover ./...
+
+  test-rabbitmq:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.22.x' ]
+
+    services:
+      rabbitmq:
+        image: rabbitmq:3.8
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        ports:
+          - 5672:5672  # RabbitMQ default port
+          - 15672:15672  # RabbitMQ Management Plugin
+        options: >-
+          --health-cmd "rabbitmqctl status"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+  
+
+    steps:
+      # Checkout code
+      - uses: actions/checkout@v4
+  
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.22.0'
+
+      - name: Wait for RabbitMQ to be ready
+        run: |
+          for i in {1..10}; do
+            if nc -z localhost 5672; then
+              echo "RabbitMQ is up and running"
+              break
+            fi
+            echo "Waiting for RabbitMQ..."
+            sleep 5
+          done
+  
+      - name: Test RabbitMQ
+        run: cd microservices/amqlib; go test -cover ./...
+
+  # test-kafka:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       go-version: [ '1.22.x' ]
+
+  #   services:
+  #     zookeeper:
+  #       image: confluentinc/cp-zookeeper:7.5.0
+  #       ports:
+  #         - 2181:2181
+  #       options: >-
+  #         --env ZOOKEEPER_CLIENT_PORT=2181
+  #         --env ZOOKEEPER_TICK_TIME=2000
+
+  #     kafka:
+  #       image: confluentinc/cp-kafka:7.5.0
+  #       ports:
+  #         - 9092:9092
+  #       options: >-
+  #         --env KAFKA_BROKER_ID=1
+  #         --env KAFKA_ZOOKEEPER_CONNECT=127.0.0.1:2181
+  #         --env KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://127.0.0.1:9092
+  #         --env KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092
+  #         --env KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+
+  #   steps:
+  #     # Checkout code
+  #     - uses: actions/checkout@v4
+
+  #     - name: Set up Go
+  #       uses: actions/setup-go@v4
+  #       with:
+  #         go-version: '1.22.0'
+
+  #     - name: Wait for Kafka to be ready
+  #       run: |
+  #         for i in {1..10}; do
+  #           if nc -z localhost 9092; then
+  #             echo "Kafka is up and running"
+  #             break
+  #           fi
+  #           echo "Waiting for Kafka..."
+  #           sleep 5
+  #         done
+
+  #     - name: Test Kafka
+  #       run: cd microservices/kafka; go test -cover ./...

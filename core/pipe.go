@@ -1,8 +1,8 @@
 package core
 
 import (
-	"github.com/tinh-tinh/tinhtinh/common"
-	"github.com/tinh-tinh/tinhtinh/dto/validator"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
+	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
 type CtxKey string
@@ -46,12 +46,12 @@ func PipeMiddleware(pipes ...PipeDto) Middleware {
 					return common.BadRequestException(ctx.Res(), err.Error())
 				}
 			case InQuery:
-				err := ctx.QueryParse(dto)
+				err := ctx.QueryParser(dto)
 				if err != nil {
 					return common.BadRequestException(ctx.Res(), err.Error())
 				}
 			case InPath:
-				err := ctx.ParamParse(dto)
+				err := ctx.ParamParser(dto)
 				if err != nil {
 					return common.BadRequestException(ctx.Res(), err.Error())
 				}

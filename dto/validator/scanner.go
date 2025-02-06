@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/tinh-tinh/tinhtinh/dto/transform"
+	"github.com/tinh-tinh/tinhtinh/v2/dto/transform"
 )
 
 func Scanner(val interface{}) error {

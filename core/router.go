@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/common/color"
+	"github.com/tinh-tinh/tinhtinh/v2/common/color"
 )
 
 type Router struct {
@@ -57,18 +57,13 @@ func (r *Router) getHandler(app *App) http.Handler {
 		mergeHandler = mid(mergeHandler)
 	}
 
-	// for _, v := range r.Middlewares {
-	// 	mid := ParseCtxMiddleware(app, v)
-	// 	mergeHandler = mid(mergeHandler)
-	// }
-
 	return mergeHandler
 }
 
 // free clears the registered routes of the app and runs the garbage collector.
 // It should be called after all the routes have been registered with the app.
 func (app *App) free() {
-	app.Module.Routers = nil
+	app.Module.free()
 	runtime.GC()
 }
 
@@ -82,7 +77,7 @@ func (app *App) free() {
 func (app *App) registerRoutes() {
 	routes := make(map[string][]*Router)
 
-	for _, r := range app.Module.Routers {
+	for _, r := range app.Module.GetRouters() {
 		route := ParseRoute(r.Method + " " + r.Path)
 		if app.version != nil && app.version.Type == URIVersion && r.Version != "" {
 			route.SetPrefix("v" + r.Version)
