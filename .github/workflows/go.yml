@@ -5,9 +5,9 @@ name: Go
 
 on:
   push:
-    branches: [ "master", "v2" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "master", "v2" ]
+    branches: [ "master" ]
 
 jobs:
 
