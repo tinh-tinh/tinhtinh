@@ -26,13 +26,14 @@ func Test_Scanner(t *testing.T) {
 		IsFloat          float64   `validate:"isFloat"`
 		IsInt            int       `validate:"isInt"`
 		IsBool           bool      `validate:"isBool"`
-		IsDateString     time.Time `validate:"isDateString"`
+		IsDateString     string    `validate:"isDateString"`
 		IsNumber         int       `validate:"isNumber"`
 		IsNumber2        float64   `validate:"isNumber"`
 		IsObjectId       string    `validate:"isObjectId"`
 		Nested           *Nested   `validate:"nested"`
 		Slice            []*Nested `validate:"nested"`
 		Lala             string    `validate:"isAlpha"`
+		Date             time.Time `validate:"isDate"`
 	}
 	require.Panics(t, func() {
 		_ = validator.Scanner(Input{})
@@ -48,7 +49,7 @@ func Test_Scanner(t *testing.T) {
 		IsFloat:          123.123,
 		IsInt:            123,
 		IsBool:           true,
-		IsDateString:     time.Now(),
+		IsDateString:     time.Now().Format("2006-01-01"),
 		IsNumber:         123,
 		IsNumber2:        39.49,
 		IsObjectId:       "5e9bf1f6d3d2d3d3d3d3d3d3",
@@ -58,6 +59,7 @@ func Test_Scanner(t *testing.T) {
 		Slice: []*Nested{
 			{IsAlpha: "avc"},
 		},
+		Date: time.Now(),
 	}
 
 	err := validator.Scanner(happyCase)
@@ -80,11 +82,11 @@ func Test_Scanner(t *testing.T) {
 	require.Equal(t, "Required is required\nIsAlpha is not a valid alpha\nIsAlphanumeric is not a valid alpha numeric\nIsEmail is not a valid email\nIsStrongPassword is not a valid strong password\nIsUUID is not a valid UUID\nIsObjectId is not a valid ObjectID\nIsAlpha is not a valid alpha\nIsAlpha is not a valid alpha", err.Error())
 
 	type BadCase struct {
-		IsFloat      interface{} `validate:"isFloat"`
-		IsInt        interface{} `validate:"isInt"`
-		IsBool       interface{} `validate:"isBool"`
-		IsDateString interface{} `validate:"isDateString"`
-		IsNumber     interface{} `validate:"isNumber"`
+		IsFloat      any `validate:"isFloat"`
+		IsInt        any `validate:"isInt"`
+		IsBool       any `validate:"isBool"`
+		IsDateString any `validate:"isDateString"`
+		IsNumber     any `validate:"isNumber"`
 	}
 
 	badCaseNum := &BadCase{
@@ -130,7 +132,6 @@ func Benchmark_Scanner(b *testing.B) {
 	b.Run("test_validator", func(b *testing.B) {
 		var userList []*User
 		count := b.N
-		fmt.Printf("No of test case %d\n", count)
 		for n := 0; n < count; n++ {
 			userDetail := &UserDetail{
 				Name:     "Haha",

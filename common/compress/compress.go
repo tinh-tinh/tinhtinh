@@ -108,10 +108,10 @@ func Decode(data []byte, alg Alg) ([]byte, error) {
 	return decompressed.Bytes(), nil
 }
 
-func DecodeMarshall[T any](data []byte, alg Alg) (interface{}, error) {
+func DecodeMarshall[T any](data []byte, alg Alg) (T, error) {
 	decompress, err := Decode(data, alg)
 	if err != nil {
-		return nil, err
+		return *new(T), err
 	}
 	return FromBytes[T](decompress)
 }

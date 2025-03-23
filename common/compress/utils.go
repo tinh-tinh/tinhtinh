@@ -15,7 +15,7 @@ func ToBytes(data interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func FromBytes[M any](data []byte) (interface{}, error) {
+func FromBytes[M any](data []byte) (M, error) {
 	buf := bytes.NewBuffer(data)
 	dec := gob.NewDecoder(buf)
 
@@ -26,7 +26,7 @@ func FromBytes[M any](data []byte) (interface{}, error) {
 			break
 		}
 		if err != nil {
-			return nil, err
+			return *new(M), err
 		}
 	}
 	return m, nil

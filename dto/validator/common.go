@@ -126,7 +126,7 @@ func IsNumber(str interface{}) bool {
 }
 
 // Date time
-func IsDateString(str interface{}) bool {
+func IsDate(str interface{}) bool {
 	switch v := str.(type) {
 	case time.Time:
 		return true
