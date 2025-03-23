@@ -92,7 +92,13 @@ func Scanner(val interface{}) error {
 					}
 				}
 			case "isDateString":
-				if !IsDateString(value) {
+				if !IsDate(value) {
+					errMsg = append(errMsg, field.Name+" is not a valid date time")
+				} else {
+					ct.Field(i).Set(reflect.ValueOf(transform.ToString(value)))
+				}
+			case "isDate":
+				if !IsDate(value) {
 					errMsg = append(errMsg, field.Name+" is not a valid date time")
 				} else {
 					ct.Field(i).Set(reflect.ValueOf(transform.ToDate(value)))

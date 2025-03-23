@@ -21,11 +21,9 @@ func Test_Byte(t *testing.T) {
 	data, err := compress.ToBytes(person)
 	require.Nil(t, err)
 
-	valRaw, err := compress.FromBytes[Person](data)
+	val, err := compress.FromBytes[Person](data)
 	require.Nil(t, err)
 
-	val, ok := valRaw.(Person)
-	require.True(t, ok)
 	require.Equal(t, person.Age, val.Age)
 	require.Equal(t, person.Name, val.Name)
 

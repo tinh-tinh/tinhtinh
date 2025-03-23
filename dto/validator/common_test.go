@@ -134,10 +134,10 @@ func Test_IsNumber(t *testing.T) {
 func Test_IsDateString(t *testing.T) {
 	t.Parallel()
 
-	require.True(t, validator.IsDateString("2020-01-01"))
-	require.True(t, validator.IsDateString(time.Now()))
+	require.True(t, validator.IsDate("2020-01-01"))
+	require.True(t, validator.IsDate(time.Now()))
 
-	require.False(t, validator.IsDateString(123))
+	require.False(t, validator.IsDate(123))
 }
 
 func Test_IsBool(t *testing.T) {

@@ -75,11 +75,8 @@ func Test_Gzip(t *testing.T) {
 
 	require.Less(t, len(val), len(data))
 
-	valRaw, err := compress.DecodeMarshall[BigStruct](val, compress.Gzip)
+	newPerson, err := compress.DecodeMarshall[BigStruct](val, compress.Gzip)
 	require.Nil(t, err)
-
-	newPerson, ok := valRaw.(BigStruct)
-	require.True(t, ok)
 
 	require.Equal(t, bigstruct, newPerson)
 }
@@ -94,11 +91,8 @@ func Test_Flate(t *testing.T) {
 
 	require.Less(t, len(val), len(data))
 
-	valRaw, err := compress.DecodeMarshall[BigStruct](val, compress.Flate)
+	newPerson, err := compress.DecodeMarshall[BigStruct](val, compress.Flate)
 	require.Nil(t, err)
-
-	newPerson, ok := valRaw.(BigStruct)
-	require.True(t, ok)
 
 	require.Equal(t, bigstruct, newPerson)
 }
@@ -113,11 +107,8 @@ func Test_Zlib(t *testing.T) {
 
 	require.Less(t, len(val), len(data))
 
-	valRaw, err := compress.DecodeMarshall[BigStruct](val, compress.Zlib)
+	newPerson, err := compress.DecodeMarshall[BigStruct](val, compress.Zlib)
 	require.Nil(t, err)
-
-	newPerson, ok := valRaw.(BigStruct)
-	require.True(t, ok)
 
 	require.Equal(t, bigstruct, newPerson)
 }
