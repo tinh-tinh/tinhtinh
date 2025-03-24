@@ -3,6 +3,7 @@ package validator
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"regexp"
 	"strconv"
 	"time"
@@ -95,28 +96,36 @@ func IsRegexMatch(pattern string, str interface{}) bool {
 
 // Numeric
 func IsInt(str interface{}) bool {
-	switch v := str.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+	if str == nil {
+		return false
+	}
+	typeInt := reflect.TypeOf(str)
+	switch typeInt.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return true
-	case string:
+	case reflect.String:
 		_, err := strconv.Atoi(str.(string))
 		return err == nil
 	default:
-		log.Printf("%v is not be integer\n", v)
+		log.Printf("%v is not be integer\n", typeInt.Kind())
 		return false
 	}
 }
 
 func IsFloat(str interface{}) bool {
-	switch v := str.(type) {
-	case float32, float64:
+	if str == nil {
+		return false
+	}
+	typeFloat := reflect.TypeOf(str)
+	switch typeFloat.Kind() {
+	case reflect.Float32, reflect.Float64:
 		return true
-	case string:
+	case reflect.String:
 		_, err := strconv.ParseFloat(str.(string), 64)
 
 		return err == nil
 	default:
-		log.Printf("%v is not be float\n", v)
+		log.Printf("%v is not be float\n", typeFloat.Kind())
 		return false
 	}
 }
@@ -141,10 +150,14 @@ func IsDate(str interface{}) bool {
 
 // Boolean
 func IsBool(str interface{}) bool {
-	switch typeof(str) {
-	case "bool":
+	if str == nil {
+		return false
+	}
+	typeBool := reflect.TypeOf(str)
+	switch typeBool.Kind() {
+	case reflect.Bool:
 		return true
-	case "string":
+	case reflect.String:
 		_, err := strconv.ParseBool(str.(string))
 
 		return err == nil

@@ -13,6 +13,13 @@ func Test_Scanner(t *testing.T) {
 	require.Panics(t, func() {
 		_ = validator.Scanner(nil)
 	})
+	type Enum int
+	const (
+		Pending Enum = iota
+		Processing
+		Completed
+		Failed
+	)
 	type Nested struct {
 		IsAlpha string `validate:"isAlpha"`
 	}
@@ -34,6 +41,7 @@ func Test_Scanner(t *testing.T) {
 		Slice            []*Nested `validate:"nested"`
 		Lala             string    `validate:"isAlpha"`
 		Date             time.Time `validate:"isDate"`
+		Enum             Enum      `validate:"isInt"`
 	}
 	require.Panics(t, func() {
 		_ = validator.Scanner(Input{})
@@ -60,6 +68,7 @@ func Test_Scanner(t *testing.T) {
 			{IsAlpha: "avc"},
 		},
 		Date: time.Now(),
+		Enum: Pending,
 	}
 
 	err := validator.Scanner(happyCase)

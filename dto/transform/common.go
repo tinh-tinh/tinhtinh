@@ -2,47 +2,49 @@ package transform
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 	"time"
 )
 
-func ToBool(str interface{}) bool {
-	switch v := str.(type) {
-	case bool:
-		return str.(bool)
-	case string:
+func ToBool(str interface{}) interface{} {
+	typeBool := reflect.TypeOf(str)
+	switch typeBool.Kind() {
+	case reflect.Bool:
+		return str
+	case reflect.String:
 		val, _ := strconv.ParseBool(str.(string))
 		return val
 	default:
-		panic(fmt.Sprintf("cannot transform bool with type %v, currently only support bool, string", v))
+		panic(fmt.Sprintf("cannot transform bool with type %v, currently only support bool, string", typeBool.Kind()))
 	}
 }
 
 func ToInt(str interface{}) interface{} {
-	switch v := str.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+	typeInt := reflect.TypeOf(str)
+	switch typeInt.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return str
-	case string:
+	case reflect.String:
 		val, _ := strconv.Atoi(str.(string))
 		return val
 	default:
-		panic(fmt.Sprintf("cannot transform int with type %v, currently only support int, string", v))
+		panic(fmt.Sprintf("cannot transform int with type %v, currently only support int, string", typeInt.Kind()))
 	}
 }
 
 func ToFloat(str interface{}) interface{} {
-	switch v := str.(type) {
-	case float32:
-		return str.(float32)
-	case float64:
-		return str.(float64)
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		return float64(str.(int))
-	case string:
+	typeFloat := reflect.TypeOf(str)
+	switch typeFloat.Kind() {
+	case reflect.Float32, reflect.Float64:
+		return str
+	case reflect.String:
 		val, _ := strconv.ParseFloat(str.(string), 64)
 		return val
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return float64(str.(int))
 	default:
-		panic(fmt.Sprintf("cannot transform with type %v, currently only support float, int, string", v))
+		panic(fmt.Sprintf("cannot transform with type %v, currently only support float, int, string", typeFloat.Kind()))
 	}
 }
 
@@ -58,21 +60,43 @@ func ToDate(str interface{}) time.Time {
 	}
 }
 
-func ToString(str interface{}) string {
-	switch v := str.(type) {
-	case string:
-		return str.(string)
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		return strconv.Itoa(int(str.(int)))
-	case float32:
+func ToString(str interface{}) interface{} {
+	typeStr := reflect.TypeOf(str)
+	switch typeStr.Kind() {
+	case reflect.String:
+		return str
+	case reflect.Int:
+		return strconv.Itoa(str.(int))
+	case reflect.Int8:
+		return strconv.Itoa(int(str.(int8)))
+	case reflect.Int16:
+		return strconv.Itoa(int(str.(int16)))
+	case reflect.Int32:
+		return strconv.Itoa(int(str.(int32)))
+	case reflect.Int64:
+		return strconv.Itoa(int(str.(int64)))
+	case reflect.Uint:
+		return strconv.Itoa(int(str.(uint)))
+	case reflect.Uint8:
+		return strconv.Itoa(int(str.(uint8)))
+	case reflect.Uint16:
+		return strconv.Itoa(int(str.(uint16)))
+	case reflect.Uint32:
+		return strconv.Itoa(int(str.(uint32)))
+	case reflect.Uint64:
+		return strconv.Itoa(int(str.(uint64)))
+	case reflect.Float32:
 		return strconv.FormatFloat(float64(str.(float32)), 'f', -1, 32)
-	case float64:
+	case reflect.Float64:
 		return strconv.FormatFloat(str.(float64), 'f', -1, 64)
-	case bool:
+	case reflect.Bool:
 		return strconv.FormatBool(str.(bool))
-	case time.Time:
-		return str.(time.Time).String()
+	case reflect.Struct:
+		if typeStr == reflect.TypeOf(time.Time{}) {
+			return str.(time.Time).String()
+		}
+		panic(fmt.Sprintf("cannot transform with type %v, currently only support string, int, float, bool, time", typeStr.Kind()))
 	default:
-		panic(fmt.Sprintf("cannot transform with type %v, currently only support string, int, float, bool, time", v))
+		panic(fmt.Sprintf("cannot transform with type %v, currently only support string, int, float, bool, time", typeStr.Kind()))
 	}
 }

@@ -109,6 +109,16 @@ func Test_IsInt(t *testing.T) {
 	require.True(t, validator.IsInt("123"))
 
 	require.False(t, validator.IsInt(true))
+
+	type Level int
+	const (
+		Low Level = iota
+		Medium
+		High
+	)
+
+	var level Level = High
+	require.True(t, validator.IsInt(level))
 }
 
 func Test_IsFloat(t *testing.T) {
@@ -119,6 +129,16 @@ func Test_IsFloat(t *testing.T) {
 	require.True(t, validator.IsFloat("123.123"))
 
 	require.False(t, validator.IsFloat(true))
+
+	type GepCode float32
+	const (
+		Asia    GepCode = 1.1
+		Europe  GepCode = 1.2
+		America GepCode = 1.3
+	)
+
+	var gepCode GepCode = Asia
+	require.True(t, validator.IsFloat(gepCode))
 }
 
 func Test_IsNumber(t *testing.T) {
@@ -148,6 +168,15 @@ func Test_IsBool(t *testing.T) {
 
 	require.True(t, validator.IsBool("true"))
 	require.False(t, validator.IsBool(123))
+
+	type Status bool
+	const (
+		Active   Status = true
+		Inactive Status = false
+	)
+
+	var status Status = Active
+	require.True(t, validator.IsBool(status))
 }
 
 func Test_IsNil(t *testing.T) {
@@ -161,4 +190,34 @@ func Test_IsNil(t *testing.T) {
 
 	b := make(map[string]interface{})
 	require.True(t, validator.IsNil(b))
+}
+
+func Test_Validators_Edge_Cases(t *testing.T) {
+	t.Parallel()
+
+	// Test nil cases
+	require.False(t, validator.IsAlpha(nil))
+	require.False(t, validator.IsAlphanumeric(nil))
+	require.False(t, validator.IsEmail(nil))
+	require.False(t, validator.IsStrongPassword(nil))
+	require.False(t, validator.IsUUID(nil))
+	require.False(t, validator.IsObjectId(nil))
+	require.False(t, validator.IsInt(nil))
+	require.False(t, validator.IsFloat(nil))
+	require.False(t, validator.IsNumber(nil))
+	require.False(t, validator.IsDate(nil))
+	require.False(t, validator.IsBool(nil))
+
+	// Test empty string cases
+	require.False(t, validator.IsAlpha(""))
+	require.False(t, validator.IsAlphanumeric(""))
+	require.False(t, validator.IsEmail(""))
+	require.False(t, validator.IsStrongPassword(""))
+	require.False(t, validator.IsUUID(""))
+	require.False(t, validator.IsObjectId(""))
+	require.False(t, validator.IsInt(""))
+	require.False(t, validator.IsFloat(""))
+	require.False(t, validator.IsNumber(""))
+	require.False(t, validator.IsDate(""))
+	require.False(t, validator.IsBool(""))
 }
