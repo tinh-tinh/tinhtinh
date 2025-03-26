@@ -7,39 +7,160 @@ import (
 	"time"
 )
 
-func ToBool(str interface{}) interface{} {
-	typeBool := reflect.TypeOf(str)
+func ToBool(val any) any {
+	if val == nil {
+		panic(fmt.Errorf("cannot convert nil to bool"))
+	}
+
+	v := reflect.ValueOf(val)
+
+	// Handle array or slice
+	if v.Kind() == reflect.Slice || v.Kind() == reflect.Array {
+		length := v.Len()
+		if length == 0 {
+			return val
+		}
+
+		// Find common type in the slice
+		var commonType reflect.Type
+		results := make([]any, length)
+
+		for i := range length {
+			converted := ToBool(v.Index(i).Interface())
+			results[i] = converted
+
+			if commonType == nil {
+				commonType = reflect.TypeOf(converted)
+			} else if commonType != reflect.TypeOf(converted) {
+				panic(fmt.Errorf("inconsistent types in array: found %v and %v", commonType, reflect.TypeOf(converted)))
+			}
+		}
+
+		// Convert to slice
+		outputSlice := reflect.MakeSlice(reflect.SliceOf(commonType), length, length)
+		for i := range length {
+			outputSlice.Index(i).Set(reflect.ValueOf(results[i]))
+		}
+		return outputSlice.Interface()
+	}
+
+	// Handle single value
+	typeBool := reflect.TypeOf(val)
 	switch typeBool.Kind() {
 	case reflect.Bool:
-		return str
+		return val
 	case reflect.String:
-		val, _ := strconv.ParseBool(str.(string))
+		val, err := strconv.ParseBool(val.(string))
+		if err != nil {
+			panic(fmt.Sprintf("cannot transform bool with type %v, currently only support bool, string", typeBool.Kind()))
+		}
 		return val
 	default:
 		panic(fmt.Sprintf("cannot transform bool with type %v, currently only support bool, string", typeBool.Kind()))
 	}
 }
 
-func ToInt(str interface{}) interface{} {
-	typeInt := reflect.TypeOf(str)
-	switch typeInt.Kind() {
+func ToInt(val any) any {
+	if val == nil {
+		panic(fmt.Errorf("cannot convert nil to int"))
+	}
+
+	v := reflect.ValueOf(val)
+
+	// Handle array or slice
+	if v.Kind() == reflect.Slice || v.Kind() == reflect.Array {
+		length := v.Len()
+		if length == 0 {
+			return val
+		}
+
+		// Find common type in the slice
+		var commonType reflect.Type
+		results := make([]any, length)
+
+		for i := range length {
+			converted := ToInt(v.Index(i).Interface())
+			results[i] = converted
+
+			if commonType == nil {
+				commonType = reflect.TypeOf(converted)
+			} else if commonType != reflect.TypeOf(converted) {
+				panic(fmt.Errorf("inconsistent types in array: found %v and %v", commonType, reflect.TypeOf(converted)))
+			}
+		}
+
+		// Convert to slice
+		outputSlice := reflect.MakeSlice(reflect.SliceOf(commonType), length, length)
+		for i := range length {
+			outputSlice.Index(i).Set(reflect.ValueOf(results[i]))
+		}
+		return outputSlice.Interface()
+	}
+
+	// Handle one element
+	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return str
-	case reflect.String:
-		val, _ := strconv.Atoi(str.(string))
 		return val
+
+	case reflect.String:
+		num, err := strconv.Atoi(val.(string))
+		if err != nil {
+			panic(fmt.Errorf("cannot convert string '%v' to int: %v", val, err))
+		}
+		return num
+
 	default:
-		panic(fmt.Sprintf("cannot transform int with type %v, currently only support int, string", typeInt.Kind()))
+		panic(fmt.Errorf("cannot convert type %v to int, only support int, uint, string, and array/slice of them", v.Kind()))
 	}
 }
 
-func ToFloat(str interface{}) interface{} {
+func ToFloat(str any) any {
+	if str == nil {
+		panic(fmt.Errorf("cannot convert nil to float"))
+	}
+
+	v := reflect.ValueOf(str)
+
+	// Handle array or slice
+	if v.Kind() == reflect.Slice || v.Kind() == reflect.Array {
+		length := v.Len()
+		if length == 0 {
+			return str
+		}
+
+		// Find common type in the slice
+		var commonType reflect.Type
+		results := make([]any, length)
+
+		for i := range length {
+			converted := ToFloat(v.Index(i).Interface())
+			results[i] = converted
+
+			if commonType == nil {
+				commonType = reflect.TypeOf(converted)
+			} else if commonType != reflect.TypeOf(converted) {
+				panic(fmt.Errorf("inconsistent types in array: found %v and %v", commonType, reflect.TypeOf(converted)))
+			}
+		}
+
+		// Convert to slice
+		outputSlice := reflect.MakeSlice(reflect.SliceOf(commonType), length, length)
+		for i := range length {
+			outputSlice.Index(i).Set(reflect.ValueOf(results[i]))
+		}
+		return outputSlice.Interface()
+	}
+
+	// Handle one element
 	typeFloat := reflect.TypeOf(str)
 	switch typeFloat.Kind() {
 	case reflect.Float32, reflect.Float64:
 		return str
 	case reflect.String:
-		val, _ := strconv.ParseFloat(str.(string), 64)
+		val, err := strconv.ParseFloat(str.(string), 64)
+		if err != nil {
+			panic(fmt.Sprintf("cannot transform with type %v, currently only support float, int, string", typeFloat.Kind()))
+		}
 		return val
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return float64(str.(int))
@@ -48,19 +169,82 @@ func ToFloat(str interface{}) interface{} {
 	}
 }
 
-func ToDate(str interface{}) time.Time {
+func ToDate(str any) any {
+	if str == nil {
+		panic(fmt.Errorf("cannot convert nil to date"))
+	}
+
+	v := reflect.ValueOf(str)
+
+	// Handle array or slice
+	if v.Kind() == reflect.Slice || v.Kind() == reflect.Array {
+		length := v.Len()
+		if length == 0 {
+			return str
+		}
+
+		// Find common type in the slice
+		results := make([]time.Time, length)
+
+		for i := range length {
+			converted := ToDate(v.Index(i).Interface())
+			results[i] = converted.(time.Time)
+		}
+
+		return results
+	}
 	switch v := str.(type) {
 	case time.Time:
 		return str.(time.Time)
 	case string:
-		date, _ := time.Parse("2006-01-02", str.(string))
+		date, err := time.Parse("2006-01-02", str.(string))
+		if err != nil {
+			panic(fmt.Sprintf("cannot transform with type %v, currently only support time, string", v))
+		}
 		return date
 	default:
 		panic(fmt.Sprintf("cannot transform with type %v, currently only support time, string", v))
 	}
 }
 
-func ToString(str interface{}) interface{} {
+func ToString(str any) any {
+	if str == nil {
+		return ""
+	}
+
+	v := reflect.ValueOf(str)
+
+	// Handle array or slice
+	if v.Kind() == reflect.Slice || v.Kind() == reflect.Array {
+		length := v.Len()
+		if length == 0 {
+			return str
+		}
+
+		// Find common type in the slice
+		var commonType reflect.Type
+		results := make([]any, length)
+
+		for i := range length {
+			converted := ToString(v.Index(i).Interface())
+			results[i] = converted
+
+			if commonType == nil {
+				commonType = reflect.TypeOf(converted)
+			} else if commonType != reflect.TypeOf(converted) {
+				panic(fmt.Errorf("inconsistent types in array: found %v and %v", commonType, reflect.TypeOf(converted)))
+			}
+		}
+
+		// Convert to slice
+		outputSlice := reflect.MakeSlice(reflect.SliceOf(commonType), length, length)
+		for i := range length {
+			outputSlice.Index(i).Set(reflect.ValueOf(results[i]))
+		}
+
+		return outputSlice.Interface()
+	}
+
 	typeStr := reflect.TypeOf(str)
 	switch typeStr.Kind() {
 	case reflect.String:
