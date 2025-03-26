@@ -177,3 +177,20 @@ func TestDefault(t *testing.T) {
 	require.Equal(t, 4, pagin2.Page)
 	require.Equal(t, 20, pagin2.Limit)
 }
+
+func Test_Array(t *testing.T) {
+	type User struct {
+		ArrEmail []string  `validate:"isEmail"`
+		ArrInt   []int     `validate:"isInt"`
+		ArrFloat []float64 `validate:"isFloat"`
+		ArrBool  []bool    `validate:"isBool"`
+	}
+
+	user := &User{
+		ArrEmail: []string{"abc@gmail.com", "abc@mailinator.ai"},
+		ArrInt:   []int{1, 2},
+		ArrFloat: []float64{1.1, 2.2},
+		ArrBool:  []bool{true, false},
+	}
+	require.Nil(t, validator.Scanner(user))
+}
