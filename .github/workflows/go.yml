@@ -34,10 +34,15 @@ jobs:
       run: go clean -testcache
 
     - name: Test
-      run: go test -cover ./...
+      run: go test -cover ./... -coverprofile=coverage.txt
 
     - name: Remove temp file
       run: 	rm -rf middleware/logger/logs common/exception/logs
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   test-redis:
     runs-on: ubuntu-latest
