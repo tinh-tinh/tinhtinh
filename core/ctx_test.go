@@ -336,20 +336,41 @@ func Test_Ctx_Param(t *testing.T) {
 		})
 
 		ctrl.Get("key/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamInt("key")
+			data := ctx.ParamInt("key", 1)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key2/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamFloat("key")
+			data := ctx.ParamFloat("key", 1)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key3/{key}", func(ctx core.Ctx) error {
+			data := ctx.ParamBool("key", true)
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("key4/{key}", func(ctx core.Ctx) error {
+			data := ctx.ParamInt("key")
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("key5/{key}", func(ctx core.Ctx) error {
+			data := ctx.ParamFloat("key")
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("key6/{key}", func(ctx core.Ctx) error {
 			data := ctx.ParamBool("key")
 			return ctx.JSON(core.Map{
 				"data": data,
@@ -400,7 +421,7 @@ func Test_Ctx_Param(t *testing.T) {
 
 	resp2, err = testClient.Get(testServer.URL + "/api/test/key/abc")
 	require.Nil(t, err)
-	require.Equal(t, http.StatusInternalServerError, resp2.StatusCode)
+	require.Equal(t, http.StatusOK, resp2.StatusCode)
 
 	// Case ParamFloat
 	resp3, err := testClient.Get(testServer.URL + "/api/test/key2/10.84573984573984")
@@ -416,7 +437,7 @@ func Test_Ctx_Param(t *testing.T) {
 
 	resp3, err = testClient.Get(testServer.URL + "/api/test/key2/abc")
 	require.Nil(t, err)
-	require.Equal(t, http.StatusInternalServerError, resp3.StatusCode)
+	require.Equal(t, http.StatusOK, resp3.StatusCode)
 
 	// Case ParamBool
 	resp4, err := testClient.Get(testServer.URL + "/api/test/key3/true")
@@ -432,7 +453,43 @@ func Test_Ctx_Param(t *testing.T) {
 
 	resp4, err = testClient.Get(testServer.URL + "/api/test/key3/abc")
 	require.Nil(t, err)
-	require.Equal(t, http.StatusInternalServerError, resp4.StatusCode)
+	require.Equal(t, http.StatusOK, resp4.StatusCode)
+
+	// Case Param with default value
+	resp5, err := testClient.Get(testServer.URL + "/api/test/key4/abc")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp5.StatusCode)
+
+	data5, err := io.ReadAll(resp5.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data5, &res)
+	require.Nil(t, err)
+	require.Equal(t, 0.0, res.Data)
+
+	// Case ParamFloat without default value
+	resp6, err := testClient.Get(testServer.URL + "/api/test/key5/abc")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp6.StatusCode)
+
+	data6, err := io.ReadAll(resp6.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data6, &res)
+	require.Nil(t, err)
+	require.Equal(t, 0.0, res.Data)
+
+	// Case ParamBool
+	resp7, err := testClient.Get(testServer.URL + "/api/test/key6/78")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp7.StatusCode)
+
+	data7, err := io.ReadAll(resp7.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data7, &res)
+	require.Nil(t, err)
+	require.Equal(t, false, res.Data)
 }
 
 func Test_Ctx_Query(t *testing.T) {
@@ -447,7 +504,7 @@ func Test_Ctx_Query(t *testing.T) {
 		})
 
 		ctrl.Get("key", func(ctx core.Ctx) error {
-			data := ctx.QueryInt("key")
+			data := ctx.QueryFloat("key", 10)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
@@ -511,7 +568,7 @@ func Test_Ctx_Query(t *testing.T) {
 
 	resp2, err = testClient.Get(testServer.URL + "/api/test/key?key=abc")
 	require.Nil(t, err)
-	require.Equal(t, http.StatusInternalServerError, resp2.StatusCode)
+	require.Equal(t, http.StatusOK, resp2.StatusCode)
 
 	// Case QueryFloat
 	resp3, err := testClient.Get(testServer.URL + "/api/test/key2?key=10.84573984573984")
@@ -524,6 +581,42 @@ func Test_Ctx_Query(t *testing.T) {
 	err = json.Unmarshal(data3, &res)
 	require.Nil(t, err)
 	require.Equal(t, 10.84573984573984, res.Data)
+
+	// Case QueryInt with invalid integer
+	resp5, err := testClient.Get(testServer.URL + "/api/test/key?key=invalid")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp5.StatusCode)
+
+	data5, err := io.ReadAll(resp5.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data5, &res)
+	require.Nil(t, err)
+	require.Equal(t, float64(10), res.Data)
+
+	// Case QueryFloat with invalid float
+	resp6, err := testClient.Get(testServer.URL + "/api/test/key2?key=invalid")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp6.StatusCode)
+
+	data6, err := io.ReadAll(resp6.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data6, &res)
+	require.Nil(t, err)
+	require.Equal(t, 0.0, res.Data)
+
+	// Case QueryBool with invalid boolean
+	resp7, err := testClient.Get(testServer.URL + "/api/test/key3?key=invalid")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp7.StatusCode)
+
+	data7, err := io.ReadAll(resp7.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data7, &res)
+	require.Nil(t, err)
+	require.Equal(t, false, res.Data)
 
 	// Case QueryBool
 	resp4, err := testClient.Get(testServer.URL + "/api/test/key3?key=true")
@@ -539,7 +632,7 @@ func Test_Ctx_Query(t *testing.T) {
 
 	resp4, err = testClient.Get(testServer.URL + "/api/test/key3?key=abc")
 	require.Nil(t, err)
-	require.Equal(t, http.StatusInternalServerError, resp4.StatusCode)
+	require.Equal(t, http.StatusOK, resp4.StatusCode)
 }
 
 func Test_Ctx_QueryInt(t *testing.T) {
@@ -548,6 +641,13 @@ func Test_Ctx_QueryInt(t *testing.T) {
 
 		ctrl.Get("", func(ctx core.Ctx) error {
 			data := ctx.QueryInt("name")
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("d", func(ctx core.Ctx) error {
+			data := ctx.QueryInt("default", 10)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
@@ -586,6 +686,39 @@ func Test_Ctx_QueryInt(t *testing.T) {
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, 10, res.Data)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test?name=abc")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, 0, res.Data)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/d?default=5")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, 5, res.Data)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/d")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, 10, res.Data)
 }
 
 func Test_Ctx_QueryBool(t *testing.T) {
@@ -594,6 +727,13 @@ func Test_Ctx_QueryBool(t *testing.T) {
 
 		ctrl.Get("", func(ctx core.Ctx) error {
 			data := ctx.QueryBool("name")
+			return ctx.JSON(core.Map{
+				"data": data,
+			})
+		})
+
+		ctrl.Get("/d", func(ctx core.Ctx) error {
+			data := ctx.QueryBool("default", true)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
@@ -632,6 +772,39 @@ func Test_Ctx_QueryBool(t *testing.T) {
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
 	require.Equal(t, true, res.Data)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, false, res.Data)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/d")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, true, res.Data)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/d?default=false")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	err = json.Unmarshal(data, &res)
+	require.Nil(t, err)
+	require.Equal(t, false, res.Data)
 }
 
 func Test_Ctx_Status(t *testing.T) {
