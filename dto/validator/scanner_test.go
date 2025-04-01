@@ -42,6 +42,8 @@ func Test_Scanner(t *testing.T) {
 		Lala             string    `validate:"isAlpha"`
 		Date             time.Time `validate:"isDate"`
 		Enum             Enum      `validate:"isInt"`
+		MinLength        string    `validate:"minLength=3"`
+		MaxLength        string    `validate:"maxLength=10"`
 	}
 	require.Panics(t, func() {
 		_ = validator.Scanner(Input{})
@@ -67,8 +69,10 @@ func Test_Scanner(t *testing.T) {
 		Slice: []*Nested{
 			{IsAlpha: "avc"},
 		},
-		Date: time.Now(),
-		Enum: Pending,
+		Date:      time.Now(),
+		Enum:      Pending,
+		MinLength: "abcd",
+		MaxLength: "xyz",
 	}
 
 	err := validator.Scanner(happyCase)
@@ -85,10 +89,12 @@ func Test_Scanner(t *testing.T) {
 		Slice: []*Nested{{
 			IsAlpha: "455455445",
 		}},
+		MinLength: "a",
+		MaxLength: "qwerteryuiiuoopo[o[bggnfnghmj,sccsbbhmjk,kk]]",
 	}
 	err = validator.Scanner(badCaseStr)
 	require.NotNil(t, err)
-	require.Equal(t, "Required is required\nIsAlpha is not a valid alpha\nIsAlphanumeric is not a valid alpha numeric\nIsEmail is not a valid email\nIsStrongPassword is not a valid strong password\nIsUUID is not a valid UUID\nIsObjectId is not a valid ObjectID\nIsAlpha is not a valid alpha\nIsAlpha is not a valid alpha", err.Error())
+	require.Equal(t, "Required is required\nIsAlpha is not a valid alpha\nIsAlphanumeric is not a valid alpha numeric\nIsEmail is not a valid email\nIsStrongPassword is not a valid strong password\nIsUUID is not a valid UUID\nIsObjectId is not a valid ObjectID\nIsAlpha is not a valid alpha\nIsAlpha is not a valid alpha\nMinLength is minimim length is 3\nMaxLength is maximum length is 10", err.Error())
 
 	type BadCase struct {
 		IsFloat      any `validate:"isFloat"`

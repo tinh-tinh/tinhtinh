@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/tinh-tinh/tinhtinh/v2/dto/transform"
@@ -124,6 +125,23 @@ func Scanner(val interface{}) error {
 							if err != nil {
 								errMsg = append(errMsg, err.Error())
 							}
+						}
+					}
+				}
+			default:
+				if strings.Contains(validate, "=") {
+					subValidators := strings.Split(validate, "=")
+					subField := subValidators[0]
+					subValue := subValidators[1]
+					if subField == "minLength" {
+						length, _ := strconv.Atoi(subValue)
+						if !MinLength(value, length) {
+							errMsg = append(errMsg, field.Name+" is minimim length is "+subValue)
+						}
+					} else if subField == "maxLength" {
+						length, _ := strconv.Atoi(subValue)
+						if !MaxLength(value, length) {
+							errMsg = append(errMsg, field.Name+" is maximum length is "+subValue)
 						}
 					}
 				}

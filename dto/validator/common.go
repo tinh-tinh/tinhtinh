@@ -316,3 +316,41 @@ func IsNil(val any) bool {
 		return val == nil
 	}
 }
+
+func MinLength(input any, min int) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		return value.Len() >= min
+	}
+
+	if typeof(input) != "string" {
+		return false
+	}
+
+	return len(input.(string)) >= min
+}
+
+func MaxLength(input any, max int) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		return value.Len() <= max
+	}
+
+	if typeof(input) != "string" {
+		return false
+	}
+
+	return len(input.(string)) <= max
+}
