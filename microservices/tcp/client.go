@@ -7,10 +7,16 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
+type RetryOptions struct {
+	Retry int
+	Delay time.Duration
+}
+
 type Options struct {
 	microservices.Config
-	Addr    string
-	Timeout time.Duration
+	Addr         string
+	Timeout      time.Duration
+	RetryOptions RetryOptions
 }
 
 type Client struct {
@@ -21,7 +27,13 @@ type Client struct {
 func NewClient(opt Options) microservices.ClientProxy {
 	conn, err := net.Dial("tcp", opt.Addr)
 	if err != nil {
-		panic(err)
+		if opt.RetryOptions.Retry != 0 {
+			time.Sleep(opt.RetryOptions.Delay)
+			opt.RetryOptions.Retry--
+			return NewClient(opt)
+		} else {
+			panic(err)
+		}
 	}
 
 	if opt.Timeout > 0 {
