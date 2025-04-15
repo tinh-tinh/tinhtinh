@@ -58,24 +58,48 @@ func (log *Logger) Info(msg string) {
 	log.write(LevelInfo, msg)
 }
 
+func (log *Logger) Infof(msg string, args ...any) {
+	log.write(LevelInfo, fmt.Sprintf(msg, args...))
+}
+
 func (log *Logger) Debug(msg string) {
 	log.write(LevelDebug, msg)
+}
+
+func (log *Logger) Debugf(msg string, args ...any) {
+	log.write(LevelDebug, fmt.Sprintf(msg, args...))
 }
 
 func (log *Logger) Warn(msg string) {
 	log.write(LevelWarn, msg)
 }
 
+func (log *Logger) Warnf(msg string, args ...any) {
+	log.write(LevelWarn, fmt.Sprintf(msg, args...))
+}
+
 func (log *Logger) Error(msg string) {
 	log.write(LevelError, msg)
+}
+
+func (log *Logger) Errorf(msg string, args ...any) {
+	log.write(LevelError, fmt.Sprintf(msg, args...))
 }
 
 func (log *Logger) Fatal(msg string) {
 	log.write(LevelFatal, msg)
 }
 
+func (log *Logger) Fatalf(msg string, args ...any) {
+	log.write(LevelFatal, fmt.Sprintf(msg, args...))
+}
+
 func (log *Logger) Log(level Level, msg string) {
 	log.write(level, msg)
+}
+
+func (log *Logger) Logf(level Level, msg string, args ...any) {
+	log.write(level, fmt.Sprintf(msg, args...))
 }
 
 func (log *Logger) write(level Level, msg string) {

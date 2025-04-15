@@ -14,7 +14,7 @@ func Test_Create(t *testing.T) {
 		Max:    1,
 		Rotate: true,
 	})
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		val := strconv.Itoa(i)
 		if i%2 == 0 {
 			log.Info(val)
@@ -36,7 +36,7 @@ func Test_Create(t *testing.T) {
 	})
 
 	require.Panics(t, func() {
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			log2.Info(randomBigStr())
 		}
 	})
@@ -47,8 +47,27 @@ func Test_Create(t *testing.T) {
 		Rotate: true,
 	})
 
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		log3.Info(randomBigStr())
+	}
+
+	log = logger.Create(logger.Options{
+		Max:    1,
+		Rotate: true,
+	})
+	for i := range 100 {
+		if i%2 == 0 {
+			log.Infof("The value is %d", i)
+		} else if i%3 == 0 {
+			log.Warnf("The value is %d", i)
+		} else if i%5 == 0 {
+			log.Errorf("The value is %d", i)
+		} else if i%7 == 0 {
+			log.Fatalf("The value is %d", i)
+		} else {
+			log.Debugf("The value is %d", i)
+		}
+		log.Logf(logger.LevelDebug, "alayws have ata %d", i)
 	}
 }
 
