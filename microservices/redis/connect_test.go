@@ -1,6 +1,7 @@
 package redis_test
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -157,6 +158,11 @@ func DeliveryApp() microservices.Service {
 			return nil
 		})
 
+		handler.OnEvent("order.created", func(ctx microservices.Ctx) error {
+			fmt.Println("Delivery when have order:", ctx.Payload(&Order{}))
+			return nil
+		})
+
 		return handler
 	}
 
@@ -258,4 +264,117 @@ func Benchmark_Practice(b *testing.B) {
 			require.Equal(b, http.StatusOK, resp.StatusCode)
 		}
 	})
+}
+
+func Test_Client_Error(t *testing.T) {
+	appModule := func() core.Module {
+		module := core.NewModule(core.NewModuleOptions{
+			Imports: []core.Modules{
+				microservices.RegisterClient(redis.NewClient(redis.Options{
+					Options: &redis_store.Options{
+						Addr: "localhost:637",
+					},
+				})),
+			},
+		})
+
+		return module
+	}
+	require.Panics(t, func() {
+		app := core.CreateFactory(appModule)
+		app.SetGlobalPrefix("api")
+	})
+
+	serverModule := func() core.Module {
+		module := core.NewModule(core.NewModuleOptions{
+			Imports: []core.Modules{microservices.Register()},
+		})
+		return module
+	}
+
+	server := redis.New(serverModule, redis.Options{
+		Options: &redis_store.Options{
+			Addr: "localhost:6379",
+		},
+	})
+	go server.Listen()
+
+	time.Sleep(100 * time.Millisecond)
+
+	clientController := func(module core.Module) core.Controller {
+		ctrl := module.NewController("test")
+
+		client := microservices.Inject(module)
+		ctrl.Get("", func(ctx core.Ctx) error {
+			go client.Send("abc", 1000)
+			return ctx.JSON(core.Map{"data": "ok"})
+		})
+
+		return ctrl
+	}
+
+	clientModule := func() core.Module {
+		module := core.NewModule(core.NewModuleOptions{
+			Imports: []core.Modules{
+				microservices.RegisterClient(redis.NewClient(redis.Options{
+					Options: &redis_store.Options{
+						Addr: "localhost:6379",
+					},
+					Config: microservices.Config{
+						Serializer: func(v interface{}) ([]byte, error) {
+							return nil, errors.New("error")
+						},
+					},
+				})),
+			},
+			Controllers: []core.Controllers{clientController},
+		})
+
+		return module
+	}
+
+	app := core.CreateFactory(clientModule)
+	app.SetGlobalPrefix("api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	testClient := testServer.Client()
+	resp, err := testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func Test_Server_Error(t *testing.T) {
+	require.Panics(t, func() {
+		serverModule := func() core.Module {
+			module := core.NewModule(core.NewModuleOptions{
+				Imports: []core.Modules{microservices.Register()},
+			})
+			return module
+		}
+		server := redis.New(serverModule, redis.Options{
+			Options: &redis_store.Options{
+				Addr: "localhost:637",
+			},
+		})
+		server.Listen()
+	})
+
+	require.Panics(t, func() {
+		serverModule := func() core.Module {
+			module := core.NewModule(core.NewModuleOptions{})
+			return module
+		}
+		server := redis.New(serverModule, redis.Options{
+			Options: &redis_store.Options{
+				Addr: "localhost:6379",
+			},
+		})
+		server.Listen()
+	})
+}
+
+func Test_Timeout(t *testing.T) {
+
 }

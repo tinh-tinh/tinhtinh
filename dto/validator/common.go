@@ -2,38 +2,89 @@ package validator
 
 import (
 	"fmt"
+	"log"
+	"reflect"
 	"regexp"
 	"strconv"
 	"time"
 	"unicode"
 )
 
-func typeof(v interface{}) string {
+func typeof(v any) string {
 	return fmt.Sprintf("%T", v)
 }
 
-func IsAlpha(str interface{}) bool {
-	if typeof(str) != "string" {
+func IsAlpha(input any) bool {
+	if input == nil {
 		return false
 	}
-	return IsRegexMatch(`^[a-zA-Z]+$`, str)
-}
 
-func IsAlphanumeric(str interface{}) bool {
-	if typeof(str) != "string" {
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		for i := range value.Len() {
+			if !IsAlpha(value.Index(i).Interface()) { // Recursive
+				return false
+			}
+		}
+		return true
+	}
+
+	if typeof(input) != "string" {
 		return false
 	}
-	return IsRegexMatch(`^[a-zA-Z0-9]+$`, str)
+
+	return IsRegexMatch(`^[a-zA-Z]+$`, input)
 }
 
-func IsEmail(str interface{}) bool {
-	if typeof(str) != "string" {
+func IsAlphanumeric(input any) bool {
+	if input == nil {
 		return false
 	}
-	return IsRegexMatch(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`, str)
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		for i := range value.Len() {
+			if !IsAlphanumeric(value.Index(i).Interface()) { // Recursive
+				return false
+			}
+		}
+		return true
+	}
+
+	if typeof(input) != "string" {
+		return false
+	}
+	return IsRegexMatch(`^[a-zA-Z0-9]+$`, input)
 }
 
-func IsStrongPassword(str interface{}) bool {
+func IsEmail(input any) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		for i := range value.Len() {
+			if !IsEmail(value.Index(i).Interface()) { // Recursive
+				return false
+			}
+		}
+		return true
+	}
+
+	if typeof(input) != "string" {
+		return false
+	}
+	return IsRegexMatch(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`, input)
+}
+
+func IsStrongPassword(str any) bool {
 	if typeof(str) != "string" {
 		return false
 	}
@@ -64,25 +115,57 @@ func IsStrongPassword(str interface{}) bool {
 	return hasUpper && hasLower && hasNumber && hasSpecial
 }
 
-func IsUUID(str interface{}) bool {
-	if typeof(str) != "string" {
+func IsUUID(input any) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		for i := range value.Len() {
+			if !IsUUID(value.Index(i).Interface()) { // Recursive
+				return false
+			}
+		}
+		return true
+	}
+
+	if typeof(input) != "string" {
 		return false
 	}
 
 	uuidPattern := `^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$`
-	return IsRegexMatch(uuidPattern, str)
+	return IsRegexMatch(uuidPattern, input)
 }
 
-func IsObjectId(str interface{}) bool {
-	if typeof(str) != "string" {
+func IsObjectId(input any) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		for i := range value.Len() {
+			if !IsObjectId(value.Index(i).Interface()) { // Recursive
+				return false
+			}
+		}
+		return true
+	}
+
+	if typeof(input) != "string" {
 		return false
 	}
 
 	objectIdPattern := `^[a-f0-9]{24}$`
-	return IsRegexMatch(objectIdPattern, str)
+	return IsRegexMatch(objectIdPattern, input)
 }
 
-func IsRegexMatch(pattern string, str interface{}) bool {
+func IsRegexMatch(pattern string, str any) bool {
 	if typeof(str) != "string" {
 		return false
 	}
@@ -93,58 +176,125 @@ func IsRegexMatch(pattern string, str interface{}) bool {
 }
 
 // Numeric
-func IsInt(str interface{}) bool {
-	switch v := str.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+func IsInt(input any) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		for i := range value.Len() {
+			if !IsInt(value.Index(i).Interface()) { // Recursive
+				return false
+			}
+		}
 		return true
-	case string:
-		_, err := strconv.Atoi(str.(string))
+	}
+
+	typeInt := reflect.TypeOf(input)
+	switch typeInt.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	case reflect.String:
+		_, err := strconv.Atoi(input.(string))
 		return err == nil
 	default:
-		fmt.Println(v)
+		log.Printf("%v is not be integer\n", typeInt.Kind())
 		return false
 	}
 }
 
-func IsFloat(str interface{}) bool {
-	switch v := str.(type) {
-	case float32, float64:
+func IsFloat(input any) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		for i := range value.Len() {
+			if !IsFloat(value.Index(i).Interface()) { // Recursive
+				return false
+			}
+		}
 		return true
-	case string:
-		_, err := strconv.ParseFloat(str.(string), 64)
+	}
+
+	typeFloat := reflect.TypeOf(input)
+	switch typeFloat.Kind() {
+	case reflect.Float32, reflect.Float64:
+		return true
+	case reflect.String:
+		_, err := strconv.ParseFloat(input.(string), 64)
 
 		return err == nil
 	default:
-		fmt.Println(v)
+		log.Printf("%v is not be float\n", typeFloat.Kind())
 		return false
 	}
 }
 
-func IsNumber(str interface{}) bool {
+func IsNumber(str any) bool {
 	return IsInt(str) || IsFloat(str)
 }
 
 // Date time
-func IsDateString(str interface{}) bool {
-	switch v := str.(type) {
+func IsDate(input any) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		for i := range value.Len() {
+			if !IsDate(value.Index(i).Interface()) { // Recursive
+				return false
+			}
+		}
+		return true
+	}
+
+	switch v := input.(type) {
 	case time.Time:
 		return true
 	case string:
-		_, err := time.Parse("2006-01-02", str.(string))
+		_, err := time.Parse("2006-01-02", input.(string))
 		return err == nil
 	default:
-		fmt.Println(v)
+		log.Printf("%v is not be date\n", v)
 		return false
 	}
 }
 
 // Boolean
-func IsBool(str interface{}) bool {
-	switch typeof(str) {
-	case "bool":
+func IsBool(input any) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		for i := range value.Len() {
+			if !IsBool(value.Index(i).Interface()) { // Recursive
+				return false
+			}
+		}
 		return true
-	case "string":
-		_, err := strconv.ParseBool(str.(string))
+	}
+
+	typeBool := reflect.TypeOf(input)
+	switch typeBool.Kind() {
+	case reflect.Bool:
+		return true
+	case reflect.String:
+		_, err := strconv.ParseBool(input.(string))
 
 		return err == nil
 	default:
@@ -152,17 +302,55 @@ func IsBool(str interface{}) bool {
 	}
 }
 
-func IsNil(val interface{}) bool {
+func IsNil(val any) bool {
 	switch v := val.(type) {
 	case string:
 		return len(v) == 0
 	case []string:
 		return len(v) == 0
-	case []interface{}:
+	case []any:
 		return len(v) == 0
-	case map[string]interface{}:
+	case map[string]any:
 		return len(v) == 0
 	default:
 		return val == nil
 	}
+}
+
+func MinLength(input any, min int) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		return value.Len() >= min
+	}
+
+	if typeof(input) != "string" {
+		return false
+	}
+
+	return len(input.(string)) >= min
+}
+
+func MaxLength(input any, max int) bool {
+	if input == nil {
+		return false
+	}
+
+	value := reflect.ValueOf(input)
+	t := value.Type()
+
+	if t.Kind() == reflect.Slice {
+		return value.Len() <= max
+	}
+
+	if typeof(input) != "string" {
+		return false
+	}
+
+	return len(input.(string)) <= max
 }

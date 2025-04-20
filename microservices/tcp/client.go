@@ -1,19 +1,22 @@
 package tcp
 
 import (
-	"bufio"
-	"fmt"
 	"net"
-	"reflect"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
+type RetryOptions struct {
+	Retry int
+	Delay time.Duration
+}
+
 type Options struct {
 	microservices.Config
-	Addr string
+	Addr         string
+	Timeout      time.Duration
+	RetryOptions RetryOptions
 }
 
 type Client struct {
@@ -24,80 +27,60 @@ type Client struct {
 func NewClient(opt Options) microservices.ClientProxy {
 	conn, err := net.Dial("tcp", opt.Addr)
 	if err != nil {
-		panic(err)
+		if opt.RetryOptions.Retry != 0 {
+			time.Sleep(opt.RetryOptions.Delay)
+			opt.RetryOptions.Retry--
+			return NewClient(opt)
+		} else {
+			panic(err)
+		}
 	}
-	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	if opt.Timeout > 0 {
+		conn.SetDeadline(time.Now().Add(opt.Timeout))
+	}
 
 	client := &Client{
 		Conn:   conn,
-		config: opt.Config,
-	}
-
-	if reflect.ValueOf(client.config).IsZero() {
-		client.config = microservices.ParseConfig(opt.Config)
+		config: microservices.NewConfig(opt.Config),
 	}
 
 	return client
 }
 
+func (client *Client) Config() microservices.Config {
+	return client.config
+}
+
 func (client *Client) Send(event string, data interface{}, headers ...microservices.Header) error {
-	writer := bufio.NewWriter(client.Conn)
-
-	message := microservices.Message{
-		Type:    microservices.RPC,
-		Headers: common.CloneMap(client.config.Header),
-		Event:   event,
-		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	jsonData, err := client.config.Serializer(message)
-	if err != nil {
-		return err
-	}
-
-	jsonData = append(jsonData, '\n')
-	_, err = writer.Write(jsonData)
-	if err != nil {
-		return err
-	}
-
-	writer.Flush()
-	fmt.Printf("Send message: %v for event %s\n", data, event)
-	return nil
+	return microservices.DefaultSend(client)(event, data, headers...)
 }
 
 func (client *Client) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	writer := bufio.NewWriter(client.Conn)
+	return microservices.DefaultPublish(client)(event, data, headers...)
+}
 
-	message := microservices.Message{
-		Type:    microservices.RPC,
-		Headers: common.CloneMap(client.config.Header),
-		Event:   event,
-		Data:    data,
-	}
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	jsonData, err := client.config.Serializer(message)
+func (client *Client) Timeout(duration time.Duration) microservices.ClientProxy {
+	err := client.Conn.SetWriteDeadline(time.Now().Add(duration))
 	if err != nil {
+		panic(err)
+	}
+	return client
+}
+
+func (client *Client) Emit(event string, message microservices.Message) error {
+	payload, err := microservices.EncodeMessage(client, message)
+	if err != nil {
+		client.config.ErrorHandler(err)
 		return err
 	}
 
-	jsonData = append(jsonData, '\n')
-	_, err = writer.Write(jsonData)
+	payload = append(payload, '\n')
+	_, err = client.Conn.Write(payload)
 	if err != nil {
+		client.config.ErrorHandler(err)
 		return err
 	}
 
-	writer.Flush()
-	fmt.Printf("Publish message: %v for event %s\n", data, event)
 	return nil
 }

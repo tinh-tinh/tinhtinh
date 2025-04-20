@@ -3,12 +3,10 @@ package amqlib
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 	"time"
 
 	"github.com/rabbitmq/amqp091-go"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
@@ -19,11 +17,11 @@ type Options struct {
 }
 
 type Connect struct {
-	clientHeaders map[string]string
-	Conn          *amqp091.Connection
-	Module        core.Module
-	Context       context.Context
-	config        microservices.Config
+	Conn    *amqp091.Connection
+	Module  core.Module
+	Context context.Context
+	config  microservices.Config
+	timeout time.Duration
 }
 
 // Client usage
@@ -36,14 +34,23 @@ func NewClient(opt Options) microservices.ClientProxy {
 	connect := &Connect{
 		Context: context.Background(),
 		Conn:    conn,
-		config:  opt.Config,
-	}
-
-	if reflect.ValueOf(connect.config).IsZero() {
-		connect.config = microservices.DefaultConfig()
+		config:  microservices.NewConfig(opt.Config),
 	}
 
 	return connect
+}
+
+func (c *Connect) Config() microservices.Config {
+	return c.config
+}
+
+func (c *Connect) Emit(event string, message microservices.Message) error {
+	return nil
+}
+
+func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
+	c.timeout = duration
+	return c
 }
 
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
@@ -68,23 +75,18 @@ func (c *Connect) Send(event string, data interface{}, headers ...microservices.
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if c.timeout == 0 {
+		c.timeout = 5 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	message := microservices.Message{
+	body, err := microservices.EncodeMessage(c, microservices.Message{
 		Type:    microservices.RPC,
 		Event:   event,
 		Data:    data,
-		Headers: common.CloneMap(c.config.Header),
-	}
-
-	if len(headers) > 0 {
-		for _, v := range headers {
-			common.MergeMaps(message.Headers, v)
-		}
-	}
-
-	body, err := c.Serializer(message)
+		Headers: microservices.AssignHeader(c.config.Header, headers...),
+	})
 	if err != nil {
 		return err
 	}
@@ -101,6 +103,7 @@ func (c *Connect) Send(event string, data interface{}, headers ...microservices.
 		return err
 	}
 
+	c.timeout = 0
 	fmt.Printf("Send message: %v for event %s\n", data, event)
 	return nil
 }
@@ -127,16 +130,18 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	if c.timeout == 0 {
+		c.timeout = 5 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
-	message := microservices.Message{
+	body, err := microservices.EncodeMessage(c, microservices.Message{
 		Type:    microservices.PubSub,
 		Event:   event,
 		Data:    data,
-		Headers: c.clientHeaders,
-	}
-	body, err := c.Serializer(message)
+		Headers: microservices.AssignHeader(c.config.Header, headers...),
+	})
 	if err != nil {
 		return err
 	}
@@ -153,24 +158,8 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 		return err
 	}
 
+	c.timeout = 0
 	return nil
-}
-
-func (c *Connect) Serializer(v interface{}) ([]byte, error) {
-	return c.config.Serializer(v)
-}
-
-func (c *Connect) Deserializer(data []byte, v interface{}) error {
-	return c.config.Deserializer(data, v)
-}
-
-func (c *Connect) SetHeaders(key string, value string) microservices.ClientProxy {
-	c.clientHeaders[key] = value
-	return c
-}
-
-func (c *Connect) GetHeaders(key string) string {
-	return c.clientHeaders[key]
 }
 
 // Server usage
@@ -260,8 +249,8 @@ func (c *Connect) Listen() {
 		panic(err)
 	}
 
-	if store.Subscribers[string(microservices.RPC)] != nil {
-		for _, sub := range store.Subscribers[string(microservices.RPC)] {
+	if store.GetRPC() != nil {
+		for _, sub := range store.GetRPC() {
 			err = ch.QueueBind(
 				q.Name,        // queue name
 				sub.Name,      // routing key
@@ -275,8 +264,8 @@ func (c *Connect) Listen() {
 		}
 	}
 
-	if store.Subscribers[string(microservices.PubSub)] != nil {
-		for _, sub := range store.Subscribers[string(microservices.PubSub)] {
+	if store.GetPubSub() != nil {
+		for _, sub := range store.GetPubSub() {
 			err = ch.QueueBind(
 				q.Name,        // queue name
 				sub.Name,      // routing key
@@ -291,7 +280,7 @@ func (c *Connect) Listen() {
 	}
 }
 
-func (c *Connect) Handler(ch *amqp091.Channel, q string, sub microservices.SubscribeHandler) {
+func (c *Connect) Handler(ch *amqp091.Channel, q string, sub *microservices.SubscribeHandler) {
 	msgs, err := ch.Consume(
 		q,     // queue
 		"",    // consumer
@@ -305,13 +294,7 @@ func (c *Connect) Handler(ch *amqp091.Channel, q string, sub microservices.Subsc
 		return
 	}
 	for d := range msgs {
-		var message microservices.Message
-		err := c.Deserializer(d.Body, &message)
-		if err != nil {
-			fmt.Println("Error deserializing message: ", err)
-			continue
-		}
-		fmt.Println(message)
+		message := microservices.DecodeMessage(c, d.Body)
 		if reflect.ValueOf(message).IsZero() {
 			sub.Handle(c, microservices.Message{
 				Data: d.Body,
@@ -320,8 +303,4 @@ func (c *Connect) Handler(ch *amqp091.Channel, q string, sub microservices.Subsc
 			sub.Handle(c, message)
 		}
 	}
-}
-
-func (c *Connect) ErrorHandler(err error) {
-	log.Printf("Error when running tcp: %v\n", err)
 }

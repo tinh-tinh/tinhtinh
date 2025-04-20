@@ -29,13 +29,13 @@ type Ctx interface {
 	Params() interface{}
 	Queries() interface{}
 	Param(key string) string
-	ParamInt(key string) int
-	ParamFloat(key string) float64
-	ParamBool(key string) bool
+	ParamInt(key string, defaultVal ...int) int
+	ParamFloat(key string, defaultVal ...float64) float64
+	ParamBool(key string, defaultVal ...bool) bool
 	Query(key string) string
-	QueryInt(key string) int
-	QueryFloat(key string) float64
-	QueryBool(key string) bool
+	QueryInt(key string, defaultVal ...int) int
+	QueryFloat(key string, defaultVal ...float64) float64
+	QueryBool(key string, defaultVal ...bool) bool
 	SetCallHandler(call CallHandler)
 	JSON(data Map) error
 	Get(key interface{}) interface{}
@@ -279,33 +279,42 @@ func (ctx *DefaultCtx) Param(key string) string {
 
 // ParamInt returns the value of the route parameter with the given key as an integer.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) ParamInt(key string) int {
+func (ctx *DefaultCtx) ParamInt(key string, defaultVal ...int) int {
 	val := ctx.r.PathValue(key)
 	intVal, err := strconv.Atoi(val)
 	if err != nil {
-		panic(err)
+		if len(defaultVal) > 0 {
+			return defaultVal[0]
+		}
+		return 0
 	}
 	return intVal
 }
 
 // ParamFloat returns the value of the route parameter with the given key as a float64.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) ParamFloat(key string) float64 {
+func (ctx *DefaultCtx) ParamFloat(key string, defaultVal ...float64) float64 {
 	val := ctx.r.PathValue(key)
 	floatVal, err := strconv.ParseFloat(val, 64)
 	if err != nil {
-		panic(err)
+		if len(defaultVal) > 0 {
+			return defaultVal[0]
+		}
+		return 0
 	}
 	return floatVal
 }
 
 // ParamBool returns the value of the route parameter with the given key as a boolean.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) ParamBool(key string) bool {
+func (ctx *DefaultCtx) ParamBool(key string, defaultVal ...bool) bool {
 	val := ctx.r.PathValue(key)
 	boolVal, err := strconv.ParseBool(val)
 	if err != nil {
-		panic(err)
+		if len(defaultVal) > 0 {
+			return defaultVal[0]
+		}
+		return false
 	}
 	return boolVal
 }
@@ -319,33 +328,42 @@ func (ctx *DefaultCtx) Query(key string) string {
 
 // QueryInt returns the value of the query string parameter with the given key as an integer.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) QueryInt(key string) int {
+func (ctx *DefaultCtx) QueryInt(key string, defaultVal ...int) int {
 	val := ctx.r.URL.Query().Get(key)
 	intVal, err := strconv.Atoi(val)
 	if err != nil {
-		panic(err)
+		if len(defaultVal) > 0 {
+			return defaultVal[0]
+		}
+		return 0
 	}
 	return intVal
 }
 
 // QueryFloat returns the value of the query string parameter with the given key as a float.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) QueryFloat(key string) float64 {
+func (ctx *DefaultCtx) QueryFloat(key string, defaultVal ...float64) float64 {
 	val := ctx.r.URL.Query().Get(key)
 	floatVal, err := strconv.ParseFloat(val, 64)
 	if err != nil {
-		panic(err)
+		if len(defaultVal) > 0 {
+			return defaultVal[0]
+		}
+		return 0
 	}
 	return floatVal
 }
 
 // QueryBool returns the value of the query string parameter with the given key as a boolean.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) QueryBool(key string) bool {
+func (ctx *DefaultCtx) QueryBool(key string, defaultVal ...bool) bool {
 	val := ctx.r.URL.Query().Get(key)
 	boolVal, err := strconv.ParseBool(val)
 	if err != nil {
-		panic(err)
+		if len(defaultVal) > 0 {
+			return defaultVal[0]
+		}
+		return false
 	}
 	return boolVal
 }

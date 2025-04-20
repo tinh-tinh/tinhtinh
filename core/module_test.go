@@ -45,7 +45,6 @@ func Test_RequestModule(t *testing.T) {
 		ctrl := module.NewController("user")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			fmt.Println("in here")
 			data := ctrl.Ref(core.Provide("user"), ctx)
 			return ctx.JSON(core.Map{
 				"data": data,

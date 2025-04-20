@@ -2,8 +2,9 @@ package microservices
 
 import (
 	"encoding/json"
-	"time"
+	"reflect"
 
+	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
@@ -13,10 +14,10 @@ type Header map[string]string
 type Config struct {
 	Serializer   core.Encode
 	Deserializer core.Decode
-	Timeout      time.Duration
 	Header       Header
 	ErrorHandler ErrorHandler
 	Logger       *logger.Logger
+	CompressAlg  compress.Alg
 }
 
 func DefaultConfig() Config {
@@ -57,7 +58,20 @@ func ParseConfig(cfg ...Config) Config {
 				defaultConfig.ErrorHandler = DefaultErrorHandler(cfg[0].Logger)
 			}
 		}
+
+		if cfg[0].CompressAlg != "" {
+			defaultConfig.CompressAlg = cfg[0].CompressAlg
+		}
 	}
 
 	return defaultConfig
+}
+
+func NewConfig(config Config) Config {
+	if reflect.ValueOf(config).IsZero() {
+		config = DefaultConfig()
+	} else {
+		config = ParseConfig(config)
+	}
+	return config
 }

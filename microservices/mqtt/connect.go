@@ -1,42 +1,34 @@
-package redis
+package mqtt
 
 import (
 	"context"
 	"reflect"
-	"strings"
 	"time"
 
-	redis_store "github.com/redis/go-redis/v9"
+	mqtt_store "github.com/eclipse/paho.mqtt.golang"
 	"github.com/tinh-tinh/tinhtinh/v2/common/era"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
-type Options struct {
-	microservices.Config
-	*redis_store.Options
-}
-
 type Connect struct {
 	Module  core.Module
-	Context context.Context
-	Conn    *redis_store.Client
+	client  mqtt_store.Client
 	config  microservices.Config
 	timeout time.Duration
 }
 
-// Client usage
+type Options struct {
+	*mqtt_store.ClientOptions
+	microservices.Config
+}
+
 func NewClient(opt Options) microservices.ClientProxy {
-	conn := redis_store.NewClient(opt.Options)
+	conn := mqtt_store.NewClient(opt.ClientOptions)
 
 	connect := &Connect{
-		Context: context.Background(),
-		Conn:    conn,
-		config:  microservices.NewConfig(opt.Config),
-	}
-
-	if err := connect.Conn.Ping(connect.Context).Err(); err != nil {
-		panic(err)
+		client: conn,
+		config: microservices.NewConfig(opt.Config),
 	}
 
 	return connect
@@ -65,13 +57,14 @@ func (c *Connect) Emit(event string, message microservices.Message) error {
 		c.config.ErrorHandler(err)
 		return err
 	}
+
 	if c.timeout > 0 {
 		err = era.TimeoutFunc(c.timeout, func(ctx context.Context) error {
-			err := c.Conn.Publish(ctx, event, payload).Err()
+			err := c.emit(event, payload)
 			return err
 		})
 	} else {
-		err = c.Conn.Publish(c.Context, event, payload).Err()
+		err = c.emit(event, payload)
 	}
 	if err != nil {
 		c.config.ErrorHandler(err)
@@ -81,41 +74,52 @@ func (c *Connect) Emit(event string, message microservices.Message) error {
 	return nil
 }
 
+func (c *Connect) emit(event string, payload []byte) error {
+	if token := c.client.Connect(); token.Wait() && token.Error() != nil {
+		c.config.ErrorHandler(token.Error())
+		return token.Error()
+	}
+
+	token := c.client.Publish(event, 0, false, payload)
+	token.Wait()
+
+	if err := token.Error(); err != nil {
+		c.config.ErrorHandler(err)
+		return err
+	}
+
+	c.client.Disconnect(250)
+	return nil
+}
+
 // Server usage
 func New(module core.ModuleParam, opts ...Options) microservices.Service {
 	connect := &Connect{
-		Context: context.Background(),
-		Module:  module(),
-		config:  microservices.DefaultConfig(),
+		Module: module(),
+		config: microservices.DefaultConfig(),
 	}
 
 	if len(opts) > 0 {
-		if opts[0].Options != nil {
-			conn := redis_store.NewClient(opts[0].Options)
-			connect.Conn = conn
+		if opts[0].ClientOptions != nil {
+			conn := mqtt_store.NewClient(opts[0].ClientOptions)
+			connect.client = conn
 		}
 		if !reflect.ValueOf(opts[0].Config).IsZero() {
 			connect.config = microservices.ParseConfig(opts[0].Config)
 		}
 	}
 
-	if err := connect.Conn.Ping(connect.Context).Err(); err != nil {
-		panic(err)
-	}
-
 	return connect
 }
-
 func Open(opts ...Options) core.Service {
 	connect := &Connect{
-		Context: context.Background(),
-		config:  microservices.DefaultConfig(),
+		config: microservices.DefaultConfig(),
 	}
 
 	if len(opts) > 0 {
-		if opts[0].Options != nil {
-			conn := redis_store.NewClient(opts[0].Options)
-			connect.Conn = conn
+		if opts[0].ClientOptions != nil {
+			conn := mqtt_store.NewClient(opts[0].ClientOptions)
+			connect.client = conn
 		}
 		if !reflect.ValueOf(opts[0].Config).IsZero() {
 			connect.config = microservices.ParseConfig(opts[0].Config)
@@ -130,39 +134,41 @@ func (c *Connect) Create(module core.Module) {
 }
 
 func (c *Connect) Listen() {
-	store, ok := c.Module.Ref(microservices.STORE).(*microservices.Store)
-	if !ok {
+	store := c.Module.Ref(microservices.STORE).(*microservices.Store)
+	if store == nil {
 		panic("store not found")
+	}
+
+	if token := c.client.Connect(); token.Wait() && token.Error() != nil {
+		panic(token.Error())
 	}
 
 	if store.GetRPC() != nil {
 		for _, sub := range store.GetRPC() {
-			subscriber := c.Conn.Subscribe(c.Context, sub.Name)
-			go c.Handler(subscriber, sub)
+			token := c.client.Subscribe(sub.Name, 0, func(client mqtt_store.Client, m mqtt_store.Message) {
+				c.handler(m, sub)
+			})
+			token.Wait()
+			if token.Error() != nil {
+				continue
+			}
 		}
 	}
 
 	if store.GetPubSub() != nil {
-		var subscriber *redis_store.PubSub
 		for _, sub := range store.GetPubSub() {
-			if strings.HasSuffix(sub.Name, "*") {
-				subscriber = c.Conn.PSubscribe(c.Context, sub.Name)
-			} else {
-				subscriber = c.Conn.Subscribe(c.Context, sub.Name)
+			token := c.client.Subscribe(sub.Name, 0, func(client mqtt_store.Client, m mqtt_store.Message) {
+				c.handler(m, sub)
+			})
+			token.Wait()
+			if token.Error() != nil {
+				continue
 			}
-			go c.Handler(subscriber, sub)
 		}
 	}
 }
 
-func (c *Connect) Handler(subscriber *redis_store.PubSub, sub *microservices.SubscribeHandler) {
-	for {
-		msg, err := subscriber.ReceiveMessage(c.Context)
-		if err != nil {
-			return
-		}
-
-		message := microservices.DecodeMessage(c, []byte(msg.Payload))
-		sub.Handle(c, message)
-	}
+func (c *Connect) handler(msg mqtt_store.Message, sub *microservices.SubscribeHandler) {
+	message := microservices.DecodeMessage(c, msg.Payload())
+	sub.Handle(c, message)
 }

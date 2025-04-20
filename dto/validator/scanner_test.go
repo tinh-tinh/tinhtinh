@@ -13,6 +13,13 @@ func Test_Scanner(t *testing.T) {
 	require.Panics(t, func() {
 		_ = validator.Scanner(nil)
 	})
+	type Enum int
+	const (
+		Pending Enum = iota
+		Processing
+		Completed
+		Failed
+	)
 	type Nested struct {
 		IsAlpha string `validate:"isAlpha"`
 	}
@@ -26,13 +33,17 @@ func Test_Scanner(t *testing.T) {
 		IsFloat          float64   `validate:"isFloat"`
 		IsInt            int       `validate:"isInt"`
 		IsBool           bool      `validate:"isBool"`
-		IsDateString     time.Time `validate:"isDateString"`
+		IsDateString     string    `validate:"isDateString"`
 		IsNumber         int       `validate:"isNumber"`
 		IsNumber2        float64   `validate:"isNumber"`
 		IsObjectId       string    `validate:"isObjectId"`
 		Nested           *Nested   `validate:"nested"`
 		Slice            []*Nested `validate:"nested"`
 		Lala             string    `validate:"isAlpha"`
+		Date             time.Time `validate:"isDate"`
+		Enum             Enum      `validate:"isInt"`
+		MinLength        string    `validate:"minLength=3"`
+		MaxLength        string    `validate:"maxLength=10"`
 	}
 	require.Panics(t, func() {
 		_ = validator.Scanner(Input{})
@@ -48,7 +59,7 @@ func Test_Scanner(t *testing.T) {
 		IsFloat:          123.123,
 		IsInt:            123,
 		IsBool:           true,
-		IsDateString:     time.Now(),
+		IsDateString:     time.Now().Format("2006-01-01"),
 		IsNumber:         123,
 		IsNumber2:        39.49,
 		IsObjectId:       "5e9bf1f6d3d2d3d3d3d3d3d3",
@@ -58,6 +69,10 @@ func Test_Scanner(t *testing.T) {
 		Slice: []*Nested{
 			{IsAlpha: "avc"},
 		},
+		Date:      time.Now(),
+		Enum:      Pending,
+		MinLength: "abcd",
+		MaxLength: "xyz",
 	}
 
 	err := validator.Scanner(happyCase)
@@ -74,17 +89,19 @@ func Test_Scanner(t *testing.T) {
 		Slice: []*Nested{{
 			IsAlpha: "455455445",
 		}},
+		MinLength: "a",
+		MaxLength: "qwerteryuiiuoopo[o[bggnfnghmj,sccsbbhmjk,kk]]",
 	}
 	err = validator.Scanner(badCaseStr)
 	require.NotNil(t, err)
-	require.Equal(t, "Required is required\nIsAlpha is not a valid alpha\nIsAlphanumeric is not a valid alpha numeric\nIsEmail is not a valid email\nIsStrongPassword is not a valid strong password\nIsUUID is not a valid UUID\nIsObjectId is not a valid ObjectID\nIsAlpha is not a valid alpha\nIsAlpha is not a valid alpha", err.Error())
+	require.Equal(t, "Required is required\nIsAlpha is not a valid alpha\nIsAlphanumeric is not a valid alpha numeric\nIsEmail is not a valid email\nIsStrongPassword is not a valid strong password\nIsUUID is not a valid UUID\nIsObjectId is not a valid ObjectID\nIsAlpha is not a valid alpha\nIsAlpha is not a valid alpha\nMinLength is minimim length is 3\nMaxLength is maximum length is 10", err.Error())
 
 	type BadCase struct {
-		IsFloat      interface{} `validate:"isFloat"`
-		IsInt        interface{} `validate:"isInt"`
-		IsBool       interface{} `validate:"isBool"`
-		IsDateString interface{} `validate:"isDateString"`
-		IsNumber     interface{} `validate:"isNumber"`
+		IsFloat      any `validate:"isFloat"`
+		IsInt        any `validate:"isInt"`
+		IsBool       any `validate:"isBool"`
+		IsDateString any `validate:"isDateString"`
+		IsNumber     any `validate:"isNumber"`
 	}
 
 	badCaseNum := &BadCase{
@@ -130,7 +147,6 @@ func Benchmark_Scanner(b *testing.B) {
 	b.Run("test_validator", func(b *testing.B) {
 		var userList []*User
 		count := b.N
-		fmt.Printf("No of test case %d\n", count)
 		for n := 0; n < count; n++ {
 			userDetail := &UserDetail{
 				Name:     "Haha",
@@ -166,4 +182,21 @@ func TestDefault(t *testing.T) {
 	require.Nil(t, validator.Scanner(pagin2))
 	require.Equal(t, 4, pagin2.Page)
 	require.Equal(t, 20, pagin2.Limit)
+}
+
+func Test_Array(t *testing.T) {
+	type User struct {
+		ArrEmail []string  `validate:"isEmail"`
+		ArrInt   []int     `validate:"isInt"`
+		ArrFloat []float64 `validate:"isFloat"`
+		ArrBool  []bool    `validate:"isBool"`
+	}
+
+	user := &User{
+		ArrEmail: []string{"abc@gmail.com", "abc@mailinator.ai"},
+		ArrInt:   []int{1, 2},
+		ArrFloat: []float64{1.1, 2.2},
+		ArrBool:  []bool{true, false},
+	}
+	require.Nil(t, validator.Scanner(user))
 }

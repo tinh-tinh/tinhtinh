@@ -18,26 +18,6 @@ type Handler struct {
 	globalMiddlewares []Middleware
 }
 
-const STORE core.Provide = "STORE"
-
-type Store struct {
-	Subscribers map[string][]SubscribeHandler
-}
-
-func Register() core.Modules {
-	return func(module core.Module) core.Module {
-		handlerModule := module.New(core.NewModuleOptions{})
-
-		handlerModule.NewProvider(core.ProviderOptions{
-			Name:  STORE,
-			Value: &Store{Subscribers: make(map[string][]SubscribeHandler)},
-		})
-
-		handlerModule.Export(STORE)
-		return handlerModule
-	}
-}
-
 // OnResponse registers a provider with the given name and factory function to be
 // called when the response is ready. The provider will be registered with the
 // same scope as the handler.
@@ -49,10 +29,10 @@ func (h *Handler) OnResponse(name string, fnc FactoryFunc) {
 			if !ok {
 				return nil
 			}
-			if store.Subscribers[string(RPC)] == nil {
-				store.Subscribers[string(RPC)] = []SubscribeHandler{}
+			if store.Subscribers[RPC] == nil {
+				store.Subscribers[RPC] = []*SubscribeHandler{}
 			}
-			store.Subscribers[string(RPC)] = append(store.Subscribers[string(RPC)], SubscribeHandler{
+			store.Subscribers[RPC] = append(store.Subscribers[RPC], &SubscribeHandler{
 				Name:        name,
 				Factory:     fnc,
 				Middlewares: append(h.globalMiddlewares, h.middlewares...),
@@ -76,10 +56,10 @@ func (h *Handler) OnEvent(name string, fnc FactoryFunc) {
 			if !ok {
 				return nil
 			}
-			if store.Subscribers[string(PubSub)] == nil {
-				store.Subscribers[string(PubSub)] = []SubscribeHandler{}
+			if store.Subscribers[PubSub] == nil {
+				store.Subscribers[PubSub] = []*SubscribeHandler{}
 			}
-			store.Subscribers[string(PubSub)] = append(store.Subscribers[string(PubSub)], SubscribeHandler{
+			store.Subscribers[PubSub] = append(store.Subscribers[PubSub], &SubscribeHandler{
 				Name:        name,
 				Factory:     fnc,
 				Middlewares: append(h.globalMiddlewares, h.middlewares...),

@@ -1,7 +1,10 @@
 package microservices
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
+	"io"
 	"reflect"
 )
 
@@ -28,23 +31,42 @@ func NewCtx(data Message, service Service) Ctx {
 	}
 }
 
+func (c *DefaultCtx) marshallCompress(data interface{}) {
+	buf := bytes.NewBuffer(c.message.Bytes)
+	dec := gob.NewDecoder(buf)
+
+	for {
+		err := dec.Decode(data)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return
+		}
+	}
+}
+
 func (c *DefaultCtx) Payload(data ...interface{}) interface{} {
 	payload := c.message.Data
 	if len(data) > 0 {
 		schema := data[0]
-		if reflect.TypeOf(payload).Kind() == reflect.String {
-			_ = c.service.Deserializer([]byte(payload.(string)), schema)
+		if c.message.Data == nil && c.message.Bytes != nil {
+			c.marshallCompress(schema)
 			return schema
 		}
-		dataBytes, _ := c.service.Serializer(payload)
-		_ = c.service.Deserializer(dataBytes, schema)
+		if reflect.TypeOf(payload).Kind() == reflect.String {
+			_ = c.service.Config().Deserializer([]byte(payload.(string)), schema)
+			return schema
+		}
+		dataBytes, _ := c.service.Config().Serializer(payload)
+		_ = c.service.Config().Deserializer(dataBytes, schema)
 		return schema
 	}
 	return payload
 }
 
 func (c *DefaultCtx) ErrorHandler(err error) {
-	c.service.ErrorHandler(err)
+	c.service.Config().ErrorHandler(err)
 }
 
 func (c *DefaultCtx) Next() error {

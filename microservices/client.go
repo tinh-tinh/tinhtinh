@@ -20,6 +20,23 @@ func RegisterClient(client ClientProxy) core.Modules {
 	}
 }
 
+type ClientFactory func(ref core.RefProvider) ClientProxy
+
+func RegisterClientFactory(factory ClientFactory) core.Modules {
+	return func(module core.Module) core.Module {
+		client := factory(module)
+		clientModule := module.New(core.NewModuleOptions{})
+
+		clientModule.NewProvider(core.ProviderOptions{
+			Name:  CLIENT,
+			Value: client,
+		})
+
+		clientModule.Export(CLIENT)
+		return clientModule
+	}
+}
+
 func Inject(module core.Module) ClientProxy {
 	conn, ok := module.Ref(CLIENT).(ClientProxy)
 	if !ok {

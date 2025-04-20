@@ -1,10 +1,10 @@
 package kafka_test
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -45,7 +45,6 @@ func OrderApp() *core.App {
 		orderService := module.Ref(ORDER).(*OrderService)
 		handler.OnResponse("order.updated", func(ctx microservices.Ctx) error {
 			data := ctx.Payload(&Order{}).(*Order)
-			fmt.Println(data)
 
 			orderService.mutex.Lock()
 			if orderService.orders[data.ID] == nil {
@@ -132,7 +131,7 @@ func Test_Practice(t *testing.T) {
 	orderApp := OrderApp()
 	orderApp.ConnectMicroservice(kafka.Open(kafka.Options{
 		Options: kafka.Config{
-			Brokers: []string{"127.0.0.1:9092"},
+			Brokers: []string{os.Getenv("KAFKA_BROKERS")},
 		},
 		GroupID: "order-app",
 	}))
@@ -151,7 +150,7 @@ func Test_Practice(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, `{"data":{}}`, string(data))
 
-	productApp := ProductApp("127.0.0.1:9092")
+	productApp := ProductApp(os.Getenv("KAFKA_BROKERS"))
 	testProductServer := httptest.NewServer(productApp.PrepareBeforeListen())
 	defer testProductServer.Close()
 
