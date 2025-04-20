@@ -1,7 +1,5 @@
 package microservices
 
-import "fmt"
-
 type ReqFnc func(event string, data interface{}, headers ...Header) error
 
 func DefaultSend(c ClientProxy) ReqFnc {
@@ -15,7 +13,6 @@ func DefaultSend(c ClientProxy) ReqFnc {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Send mesage: %v for event: %s\n", data, event)
 		return nil
 	}
 }
@@ -31,7 +28,6 @@ func DefaultPublish(c ClientProxy) ReqFnc {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Publish mesage: %v for event: %s\n", data, event)
 		return nil
 	}
 }
