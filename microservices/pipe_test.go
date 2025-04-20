@@ -13,6 +13,8 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/microservices/tcp"
 )
 
+const TCP_SERVICE core.Provide = "TCP_SERVICE"
+
 type User struct {
 	Name string `json:"name" validate:"isAlpha"`
 	Age  int    `json:"age" validate:"isInt"`
@@ -74,7 +76,7 @@ func clientPipe(addr string) *core.App {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
+			client := microservices.InjectClient(module, TCP_SERVICE)
 			if client == nil {
 				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
 			}
@@ -96,9 +98,14 @@ func clientPipe(addr string) *core.App {
 
 	clientModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(tcp.Options{
-				Addr: addr,
-			}))},
+			Imports: []core.Modules{
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: TCP_SERVICE,
+					Transport: tcp.NewClient(tcp.Options{
+						Addr: addr,
+					}),
+				}),
+			},
 			Controllers: []core.Controllers{
 				clientController,
 			},

@@ -13,13 +13,18 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/microservices/tcp"
 )
 
+const TCP_SERVICE core.Provide = "TCP_SERVICE"
+
 func Test_Client_Error(t *testing.T) {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(tcp.NewClient(tcp.Options{
-					Addr: "localhost:9091",
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: TCP_SERVICE,
+					Transport: tcp.NewClient(tcp.Options{
+						Addr: "localhost:9091",
+					}),
+				}),
 			},
 		})
 
@@ -47,7 +52,7 @@ func Test_Client_Error(t *testing.T) {
 	clientController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
-		client := microservices.Inject(module)
+		client := microservices.InjectClient(module, TCP_SERVICE)
 		ctrl.Get("", func(ctx core.Ctx) error {
 			go client.Timeout(1*time.Microsecond).Send("abc", 1000)
 			return ctx.JSON(core.Map{"data": "ok"})
@@ -59,14 +64,17 @@ func Test_Client_Error(t *testing.T) {
 	clientModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(tcp.NewClient(tcp.Options{
-					Addr: "localhost:9000",
-					Config: microservices.Config{
-						Serializer: func(v interface{}) ([]byte, error) {
-							return nil, errors.New("error")
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: TCP_SERVICE,
+					Transport: tcp.NewClient(tcp.Options{
+						Addr: "localhost:9000",
+						Config: microservices.Config{
+							Serializer: func(v interface{}) ([]byte, error) {
+								return nil, errors.New("error")
+							},
 						},
-					},
-				})),
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{clientController},
 		})
