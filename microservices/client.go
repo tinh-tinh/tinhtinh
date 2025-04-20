@@ -4,41 +4,50 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
-const CLIENT core.Provide = "CLIENT"
+type ClientOptions struct {
+	Name      core.Provide
+	Transport ClientProxy
+}
 
-func RegisterClient(client ClientProxy) core.Modules {
+func RegisterClient(options ...ClientOptions) core.Modules {
 	return func(module core.Module) core.Module {
 		clientModule := module.New(core.NewModuleOptions{})
 
-		clientModule.NewProvider(core.ProviderOptions{
-			Name:  CLIENT,
-			Value: client,
-		})
+		for _, option := range options {
+			clientModule.NewProvider(core.ProviderOptions{
+				Name:  option.Name,
+				Value: option.Transport,
+			})
 
-		clientModule.Export(CLIENT)
+			clientModule.Export(option.Name)
+		}
+
 		return clientModule
 	}
 }
 
-type ClientFactory func(ref core.RefProvider) ClientProxy
+type ClientFactory func(ref core.RefProvider) []ClientOptions
 
 func RegisterClientFactory(factory ClientFactory) core.Modules {
 	return func(module core.Module) core.Module {
-		client := factory(module)
+		options := factory(module)
 		clientModule := module.New(core.NewModuleOptions{})
 
-		clientModule.NewProvider(core.ProviderOptions{
-			Name:  CLIENT,
-			Value: client,
-		})
+		for _, option := range options {
+			clientModule.NewProvider(core.ProviderOptions{
+				Name:  option.Name,
+				Value: option.Transport,
+			})
 
-		clientModule.Export(CLIENT)
+			clientModule.Export(option.Name)
+		}
+
 		return clientModule
 	}
 }
 
-func Inject(module core.Module) ClientProxy {
-	conn, ok := module.Ref(CLIENT).(ClientProxy)
+func InjectClient(ref core.RefProvider, name core.Provide) ClientProxy {
+	conn, ok := ref.Ref(name).(ClientProxy)
 	if !ok {
 		return nil
 	}

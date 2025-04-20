@@ -43,7 +43,7 @@ func AuthApp(addr string) *core.App {
 
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("auth")
-		client := microservices.Inject(module)
+		client := microservices.InjectClient(module, TCP_SERVICE)
 
 		ctrl.Post("register", func(ctx core.Ctx) error {
 			userService := module.Ref(USER_SERVICE).(*UserService)
@@ -90,17 +90,20 @@ func AuthApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(tcp.NewClient(tcp.Options{
-					Addr:    addr,
-					Timeout: 200 * time.Millisecond,
-					Config: microservices.Config{
-						CompressAlg: compress.Gzip,
-					},
-					RetryOptions: tcp.RetryOptions{
-						Retry: 5,
-						Delay: 1 * time.Second,
-					},
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: TCP_SERVICE,
+					Transport: tcp.NewClient(tcp.Options{
+						Addr:    addr,
+						Timeout: 200 * time.Millisecond,
+						Config: microservices.Config{
+							CompressAlg: compress.Gzip,
+						},
+						RetryOptions: tcp.RetryOptions{
+							Retry: 5,
+							Delay: 1 * time.Second,
+						},
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{controller},
 			Providers: []core.Providers{
