@@ -31,6 +31,27 @@ func Test_Client(t *testing.T) {
 	require.Nil(t, microservices.Inject(module2))
 }
 
+func Test_Client_Factory(t *testing.T) {
+	listener, err := net.Listen("tcp", "localhost:8084")
+	require.Nil(t, err)
+
+	go http.Serve(listener, nil)
+	module := core.NewModule(core.NewModuleOptions{
+		Imports: []core.Modules{microservices.RegisterClientFactory(
+			func(ref core.RefProvider) microservices.ClientProxy {
+				return tcp.NewClient(tcp.Options{
+					Addr: "localhost:8084",
+				})
+			},
+		)},
+	})
+
+	require.NotNil(t, microservices.Inject(module))
+
+	module2 := core.NewModule(core.NewModuleOptions{})
+	require.Nil(t, microservices.Inject(module2))
+}
+
 func Test_HybridApp(t *testing.T) {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
