@@ -177,21 +177,34 @@ func InitProviders(module Module, opt ProviderOptions) Provider {
 		}
 		module.AppendDataProviders(provider)
 	}
+
+	if provider.GetScope() == "" {
+		provider.SetScope(module.GetScope())
+	}
+
+	// Handle transient
+	if provider.GetScope() == Transient {
+		provider.SetInject(opt.Inject)
+		provider.SetFactory(opt.Factory)
+		return provider
+	}
+
+	// Handle request scope
 	reqInject := slices.ContainsFunc(opt.Inject, func(p Provide) bool {
 		return p == REQUEST
 	})
 	if reqInject {
 		provider.SetScope(Request)
 	}
-	if provider.GetScope() == "" {
-		provider.SetScope(module.GetScope())
-	}
+
 	if provider.GetScope() == Request {
 		provider.SetInject(opt.Inject)
 		provider.SetFactory(opt.Factory)
 		provider.SetValue(opt.Value)
 		return provider
 	}
+
+	// Handle singleton
 	provider.SetValue(opt.Value)
 	if opt.Value == nil {
 		var values []interface{}
