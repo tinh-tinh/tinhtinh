@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"slices"
+	"sync"
 	"time"
 
 	"github.com/tinh-tinh/tinhtinh/v2/common"
@@ -17,8 +18,9 @@ type DocRoute struct {
 type Scope string
 
 const (
-	Global  Scope = "global"
-	Request Scope = "request"
+	Global    Scope = "global"
+	Request   Scope = "request"
+	Transient Scope = "transient"
 )
 
 type Module interface {
@@ -45,6 +47,7 @@ type Module interface {
 }
 
 type DynamicModule struct {
+	sync.Pool
 	isRoot        bool
 	Scope         Scope
 	Routers       []*Router
@@ -214,13 +217,20 @@ func (m *DynamicModule) Ref(name Provide, ctx ...Ctx) interface{} {
 		return nil
 	}
 
-	if m.DataProviders[idx].GetScope() == Request {
+	prd := m.DataProviders[idx]
+	if prd.GetScope() == Request {
 		if len(ctx) == 0 {
 			panic("request provider need ctx as parameters")
 		}
 		return ctx[0].Get(name)
+	} else if prd.GetScope() == Transient {
+		var values []interface{}
+		for _, p := range prd.GetInject() {
+			values = append(values, m.Ref(p))
+		}
+		return prd.GetFactory()(values...)
 	}
-	return m.DataProviders[idx].GetValue()
+	return prd.GetValue()
 }
 
 func (m *DynamicModule) findIdx(name Provide) int {
