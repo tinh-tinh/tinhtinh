@@ -93,7 +93,7 @@ func ProductApp(addr string) *core.App {
 		ctrl := module.NewController("products")
 
 		ctrl.Post("", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
+			client := microservices.InjectClient(module, "NATS")
 
 			go client.Publish("order.created", &Order{
 				ID:   "order1",
@@ -110,9 +110,12 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(nats.NewClient(nats.Options{
-					Addr: addr,
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: "NATS",
+					Transport: nats.NewClient(nats.Options{
+						Addr: addr,
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{controller},
 		})
