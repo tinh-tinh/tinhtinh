@@ -5,19 +5,19 @@ go 1.23.0
 toolchain go1.24.1
 
 require (
-	github.com/nats-io/nats.go v1.38.0
+	github.com/nats-io/nats.go v1.41.2
 	github.com/stretchr/testify v1.9.0
-	github.com/tinh-tinh/tinhtinh/v2 v2.0.0-beta.2
+	github.com/tinh-tinh/tinhtinh/v2 v2.1.0
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
-	github.com/nats-io/nkeys v0.4.9 // indirect
+	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
