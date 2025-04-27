@@ -3,6 +3,10 @@
 <div>
 <img alt="GitHub Release" src="https://img.shields.io/github/v/release/tinh-tinh/tinhtinh">
 <img alt="GitHub License" src="https://img.shields.io/github/license/tinh-tinh/tinhtinh">
+<a href="https://codecov.io/gh/tinh-tinh/tinhtinh" > 
+    <img src="https://codecov.io/gh/tinh-tinh/tinhtinh/graph/badge.svg?token=8TCX9EH6S5"/> 
+</a>
+<a href="https://pkg.go.dev/github.com/tinh-tinh/tinhtinh"><img src="https://pkg.go.dev/badge/github.com/tinh-tinh/tinhtinh.svg" alt="Go Reference"></a>
 </div>
 
 
@@ -14,7 +18,7 @@ An easy to use, extensible boilerplate for Go applications.
 ## Install
 
 ```bash
-go get -u github.com/tinh-tinh/tinhtinh
+go get -u github.com/tinh-tinh/tinhtinh/v2
 ```
 
 ## Usage
