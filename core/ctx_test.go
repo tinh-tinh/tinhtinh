@@ -282,6 +282,7 @@ func Test_Ctx_Params(t *testing.T) {
 func Test_Ctx_Queries(t *testing.T) {
 	type QueryData struct {
 		Name string `query:"name"`
+		Age  uint   `query:"age"`
 	}
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
@@ -842,8 +843,14 @@ func Test_Ctx_Status(t *testing.T) {
 
 func Test_QueryParser(t *testing.T) {
 	type QueryData struct {
-		Age    int  `query:"age"`
-		Format bool `query:"format"`
+		Age    uint    `query:"age"`
+		Score  float32 `query:"score"`
+		Format bool    `query:"format"`
+	}
+
+	type UnsupportStruct struct {
+		hidden string         `query:"hidden"`
+		Untype map[string]any `query:"untype"`
 	}
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
@@ -856,6 +863,17 @@ func Test_QueryParser(t *testing.T) {
 			}
 			return ctx.JSON(core.Map{
 				"data": queryData,
+			})
+		})
+
+		ctrl.Get("unsupport", func(ctx core.Ctx) error {
+			var queryData UnsupportStruct
+			err := ctx.QueryParser(&queryData)
+			if err != nil {
+				return common.InternalServerException(ctx.Res(), err.Error())
+			}
+			return ctx.JSON(core.Map{
+				"data": queryData.hidden,
 			})
 		})
 
@@ -877,7 +895,7 @@ func Test_QueryParser(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	resp, err := testClient.Get(testServer.URL + "/api/test?age=12&format=true")
+	resp, err := testClient.Get(testServer.URL + "/api/test?age=12&format=true&score=4.5")
 
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -888,6 +906,26 @@ func Test_QueryParser(t *testing.T) {
 	var res Response
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test?age=true")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test?format=35")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test?score=string")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/unsupport?untype=string")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/unsupport?hidden=string")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 }
 
 func Test_ParamParser(t *testing.T) {
