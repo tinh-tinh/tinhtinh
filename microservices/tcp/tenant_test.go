@@ -159,7 +159,12 @@ func DirectoryApp() *core.App {
 				directoryService.directories[tenantID] = []*User{}
 			}
 
-			payload := ctx.Payload(&User{}).(*User)
+			var payload *User
+			err := ctx.PayloadParser(&payload)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
 			directoryService.directories[tenantID] = append(directoryService.directories[tenantID], payload)
 
 			fmt.Printf("Receive payload is %v\n", payload)
@@ -170,7 +175,12 @@ func DirectoryApp() *core.App {
 			tenantID := ctx.Get("tenant").(string)
 
 			fmt.Println("User Logged Data:", ctx.Payload(), tenantID)
-			payload := ctx.Payload(&User{}).(*User)
+			var payload *User
+			err := ctx.PayloadParser(&payload)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
 			if payload != nil {
 				directoryService.currentlyLogged[tenantID] = payload
 			}

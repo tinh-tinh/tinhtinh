@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 	"github.com/tinh-tinh/tinhtinh/v2/microservices/tcp"
@@ -31,7 +32,9 @@ func Test_Ctx(t *testing.T) {
 	}
 	ctx := microservices.NewCtx(message, svc)
 
-	payload := ctx.Payload(&User{}).(*User)
+	var payload User
+	err := ctx.PayloadParser(&payload)
+	require.Nil(t, err)
 	require.Equal(t, "xyz@gmail.com", payload.Email)
 	require.Equal(t, "12345678@Tc", payload.Password)
 
@@ -40,4 +43,31 @@ func Test_Ctx(t *testing.T) {
 
 	headers := ctx.Headers("key")
 	require.Equal(t, "value", headers)
+
+	message2 := microservices.Message{
+		Type:  microservices.RPC,
+		Event: "test",
+		Headers: map[string]string{
+			"key": "value",
+		},
+		Data: &User{
+			Email:    "abc@gmail.com",
+			Password: "12345678",
+		},
+	}
+	encoder, err := compress.Encode(message2.Data, compress.Gzip)
+	require.Nil(t, err)
+
+	decoder, err := compress.Decode(encoder, compress.Gzip)
+	require.Nil(t, err)
+
+	message2.Bytes = decoder
+	message2.Data = nil
+
+	ctx2 := microservices.NewCtx(message2, svc)
+	var payload2 User
+	err = ctx2.PayloadParser(&payload2)
+	require.Nil(t, err)
+	require.Equal(t, "xyz@gmail.com", payload.Email)
+	require.Equal(t, "12345678@Tc", payload.Password)
 }

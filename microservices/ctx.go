@@ -10,7 +10,8 @@ import (
 
 type Ctx interface {
 	Headers(key string) string
-	Payload(data ...interface{}) interface{}
+	Payload() interface{}
+	PayloadParser(schema interface{}) error
 	ErrorHandler(err error)
 	Set(key interface{}, value interface{})
 	Get(key interface{}) interface{}
@@ -31,7 +32,7 @@ func NewCtx(data Message, service Service) Ctx {
 	}
 }
 
-func (c *DefaultCtx) marshallCompress(data interface{}) {
+func (c *DefaultCtx) unmarshallCompress(data interface{}) error {
 	buf := bytes.NewBuffer(c.message.Bytes)
 	dec := gob.NewDecoder(buf)
 
@@ -41,28 +42,27 @@ func (c *DefaultCtx) marshallCompress(data interface{}) {
 			break
 		}
 		if err != nil {
-			return
+			return err
 		}
 	}
+	return nil
 }
 
-func (c *DefaultCtx) Payload(data ...interface{}) interface{} {
+func (c *DefaultCtx) Payload() interface{} {
+	return c.message.Data
+}
+
+func (c *DefaultCtx) PayloadParser(schema interface{}) error {
 	payload := c.message.Data
-	if len(data) > 0 {
-		schema := data[0]
-		if c.message.Data == nil && c.message.Bytes != nil {
-			c.marshallCompress(schema)
-			return schema
-		}
-		if reflect.TypeOf(payload).Kind() == reflect.String {
-			_ = c.service.Config().Deserializer([]byte(payload.(string)), schema)
-			return schema
-		}
-		dataBytes, _ := c.service.Config().Serializer(payload)
-		_ = c.service.Config().Deserializer(dataBytes, schema)
-		return schema
+
+	if c.message.Data == nil && c.message.Bytes != nil {
+		return c.unmarshallCompress(schema)
 	}
-	return payload
+	if reflect.TypeOf(payload).Kind() == reflect.String {
+		return c.service.Config().Deserializer([]byte(payload.(string)), schema)
+	}
+	dataBytes, _ := c.service.Config().Serializer(payload)
+	return c.service.Config().Deserializer(dataBytes, schema)
 }
 
 func (c *DefaultCtx) ErrorHandler(err error) {

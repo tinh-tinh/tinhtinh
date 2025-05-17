@@ -40,6 +40,10 @@ func Test_Pipe(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
+	resp, err = testClient.Get(testServer.URL + "/api/test/failed")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
 	time.Sleep(100 * time.Millisecond)
 }
 
@@ -48,6 +52,11 @@ func appPipe(addr string) microservices.Service {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		handler.Pipe(microservices.Payload(User{})).OnResponse("user.created", func(ctx microservices.Ctx) error {
+			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
+			return nil
+		})
+
+		handler.Pipe(microservices.Payload(User{})).OnResponse("user.failed", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
 			return nil
 		})
@@ -90,6 +99,16 @@ func clientPipe(addr string) *core.App {
 				client.Send("user.created", msg)
 			}
 
+			return ctx.JSON(core.Map{"data": "ok"})
+		})
+
+		ctrl.Get("failed", func(ctx core.Ctx) error {
+			client := microservices.InjectClient(module, TCP_SERVICE)
+			if client == nil {
+				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
+			}
+
+			client.Send("user.failed", 23)
 			return ctx.JSON(core.Map{"data": "ok"})
 		})
 
