@@ -61,6 +61,7 @@ type DefaultCtx struct {
 	metadata    []*Metadata
 	callHandler CallHandler
 	app         *App
+	statusCode  int
 }
 
 // Req returns the original http.Request from the client.
@@ -372,7 +373,7 @@ func (ctx *DefaultCtx) QueryBool(key string, defaultVal ...bool) bool {
 //
 //	ctx.Status(http.StatusOK).JSON(core.Map{"message": "Hello, World!"})
 func (ctx *DefaultCtx) Status(statusCode int) Ctx {
-	ctx.w.WriteHeader(statusCode)
+	ctx.statusCode = statusCode
 	return ctx
 }
 
@@ -389,6 +390,8 @@ func (ctx *DefaultCtx) SetCallHandler(call CallHandler) {
 // If there is an error while encoding the data, it panics.
 func (ctx *DefaultCtx) JSON(data Map) error {
 	ctx.w.Header().Set("Content-Type", "application/json")
+	ctx.w.WriteHeader(ctx.statusCode)
+
 	if ctx.callHandler != nil {
 		data = ctx.callHandler(data)
 	}
@@ -465,7 +468,8 @@ func (ctx *DefaultCtx) Session(key string, val ...interface{}) interface{} {
 // Req, Res, Headers, etc.
 func NewCtx(app *App) *DefaultCtx {
 	return &DefaultCtx{
-		app: app,
+		app:        app,
+		statusCode: http.StatusOK,
 	}
 }
 
