@@ -1,16 +1,18 @@
-package common
+package common_test
 
 import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 )
 
 func Test_Name(t *testing.T) {
 	type Person struct{}
-	require.Equal(t, "Person", GetStructName(Person{}))
-	require.Equal(t, "Person", GetStructName(&Person{}))
+	require.Equal(t, "Person", common.GetStructName(Person{}))
+	require.Equal(t, "Person", common.GetStructName(&Person{}))
 }
 
 func Test_Partial(t *testing.T) {
@@ -64,7 +66,7 @@ func Test_Partial(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, `{}`, string(largeBefore))
 
-	largePointer := PartialStruct(largeInput)
+	largePointer := common.PartialStruct(largeInput)
 	largeAfter, _ := json.Marshal(&largePointer)
 	require.Equal(t, `{"id":0,"name":"","email":"","age":0,"address":"","phone_number":"","is_active":false,"balance":0,"score":0,"department":"","position":"","years_employed":0,"salary":0,"vacation_days":0,"employee_id":"","security_level":0,"last_login_date":"","preferred_shift":"","emergency_phone":"","badge_number":""}`, string(largeAfter))
 }
@@ -90,7 +92,7 @@ func Test_Pick(t *testing.T) {
 
 	// Test picking a subset of fields
 	fields := []string{"Name", "Email", "Balance"}
-	result := PickStruct(input, fields)
+	result := common.PickStruct(input, fields)
 
 	// Marshal both original and picked structs to compare
 	originalJSON, err := json.Marshal(input)
@@ -102,13 +104,13 @@ func Test_Pick(t *testing.T) {
 	require.Equal(t, `{"name":"John Doe","email":"john@example.com","balance":1000.5}`, string(pickedJSON))
 
 	// Test picking no fields
-	emptyResult := PickStruct(input, []string{})
+	emptyResult := common.PickStruct(input, []string{})
 	emptyJSON, err := json.Marshal(emptyResult)
 	require.NoError(t, err)
 	require.Equal(t, `{}`, string(emptyJSON))
 
 	// Test picking non-existent fields (should be ignored)
-	invalidResult := PickStruct(input, []string{"NonExistent", "Name"})
+	invalidResult := common.PickStruct(input, []string{"NonExistent", "Name"})
 	invalidJSON, err := json.Marshal(invalidResult)
 	require.NoError(t, err)
 	require.Equal(t, `{"name":"John Doe"}`, string(invalidJSON))
@@ -135,7 +137,7 @@ func Test_Omit(t *testing.T) {
 
 	// Test omitting a subset of fields
 	fields := []string{"Age", "Balance", "IsActive"}
-	result := OmitStruct(input, fields)
+	result := common.OmitStruct(input, fields)
 
 	// Marshal both original and omitted structs to compare
 	originalJSON, err := json.Marshal(input)
@@ -147,26 +149,26 @@ func Test_Omit(t *testing.T) {
 	require.Equal(t, `{"id":123,"name":"John Doe","email":"john@example.com"}`, string(omittedJSON))
 
 	// Test omitting no fields (should return same as original)
-	fullResult := OmitStruct(input, []string{})
+	fullResult := common.OmitStruct(input, []string{})
 	fullJSON, err := json.Marshal(fullResult)
 	require.NoError(t, err)
 	require.Equal(t, `{"id":123,"name":"John Doe","email":"john@example.com","age":30,"balance":1000.5,"is_active":true}`, string(fullJSON))
 
 	// Test omitting all fields
 	allFields := []string{"ID", "Name", "Email", "Age", "Balance", "IsActive"}
-	emptyResult := OmitStruct(input, allFields)
+	emptyResult := common.OmitStruct(input, allFields)
 	emptyJSON, err := json.Marshal(emptyResult)
 	require.NoError(t, err)
 	require.Equal(t, `{}`, string(emptyJSON))
 
 	// Test omitting non-existent fields (should be ignored)
-	invalidResult := OmitStruct(input, []string{"NonExistent", "Age"})
+	invalidResult := common.OmitStruct(input, []string{"NonExistent", "Age"})
 	invalidJSON, err := json.Marshal(invalidResult)
 	require.NoError(t, err)
 	require.Equal(t, `{"id":123,"name":"John Doe","email":"john@example.com","balance":1000.5,"is_active":true}`, string(invalidJSON))
 }
 
-func Test_Assert(t *testing.T) {
+func Test_AssertType(t *testing.T) {
 	type Person struct {
 		Name    string
 		Age     int
@@ -199,8 +201,8 @@ func Test_Assert(t *testing.T) {
 		Phone:   "555-1234",
 	}
 
-	// Test PartialStruct type assertion
-	partial := PartialStruct(person)
+	// Test common.PartialStruct type assertion
+	partial := common.PartialStruct(person)
 	partialJSON, err := json.Marshal(partial)
 	require.Nil(t, err)
 
@@ -212,8 +214,8 @@ func Test_Assert(t *testing.T) {
 	require.Equal(t, "123 Main St", *partialPerson.Address)
 	require.Equal(t, "555-1234", *partialPerson.Phone)
 
-	// Test PickStruct type assertion
-	picked := PickStruct(person, []string{"Name", "Age"})
+	// Test common.PickStruct type assertion
+	picked := common.PickStruct(person, []string{"Name", "Age"})
 	pickedJSON, err := json.Marshal(picked)
 	require.Nil(t, err)
 
@@ -223,8 +225,8 @@ func Test_Assert(t *testing.T) {
 	require.Equal(t, "John", pickPerson.Name)
 	require.Equal(t, 30, pickPerson.Age)
 
-	// Test OmitStruct type assertion
-	omitted := OmitStruct(person, []string{"Phone"})
+	// Test common.OmitStruct type assertion
+	omitted := common.OmitStruct(person, []string{"Phone"})
 	omittedJSON, err := json.Marshal(omitted)
 	require.Nil(t, err)
 
@@ -234,4 +236,24 @@ func Test_Assert(t *testing.T) {
 	require.Equal(t, "John", omitPerson.Name)
 	require.Equal(t, 30, omitPerson.Age)
 	require.Equal(t, "123 Main St", omitPerson.Address)
+}
+
+func Test_MergeStruct(t *testing.T) {
+	type Person struct {
+		Name    string
+		Age     int
+		Address string
+		Phone   string
+	}
+	abc := common.MergeStruct(Person{
+		Name: "abc",
+	}, Person{
+		Age: 12,
+	}, Person{
+		Address: "44454545",
+	})
+
+	assert.Equal(t, "abc", abc.Name)
+	assert.Equal(t, "44454545", abc.Address)
+	assert.Equal(t, 12, abc.Age)
 }
