@@ -24,14 +24,14 @@ type Ctx interface {
 	SignedCookie(key string, val ...string) (string, error)
 	BodyParser(payload interface{}) error
 	QueryParser(payload interface{}) error
-	ParamParser(payload interface{}) error
+	PathParser(payload interface{}) error
 	Body() interface{}
-	Params() interface{}
+	Paths() interface{}
 	Queries() interface{}
-	Param(key string) string
-	ParamInt(key string, defaultVal ...int) int
-	ParamFloat(key string, defaultVal ...float64) float64
-	ParamBool(key string, defaultVal ...bool) bool
+	Path(key string) string
+	PathInt(key string, defaultVal ...int) int
+	PathFloat(key string, defaultVal ...float64) float64
+	PathBool(key string, defaultVal ...bool) bool
 	Query(key string) string
 	QueryInt(key string, defaultVal ...int) int
 	QueryFloat(key string, defaultVal ...float64) float64
@@ -191,13 +191,13 @@ func (ctx *DefaultCtx) QueryParser(payload interface{}) error {
 	})
 }
 
-// ParamParser takes a struct and populates its fields based on the path
+// PathParser takes a struct and populates its fields based on the path
 // parameters in the request. It supports string, int, and bool types.
 // If a field has a "param" tag, it will be populated with the path
 // parameter of the same name. If the path parameter is not present,
 // the field will be skipped.
-func (ctx *DefaultCtx) ParamParser(payload interface{}) error {
-	return parser(payload, "param", func(tagVal string) string {
+func (ctx *DefaultCtx) PathParser(payload interface{}) error {
+	return parser(payload, "path", func(tagVal string) string {
 		return ctx.Req().PathValue(tagVal)
 	})
 }
@@ -257,8 +257,8 @@ func (ctx *DefaultCtx) Body() interface{} {
 	return ctx.Get(InBody)
 }
 
-// Params returns the route parameters as a given interface.
-func (ctx *DefaultCtx) Params() interface{} {
+// Paths returns the route parameters as a given interface.
+func (ctx *DefaultCtx) Paths() interface{} {
 	return ctx.Get(InPath)
 }
 
@@ -267,16 +267,16 @@ func (ctx *DefaultCtx) Queries() interface{} {
 	return ctx.Get(InQuery)
 }
 
-// Param returns the value of the route parameter with the given key.
+// Path returns the value of the route parameter with the given key.
 // If the parameter is not present, it returns an empty string.
-func (ctx *DefaultCtx) Param(key string) string {
+func (ctx *DefaultCtx) Path(key string) string {
 	val := ctx.r.PathValue(key)
 	return val
 }
 
-// ParamInt returns the value of the route parameter with the given key as an integer.
+// PathInt returns the value of the route parameter with the given key as an integer.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) ParamInt(key string, defaultVal ...int) int {
+func (ctx *DefaultCtx) PathInt(key string, defaultVal ...int) int {
 	val := ctx.r.PathValue(key)
 	intVal, err := strconv.Atoi(val)
 	if err != nil {
@@ -288,9 +288,9 @@ func (ctx *DefaultCtx) ParamInt(key string, defaultVal ...int) int {
 	return intVal
 }
 
-// ParamFloat returns the value of the route parameter with the given key as a float64.
+// PathFloat returns the value of the route parameter with the given key as a float64.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) ParamFloat(key string, defaultVal ...float64) float64 {
+func (ctx *DefaultCtx) PathFloat(key string, defaultVal ...float64) float64 {
 	val := ctx.r.PathValue(key)
 	floatVal, err := strconv.ParseFloat(val, 64)
 	if err != nil {
@@ -302,9 +302,9 @@ func (ctx *DefaultCtx) ParamFloat(key string, defaultVal ...float64) float64 {
 	return floatVal
 }
 
-// ParamBool returns the value of the route parameter with the given key as a boolean.
+// PathBool returns the value of the route parameter with the given key as a boolean.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) ParamBool(key string, defaultVal ...bool) bool {
+func (ctx *DefaultCtx) PathBool(key string, defaultVal ...bool) bool {
 	val := ctx.r.PathValue(key)
 	boolVal, err := strconv.ParseBool(val)
 	if err != nil {
