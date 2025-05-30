@@ -2,6 +2,8 @@ package core
 
 import (
 	"slices"
+
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 )
 
 type Provide string
@@ -113,16 +115,21 @@ type ProviderOptions struct {
 	Type   ProviderType
 }
 
-// NewProvider creates a new provider with the given options.
-// If the provider with the same name has existed, the value of the provider
-// will be override.
-// If the scope of the provider is Request, the provider will be injected with
-// the given injects and the value of the provider will be set to the result of
-// the factory function with the given injects.
-// Otherwise, the value of the provider will be set to the given value, or the
-// result of the factory function with the given injects if the value is nil.
-func (module *DynamicModule) NewProvider(opt ProviderOptions) Provider {
-	return InitProviders(module, opt)
+type ProviderParams interface {
+	ProviderOptions | interface{}
+}
+
+func (module *DynamicModule) NewProvider(param ProviderParams) Provider {
+	providerOptions, ok := param.(ProviderOptions)
+	if ok {
+		return InitProviders(module, providerOptions)
+	}
+	nameProvide := common.GetStructName(param)
+	options := ProviderOptions{
+		Name:  Provide(nameProvide),
+		Value: param,
+	}
+	return InitProviders(module, options)
 }
 
 // getExports returns a list of providers that are exported by the module.
@@ -220,4 +227,14 @@ func InitProviders(module Module, opt ProviderOptions) Provider {
 	}
 
 	return provider
+}
+
+func Inject[P any](module RefProvider) *P {
+	var provider P
+	name := common.GetStructName(provider)
+	svc, ok := module.Ref(Provide(name)).(*P)
+	if !ok {
+		return nil
+	}
+	return svc
 }

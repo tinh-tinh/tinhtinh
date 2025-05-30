@@ -273,6 +273,29 @@ func Test_TransientProvider(t *testing.T) {
 	require.NotSame(t, old, newStr)
 }
 
+func Test_AutoNameProvider(t *testing.T) {
+	type StructName struct {
+		Name string
+	}
+	service := func(module core.Module) core.Provider {
+		return module.NewProvider(&StructName{Name: "module"})
+	}
+
+	module := core.NewModule(core.NewModuleOptions{
+		Providers: []core.Providers{service},
+		Exports:   []core.Providers{service},
+	})
+
+	structName := core.Inject[StructName](module)
+	require.Equal(t, "module", structName.Name)
+
+	type Any struct {
+		Version int
+	}
+	nilValue := core.Inject[Any](module)
+	require.Nil(t, nilValue)
+}
+
 func BenchmarkRequestModule(b *testing.B) {
 	app := core.CreateFactory(tenantModule)
 	app.SetGlobalPrefix("/api")
