@@ -36,7 +36,7 @@ type Module interface {
 	GetExports() []Provider
 	free()
 	NewController(name string) Controller
-	NewProvider(opt ProviderOptions) Provider
+	NewProvider(opt ProviderParams) Provider
 	Consumer(consumer *Consumer) Module
 	Guard(guards ...Guard) Module
 	Use(middleware ...Middleware) Module
