@@ -236,13 +236,13 @@ func Test_Ctx_Body(t *testing.T) {
 
 func Test_Ctx_Params(t *testing.T) {
 	type ID struct {
-		ID string `param:"id"`
+		ID string `path:"id"`
 	}
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Pipe(core.Param(ID{})).Get("/{id}", func(ctx core.Ctx) error {
-			data := ctx.Params().(*ID)
+			data := ctx.Paths().(*ID)
 			return ctx.JSON(core.Map{
 				"data": data.ID,
 			})
@@ -330,49 +330,49 @@ func Test_Ctx_Param(t *testing.T) {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("/{id}", func(ctx core.Ctx) error {
-			data := ctx.Param("id")
+			data := ctx.Path("id")
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamInt("key", 1)
+			data := ctx.PathInt("key", 1)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key2/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamFloat("key", 1)
+			data := ctx.PathFloat("key", 1)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key3/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamBool("key", true)
+			data := ctx.PathBool("key", true)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key4/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamInt("key")
+			data := ctx.PathInt("key")
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key5/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamFloat("key")
+			data := ctx.PathFloat("key")
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key6/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamBool("key")
+			data := ctx.PathBool("key")
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
@@ -930,15 +930,15 @@ func Test_QueryParser(t *testing.T) {
 
 func Test_ParamParser(t *testing.T) {
 	type ParamData struct {
-		ID     int  `param:"id"`
-		Export bool `param:"export"`
+		ID     int  `path:"id"`
+		Export bool `path:"export"`
 	}
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("{id}/{export}", func(ctx core.Ctx) error {
 			var queryData ParamData
-			err := ctx.ParamParser(&queryData)
+			err := ctx.PathParser(&queryData)
 			if err != nil {
 				return common.InternalServerException(ctx.Res(), err.Error())
 			}

@@ -51,7 +51,7 @@ func PipeMiddleware(pipes ...PipeDto) Middleware {
 					return common.BadRequestException(ctx.Res(), err.Error())
 				}
 			case InPath:
-				err := ctx.ParamParser(dto)
+				err := ctx.PathParser(dto)
 				if err != nil {
 					return common.BadRequestException(ctx.Res(), err.Error())
 				}

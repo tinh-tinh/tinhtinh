@@ -122,7 +122,7 @@ func Test_Query(t *testing.T) {
 
 func Test_Param(t *testing.T) {
 	type ParamDto struct {
-		ID int `validate:"required,isInt" param:"id"`
+		ID int `validate:"required,isInt" path:"id"`
 	}
 	appController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
