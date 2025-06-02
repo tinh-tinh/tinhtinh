@@ -1,6 +1,7 @@
 package kafka_test
 
 import (
+	"os"
 	"testing"
 
 	"github.com/IBM/sarama"
@@ -9,7 +10,7 @@ import (
 
 func Test_Producer(t *testing.T) {
 	instance := kafka.NewInstance(kafka.Config{
-		Brokers: []string{"127.0.0.1:9092"},
+		Brokers: []string{os.Getenv("KAFKA_BROKERS")},
 	})
 	producer := instance.Producer()
 	producer.Publish(&sarama.ProducerMessage{
