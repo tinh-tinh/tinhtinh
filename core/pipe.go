@@ -110,3 +110,39 @@ func Param[P any](dto P) PipeDto {
 		In: InPath,
 	}
 }
+
+// Body Parser
+type BodyParser[P any] struct{}
+
+func (b BodyParser[P]) GetValue() any {
+	var payload P
+	return &payload
+}
+
+func (b BodyParser[P]) GetLocation() InDto {
+	return InBody
+}
+
+// Query Parser
+type QueryParser[P any] struct{}
+
+func (b QueryParser[P]) GetValue() any {
+	var payload P
+	return &payload
+}
+
+func (b QueryParser[P]) GetLocation() InDto {
+	return InQuery
+}
+
+// Path Parser
+type PathParser[P any] struct{}
+
+func (b PathParser[P]) GetValue() any {
+	var payload P
+	return &payload
+}
+
+func (b PathParser[P]) GetLocation() InDto {
+	return InPath
+}
