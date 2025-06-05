@@ -7,6 +7,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/rcrowley/go-metrics"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 )
 
 type Producer struct {
@@ -21,7 +22,7 @@ func (k *Kafka) Producer(configs ...*sarama.Config) *Producer {
 	tProducer.producerProvider = func() sarama.AsyncProducer {
 		var cfg *sarama.Config
 		if len(configs) > 0 {
-			cfg = configs[0]
+			cfg = common.MergeStruct(configs...)
 		} else {
 			cfg = defaultProducerConfig(k.Version)
 		}
@@ -45,25 +46,29 @@ func (k *Kafka) Producer(configs ...*sarama.Config) *Producer {
 
 func (p *Producer) Publish(msg *sarama.ProducerMessage) {
 	ctx, cancel := context.WithCancel(context.Background())
-	var wg sync.WaitGroup
+	defer cancel()
 
-	for i := 0; i < p.numProducers; i++ {
+	var wg sync.WaitGroup
+	var once sync.Once
+
+	for range p.numProducers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-					p.txnProducer.producer(msg)
-				}
+			select {
+			case <-ctx.Done():
+				// Context was cancelled before this goroutine started
+				return
+			default:
+				p.txnProducer.producer(msg) // Send the message
+				once.Do(func() {
+					cancel() // Cancel context after first successful publish
+				})
 			}
 		}()
 	}
-	cancel()
-	wg.Wait()
 
+	wg.Wait()
 	p.txnProducer.clear()
 }
 

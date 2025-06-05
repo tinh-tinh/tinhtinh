@@ -101,7 +101,7 @@ func ProductApp(addr string) *core.App {
 		ctrl.Post("", func(ctx core.Ctx) error {
 			client := microservices.InjectClient(module, "Kafka")
 
-			err := client.Send("order.updated", &Order{
+			err := client.Send("order.created", &Order{
 				ID:   "order1",
 				Name: "order2",
 			})
@@ -174,11 +174,12 @@ func Test_Practice(t *testing.T) {
 
 	time.Sleep(1000 * time.Millisecond)
 
-	// resp, err = testClientOrder.Get(testOrderServer.URL + "/order-api/orders")
-	// require.Nil(t, err)
-	// require.Equal(t, http.StatusOK, resp.StatusCode)
+	resp, err = testClientOrder.Get(testOrderServer.URL + "/order-api/orders")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// data, err = io.ReadAll(resp.Body)
-	// require.Nil(t, err)
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	fmt.Println(string(data))
 	// require.Equal(t, `{"data":{"order1":true}}`, string(data))
 }
