@@ -47,10 +47,8 @@ func OrderApp() *core.App {
 			var data *Order
 			err := ctx.PayloadParser(&data)
 			if err != nil {
-				fmt.Println(err)
 				return err
 			}
-			fmt.Println(data)
 
 			orderService.mutex.Lock()
 			if orderService.orders[data.ID] == nil {
@@ -99,7 +97,7 @@ func ProductApp(addr string) *core.App {
 		ctrl := module.NewController("products")
 
 		ctrl.Post("", func(ctx core.Ctx) error {
-			client := microservices.InjectClient(module, "Kafka")
+			client := microservices.InjectClient(module, microservices.KAFKA)
 
 			err := client.Send("order.created", &Order{
 				ID:   "order1",
@@ -120,7 +118,7 @@ func ProductApp(addr string) *core.App {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
 				microservices.RegisterClient(microservices.ClientOptions{
-					Name: "Kafka",
+					Name: microservices.KAFKA,
 					Transport: kafka.NewClient(kafka.Options{
 						Options: kafka.Config{
 							Brokers: []string{addr},

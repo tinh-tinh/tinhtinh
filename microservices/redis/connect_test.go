@@ -50,7 +50,11 @@ func OrderApp() *core.App {
 
 		orderService := module.Ref(ORDER).(*OrderService)
 		handler.OnResponse("order.created", func(ctx microservices.Ctx) error {
-			data := ctx.Payload(&Order{}).(*Order)
+			var data *Order
+			err := ctx.PayloadParser(&data)
+			if err != nil {
+				return err
+			}
 
 			orderService.mutex.Lock()
 			if orderService.orders[data.ID] == nil {
@@ -105,7 +109,7 @@ func ProductApp(addr string) *core.App {
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("products")
 
-		client := microservices.Inject(module)
+		client := microservices.InjectClient(module, microservices.REDIS)
 		ctrl.Post("", func(ctx core.Ctx) error {
 			go client.Send("order.created", &Order{
 				ID:   "order1",
@@ -132,11 +136,14 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(redis.NewClient(redis.Options{
-					Options: &redis_store.Options{
-						Addr: addr,
-					},
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: microservices.REDIS,
+					Transport: redis.NewClient(redis.Options{
+						Options: &redis_store.Options{
+							Addr: addr,
+						},
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{controller},
 		})
@@ -154,12 +161,24 @@ func DeliveryApp() microservices.Service {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		handler.OnEvent("order.*", func(ctx microservices.Ctx) error {
-			fmt.Println("Delivery when have order:", ctx.Payload(&Order{}))
+			var data *Order
+			err := ctx.PayloadParser(&data)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Delivery when have order:", data)
 			return nil
 		})
 
 		handler.OnEvent("order.created", func(ctx microservices.Ctx) error {
-			fmt.Println("Delivery when have order:", ctx.Payload(&Order{}))
+			var data *Order
+			err := ctx.PayloadParser(&data)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Delivery when have order:", data)
 			return nil
 		})
 
@@ -270,11 +289,14 @@ func Test_Client_Error(t *testing.T) {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(redis.NewClient(redis.Options{
-					Options: &redis_store.Options{
-						Addr: "localhost:637",
-					},
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: microservices.REDIS,
+					Transport: redis.NewClient(redis.Options{
+						Options: &redis_store.Options{
+							Addr: "localhost:637",
+						},
+					}),
+				}),
 			},
 		})
 
@@ -304,7 +326,7 @@ func Test_Client_Error(t *testing.T) {
 	clientController := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
-		client := microservices.Inject(module)
+		client := microservices.InjectClient(module, microservices.REDIS)
 		ctrl.Get("", func(ctx core.Ctx) error {
 			go client.Send("abc", 1000)
 			return ctx.JSON(core.Map{"data": "ok"})
@@ -316,16 +338,19 @@ func Test_Client_Error(t *testing.T) {
 	clientModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(redis.NewClient(redis.Options{
-					Options: &redis_store.Options{
-						Addr: "localhost:6379",
-					},
-					Config: microservices.Config{
-						Serializer: func(v interface{}) ([]byte, error) {
-							return nil, errors.New("error")
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: microservices.REDIS,
+					Transport: redis.NewClient(redis.Options{
+						Options: &redis_store.Options{
+							Addr: "localhost:6379",
 						},
-					},
-				})),
+						Config: microservices.Config{
+							Serializer: func(v interface{}) ([]byte, error) {
+								return nil, errors.New("error")
+							},
+						},
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{clientController},
 		})
