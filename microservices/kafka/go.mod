@@ -5,10 +5,10 @@ go 1.23.0
 toolchain go1.24.1
 
 require (
-	github.com/IBM/sarama v1.45.1
+	github.com/IBM/sarama v1.45.2
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9
 	github.com/stretchr/testify v1.10.0
-	github.com/tinh-tinh/tinhtinh/v2 v2.1.1
+	github.com/tinh-tinh/tinhtinh/v2 v2.1.2
 )
 
 require (
