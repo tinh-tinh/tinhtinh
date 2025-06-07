@@ -1241,7 +1241,7 @@ func Benchmark_CtxJson(b *testing.B) {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			return ctx.JSON(core.Map{
+			return ctx.Status(http.StatusOK).JSON(core.Map{
 				"data": "ok",
 			})
 		})
