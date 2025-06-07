@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"html"
 
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/cookie"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/storage"
@@ -71,7 +72,8 @@ func (w *SafeResponseWriter) Write(b []byte) (int, error) {
 	if !w.wroteHeader {
 		w.WriteHeader(http.StatusOK)
 	}
-	return w.ResponseWriter.Write(b)
+	escaped := html.EscapeString(string(b))
+	return w.ResponseWriter.Write([]byte(escaped))
 }
 
 type DefaultCtx struct {
