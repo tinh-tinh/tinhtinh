@@ -53,7 +53,7 @@ func (r *Router) getHandler(app *App) http.Handler {
 
 	for i := len(r.Middlewares) - 1; i >= 0; i-- {
 		v := r.Middlewares[i]
-		mid := ParseCtxMiddleware(app, v)
+		mid := ParseCtxMiddleware(app, v, r)
 		mergeHandler = mid(mergeHandler)
 	}
 

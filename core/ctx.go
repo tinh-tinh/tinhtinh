@@ -17,7 +17,7 @@ import (
 
 type Ctx interface {
 	Req() *http.Request
-	Res() http.ResponseWriter
+	Res() *SafeResponseWriter
 	Headers(key string) string
 	Cookies(key string) *http.Cookie
 	SetCookie(key string, value string, maxAge int)
@@ -54,9 +54,29 @@ type Ctx interface {
 	Status(statusCode int) Ctx
 }
 
+// Custom ResponseWriter to prevent duplicate WriteHeader calls
+type SafeResponseWriter struct {
+	http.ResponseWriter
+	wroteHeader bool
+}
+
+func (w *SafeResponseWriter) WriteHeader(code int) {
+	if !w.wroteHeader {
+		w.wroteHeader = true
+		w.ResponseWriter.WriteHeader(code)
+	}
+}
+
+func (w *SafeResponseWriter) Write(b []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+	return w.ResponseWriter.Write(b)
+}
+
 type DefaultCtx struct {
 	r           *http.Request
-	w           http.ResponseWriter
+	w           *SafeResponseWriter
 	handler     http.Handler
 	metadata    []*Metadata
 	callHandler CallHandler
@@ -70,7 +90,7 @@ func (ctx *DefaultCtx) Req() *http.Request {
 }
 
 // Res returns the original http.ResponseWriter from the server.
-func (ctx *DefaultCtx) Res() http.ResponseWriter {
+func (ctx *DefaultCtx) Res() *SafeResponseWriter {
 	return ctx.w
 }
 
@@ -448,7 +468,7 @@ func (ctx *DefaultCtx) Next() error {
 func (ctx *DefaultCtx) Session(key string, val ...interface{}) interface{} {
 	if len(val) > 0 {
 		cookie := ctx.app.session.Set(key, val[0])
-		http.SetCookie(ctx.w, &cookie)
+		http.SetCookie(ctx.w.ResponseWriter, &cookie)
 		return nil
 	}
 	cookie, err := ctx.Req().Cookie(key)
@@ -478,7 +498,7 @@ func NewCtx(app *App) *DefaultCtx {
 //
 // It returns nothing.
 func (ctx *DefaultCtx) SetCtx(w http.ResponseWriter, r *http.Request) {
-	ctx.w = w
+	ctx.w = &SafeResponseWriter{ResponseWriter: w}
 	ctx.r = r
 }
 
@@ -498,11 +518,11 @@ func (ctx *DefaultCtx) SetHandler(h http.Handler) {
 //
 // The returned http.HandlerFunc can be used as a handler for an HTTP request.
 func ParseCtx(app *App, router *Router) http.Handler {
-	ctx := app.pool.Get().(*DefaultCtx)
-	defer app.pool.Put(ctx)
-
-	ctx.SetMetadata(router.Metadata...)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := app.pool.Get().(*DefaultCtx)
+		defer app.pool.Put(ctx)
+
+		ctx.SetMetadata(router.Metadata...)
 		ctx.SetCtx(w, r)
 		if router.interceptor != nil {
 			ctx.SetCallHandler(router.interceptor(ctx))
@@ -512,11 +532,13 @@ func ParseCtx(app *App, router *Router) http.Handler {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("%v", r)
 				app.errorHandler(err, ctx)
+				return
 			}
 		}()
 		err = router.Handler(ctx)
 		if err != nil {
 			app.errorHandler(err, ctx)
+			return
 		}
 	})
 }
