@@ -1,27 +1,29 @@
 package core
 
 import (
+	"fmt"
+	"reflect"
+	"strconv"
+
 	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
 type CtxKey string
 
-type InDto string
-
 const (
-	InBody  InDto = "body"
-	InQuery InDto = "query"
-	InPath  InDto = "path"
+	InBody  CtxKey = "body"
+	InQuery CtxKey = "query"
+	InPath  CtxKey = "path"
 )
 
 type Pipe[P any] struct {
-	// In is the InDto of the Pipe. It can be one of InBody, InQuery, InPath.
-	In InDto
+	// In is the CtxKey of the Pipe. It can be one of InBody, InQuery, InPath.
+	In CtxKey
 }
 
 type PipeDto interface {
-	GetLocation() InDto
+	GetLocation() CtxKey
 	GetValue() interface{}
 }
 
@@ -67,7 +69,7 @@ func PipeMiddleware(pipes ...PipeDto) Middleware {
 	}
 }
 
-func (p Pipe[P]) GetLocation() InDto {
+func (p Pipe[P]) GetLocation() CtxKey {
 	return p.In
 }
 
@@ -119,7 +121,7 @@ func (b BodyParser[P]) GetValue() any {
 	return &payload
 }
 
-func (b BodyParser[P]) GetLocation() InDto {
+func (b BodyParser[P]) GetLocation() CtxKey {
 	return InBody
 }
 
@@ -131,7 +133,7 @@ func (b QueryParser[P]) GetValue() any {
 	return &payload
 }
 
-func (b QueryParser[P]) GetLocation() InDto {
+func (b QueryParser[P]) GetLocation() CtxKey {
 	return InQuery
 }
 
@@ -143,6 +145,124 @@ func (b PathParser[P]) GetValue() any {
 	return &payload
 }
 
-func (b PathParser[P]) GetLocation() InDto {
+func (b PathParser[P]) GetLocation() CtxKey {
 	return InPath
+}
+
+func bindSingle(val string, field reflect.Value) error {
+	switch field.Kind() {
+	case reflect.String:
+		field.SetString(val)
+
+	case reflect.Bool:
+		b, err := strconv.ParseBool(val)
+		if err != nil {
+			return err
+		}
+		field.SetBool(b)
+
+	case reflect.Int:
+		i, err := strconv.Atoi(val)
+		if err != nil {
+			return err
+		}
+		field.SetInt(int64(i))
+
+	case reflect.Int8:
+		i, err := strconv.ParseInt(val, 10, 8)
+		if err != nil {
+			return err
+		}
+		field.SetInt(i)
+
+	case reflect.Int16:
+		i, err := strconv.ParseInt(val, 10, 16)
+		if err != nil {
+			return err
+		}
+		field.SetInt(i)
+
+	case reflect.Int32:
+		i, err := strconv.ParseInt(val, 10, 32)
+		if err != nil {
+			return err
+		}
+		field.SetInt(i)
+
+	case reflect.Int64:
+		i, err := strconv.ParseInt(val, 10, 64)
+		if err != nil {
+			return err
+		}
+		field.SetInt(i)
+
+	case reflect.Uint:
+		u, err := strconv.ParseUint(val, 10, 0)
+		if err != nil {
+			return err
+		}
+		field.SetUint(u)
+
+	case reflect.Uint8:
+		u, err := strconv.ParseUint(val, 10, 8)
+		if err != nil {
+			return err
+		}
+		field.SetUint(u)
+
+	case reflect.Uint16:
+		u, err := strconv.ParseUint(val, 10, 16)
+		if err != nil {
+			return err
+		}
+		field.SetUint(u)
+
+	case reflect.Uint32:
+		u, err := strconv.ParseUint(val, 10, 32)
+		if err != nil {
+			return err
+		}
+		field.SetUint(u)
+
+	case reflect.Uint64:
+		u, err := strconv.ParseUint(val, 10, 64)
+		if err != nil {
+			return err
+		}
+		field.SetUint(u)
+
+	case reflect.Float32:
+		f, err := strconv.ParseFloat(val, 32)
+		if err != nil {
+			return err
+		}
+		field.SetFloat(float64(float32(f))) // explicitly cast to float32 before setting
+
+	case reflect.Float64:
+		f, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			return err
+		}
+		field.SetFloat(f)
+
+	default:
+		return fmt.Errorf("unsupported field type: %s", field.Kind())
+	}
+	return nil
+}
+
+func bindSlice(values []string, field reflect.Value) error {
+	elemType := field.Type().Elem()
+	slice := reflect.MakeSlice(field.Type(), 0, len(values))
+
+	for _, val := range values {
+		elem := reflect.New(elemType).Elem()
+		if err := bindSingle(val, elem); err != nil {
+			return err
+		}
+		slice = reflect.Append(slice, elem)
+	}
+
+	field.Set(slice)
+	return nil
 }

@@ -206,8 +206,8 @@ func (ctx *DefaultCtx) BodyParser(payload interface{}) error {
 //	}
 //	fmt.Println(ms.Name) // John
 func (ctx *DefaultCtx) QueryParser(payload interface{}) error {
-	return parser(payload, "query", func(tagVal string) string {
-		return ctx.Req().URL.Query().Get(tagVal)
+	return parser(payload, "query", func(tagVal string) []string {
+		return ctx.Req().URL.Query()[tagVal]
 	})
 }
 
@@ -217,55 +217,34 @@ func (ctx *DefaultCtx) QueryParser(payload interface{}) error {
 // parameter of the same name. If the path parameter is not present,
 // the field will be skipped.
 func (ctx *DefaultCtx) PathParser(payload interface{}) error {
-	return parser(payload, "path", func(tagVal string) string {
-		return ctx.Req().PathValue(tagVal)
+	return parser(payload, "path", func(tagVal string) []string {
+		return []string{ctx.Req().PathValue(tagVal)}
 	})
 }
 
-func parser(payload any, tagName string, getVal func(tagVal string) string) error {
-	ct := reflect.ValueOf(payload).Elem()
-	for i := 0; i < ct.NumField(); i++ {
+func parser(schema any, tagName string, getVal func(tagVal string) []string) error {
+	ct := reflect.ValueOf(schema).Elem()
+	for i := range ct.NumField() {
 		field := ct.Type().Field(i)
 		tagVal := field.Tag.Get(tagName)
 		if tagVal != "" {
-			val := getVal(tagVal)
-			if val == "" {
+			values := getVal(tagVal)
+			if len(values) == 0 {
 				continue
 			}
 			if !ct.Field(i).CanSet() {
 				return fmt.Errorf("cannot set field %d", i)
 			}
 
-			kind := field.Type.Kind()
-			switch kind {
-			case reflect.String:
-				ct.Field(i).SetString(val)
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				intVal, err := strconv.ParseInt(val, 10, 64)
-				if err != nil {
-					return fmt.Errorf("error parsing int for field %d: %w", i, err)
+			kind := ct.Field(i).Kind()
+			if kind == reflect.Slice {
+				if err := bindSlice(values, ct.Field(i)); err != nil {
+					return fmt.Errorf("error parsing slice %s: %w", tagVal, err)
 				}
-				ct.Field(i).SetInt(intVal)
-			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				uintVal, err := strconv.ParseUint(val, 10, 64)
-				if err != nil {
-					return fmt.Errorf("error parsing uint for field %d: %w", i, err)
+			} else {
+				if err := bindSingle(values[0], ct.Field(i)); err != nil {
+					return fmt.Errorf("error parsing field %s: %w", tagVal, err)
 				}
-				ct.Field(i).SetUint(uintVal)
-			case reflect.Float32, reflect.Float64:
-				floatVal, err := strconv.ParseFloat(val, 64)
-				if err != nil {
-					return fmt.Errorf("error parsing float for field %s: %w", field.Name, err)
-				}
-				ct.Field(i).SetFloat(floatVal)
-			case reflect.Bool:
-				boolVal, err := strconv.ParseBool(val)
-				if err != nil {
-					return fmt.Errorf("error parsing bool for field %d: %w", i, err)
-				}
-				ct.Field(i).SetBool(boolVal)
-			default:
-				return fmt.Errorf("unsupported type %s for field %d", kind.String(), i)
 			}
 		}
 	}
