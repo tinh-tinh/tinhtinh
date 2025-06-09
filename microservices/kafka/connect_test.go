@@ -43,7 +43,7 @@ func OrderApp() *core.App {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		orderService := module.Ref(ORDER).(*OrderService)
-		handler.OnResponse("order.updated", func(ctx microservices.Ctx) error {
+		handler.OnResponse("order.created", func(ctx microservices.Ctx) error {
 			var data *Order
 			err := ctx.PayloadParser(&data)
 			if err != nil {
@@ -179,5 +179,5 @@ func Test_Practice(t *testing.T) {
 	data, err = io.ReadAll(resp.Body)
 	require.Nil(t, err)
 	fmt.Println(string(data))
-	// require.Equal(t, `{"data":{"order1":true}}`, string(data))
+	require.Equal(t, `{"data":{"order1":true}}`, string(data))
 }
