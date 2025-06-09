@@ -129,7 +129,7 @@ func (c *Connect) Listen() {
 
 	if store.GetRPC() != nil {
 		for _, sub := range store.GetRPC() {
-			consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
+			go consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
 				c.Handler(msg, sub)
 			})
 		}
@@ -137,7 +137,7 @@ func (c *Connect) Listen() {
 
 	if store.GetPubSub() != nil {
 		for _, sub := range store.GetPubSub() {
-			consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
+			go consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
 				c.Handler(msg, sub)
 			})
 		}
