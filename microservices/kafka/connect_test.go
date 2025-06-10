@@ -43,7 +43,22 @@ func OrderApp() *core.App {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		orderService := module.Ref(ORDER).(*OrderService)
-		handler.OnResponse("order.created", func(ctx microservices.Ctx) error {
+		handler.OnEvent("order.created", func(ctx microservices.Ctx) error {
+			var data *Order
+			err := ctx.PayloadParser(&data)
+			if err != nil {
+				return err
+			}
+
+			orderService.mutex.Lock()
+			if orderService.orders[data.ID] == nil {
+				orderService.orders[data.ID] = true
+			}
+			orderService.mutex.Unlock()
+			return nil
+		})
+
+		handler.OnResponse("order.updated", func(ctx microservices.Ctx) error {
 			var data *Order
 			err := ctx.PayloadParser(&data)
 			if err != nil {
@@ -99,7 +114,7 @@ func ProductApp(addr string) *core.App {
 		ctrl.Post("", func(ctx core.Ctx) error {
 			client := microservices.InjectClient(module, microservices.KAFKA)
 
-			err := client.Send("order.created", &Order{
+			err := client.Publish("order.created", &Order{
 				ID:   "order1",
 				Name: "order2",
 			})
