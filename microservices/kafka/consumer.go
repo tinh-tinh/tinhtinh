@@ -92,21 +92,21 @@ type ConsumerChannel struct {
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim
-func (consumer *ConsumerChannel) Setup(sarama.ConsumerGroupSession) error {
+func (consumerChannel *ConsumerChannel) Setup(sarama.ConsumerGroupSession) error {
 	// Mark the consumer as ready
-	close(consumer.ready)
+	close(consumerChannel.ready)
 	return nil
 }
 
 // Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
-func (consumer *ConsumerChannel) Cleanup(sarama.ConsumerGroupSession) error {
+func (consumerChannel *ConsumerChannel) Cleanup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
 // ConsumeClaim must start a consumer loop of ConsumerGroupClaim's Messages().
 // Once the Messages() channel is closed, the Handler must finish its processing
 // loop and exit.
-func (consumer *ConsumerChannel) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+func (consumerChannel *ConsumerChannel) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	// NOTE:
 	// Do not move the code below to a goroutine.
 	// The `ConsumeClaim` itself is called within a goroutine, see:
@@ -119,7 +119,7 @@ func (consumer *ConsumerChannel) ConsumeClaim(session sarama.ConsumerGroupSessio
 				return nil
 			}
 			log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
-			consumer.handler(message)
+			consumerChannel.handler(message)
 			session.MarkMessage(message, "")
 		// Should return when `session.Context()` is done.
 		// If not, will raise `ErrRebalanceInProgress` or `read tcp <ip>:<port>: i/o timeout` when kafka rebalance. see:
