@@ -21,7 +21,8 @@ func Scanner(val interface{}) error {
 	}
 
 	ct := reflect.ValueOf(val).Elem()
-	for i := 0; i < ct.NumField(); i++ {
+	// Validate by tags
+	for i := range ct.NumField() {
 		field := ct.Type().Field(i)
 		tagVal := field.Tag.Get("validate")
 		if tagVal == "" {
@@ -144,6 +145,22 @@ func Scanner(val interface{}) error {
 							errMsg = append(errMsg, field.Name+" is maximum length is "+subValue)
 						}
 					}
+				}
+			}
+		}
+	}
+
+	// Validate by custom function
+	v := reflect.ValueOf(val)
+	method := v.MethodByName("Scan")
+	if method.IsValid() {
+		results := method.Call(nil)
+		// Get the returned error
+		if len(results) > 0 {
+			errInterface := results[0].Interface()
+			if errInterface != nil {
+				if err, ok := errInterface.(error); ok {
+					errMsg = append(errMsg, err.Error())
 				}
 			}
 		}
