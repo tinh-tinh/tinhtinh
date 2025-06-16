@@ -44,13 +44,18 @@ func OrderApp() *core.App {
 
 		orderService := module.Ref(ORDER).(*OrderService)
 		handler.OnEvent("order.created", func(ctx microservices.Ctx) error {
-			data := ctx.Payload(&Order{}).(*Order)
+			var data Order
+			err := ctx.PayloadParser(&data)
+			if err != nil {
+				return err
+			}
 
 			orderService.mutex.Lock()
 			if orderService.orders[data.ID] == nil {
 				orderService.orders[data.ID] = true
 			}
 			orderService.mutex.Unlock()
+
 			return nil
 		})
 
@@ -93,7 +98,7 @@ func ProductApp(addr string) *core.App {
 		ctrl := module.NewController("products")
 
 		ctrl.Post("", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
+			client := microservices.InjectClient(module, microservices.NATS)
 
 			go client.Publish("order.created", &Order{
 				ID:   "order1",
@@ -110,9 +115,12 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(nats.NewClient(nats.Options{
-					Addr: addr,
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: microservices.NATS,
+					Transport: nats.NewClient(nats.Options{
+						Addr: addr,
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{controller},
 		})
@@ -171,7 +179,7 @@ func Test_Standalone(t *testing.T) {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		handler.OnEvent("order.*", func(ctx microservices.Ctx) error {
-			fmt.Println("User Event Data:", ctx.Payload(&Order{}))
+			fmt.Println("User Event Data:", ctx.Payload())
 			return nil
 		})
 

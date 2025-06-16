@@ -127,25 +127,25 @@ func (c *Connect) Listen() {
 		Oldest:   true,
 	})
 
-	if store.GetRPC() != nil {
-		for _, sub := range store.GetRPC() {
-			consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
-				c.Handler(msg, sub)
-			})
-		}
-	}
-
-	if store.GetPubSub() != nil {
-		for _, sub := range store.GetPubSub() {
-			consumer.Subscribe([]string{sub.Name}, func(msg *sarama.ConsumerMessage) {
-				c.Handler(msg, sub)
-			})
-		}
-	}
+	// Topics
+	subscribers := append(store.GetRPC(), store.GetPubSub()...)
+	topics := Map(subscribers, func(sub *microservices.SubscribeHandler) string {
+		return sub.Name
+	})
+	// handler
+	consumer.Subscribe(topics, func(msg *sarama.ConsumerMessage) {
+		c.Handler(msg, subscribers)
+	})
 }
 
-func (c *Connect) Handler(msg *sarama.ConsumerMessage, sub *microservices.SubscribeHandler) {
+func (c *Connect) Handler(msg *sarama.ConsumerMessage, subscribers []*microservices.SubscribeHandler) {
 	message := microservices.DecodeMessage(c, msg.Value)
+	sub, ok := Find(subscribers, func(sub *microservices.SubscribeHandler) bool {
+		return sub.Name == msg.Topic
+	})
+	if !ok {
+		return
+	}
 
 	if reflect.ValueOf(message).IsZero() {
 		sub.Handle(c, microservices.Message{

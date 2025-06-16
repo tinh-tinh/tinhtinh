@@ -17,21 +17,21 @@ import (
 
 type Ctx interface {
 	Req() *http.Request
-	Res() http.ResponseWriter
+	Res() *SafeResponseWriter
 	Headers(key string) string
 	Cookies(key string) *http.Cookie
 	SetCookie(key string, value string, maxAge int)
 	SignedCookie(key string, val ...string) (string, error)
 	BodyParser(payload interface{}) error
 	QueryParser(payload interface{}) error
-	ParamParser(payload interface{}) error
+	PathParser(payload interface{}) error
 	Body() interface{}
-	Params() interface{}
+	Paths() interface{}
 	Queries() interface{}
-	Param(key string) string
-	ParamInt(key string, defaultVal ...int) int
-	ParamFloat(key string, defaultVal ...float64) float64
-	ParamBool(key string, defaultVal ...bool) bool
+	Path(key string) string
+	PathInt(key string, defaultVal ...int) int
+	PathFloat(key string, defaultVal ...float64) float64
+	PathBool(key string, defaultVal ...bool) bool
 	Query(key string) string
 	QueryInt(key string, defaultVal ...int) int
 	QueryFloat(key string, defaultVal ...float64) float64
@@ -54,13 +54,34 @@ type Ctx interface {
 	Status(statusCode int) Ctx
 }
 
+// Custom ResponseWriter to prevent duplicate WriteHeader calls
+type SafeResponseWriter struct {
+	http.ResponseWriter
+	wroteHeader bool
+}
+
+func (w *SafeResponseWriter) WriteHeader(code int) {
+	if !w.wroteHeader {
+		w.wroteHeader = true
+		w.ResponseWriter.WriteHeader(code)
+	}
+}
+
+func (w *SafeResponseWriter) Write(b []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+	return w.ResponseWriter.Write(b)
+}
+
 type DefaultCtx struct {
 	r           *http.Request
-	w           http.ResponseWriter
+	w           *SafeResponseWriter
 	handler     http.Handler
 	metadata    []*Metadata
 	callHandler CallHandler
 	app         *App
+	statusCode  int
 }
 
 // Req returns the original http.Request from the client.
@@ -69,7 +90,7 @@ func (ctx *DefaultCtx) Req() *http.Request {
 }
 
 // Res returns the original http.ResponseWriter from the server.
-func (ctx *DefaultCtx) Res() http.ResponseWriter {
+func (ctx *DefaultCtx) Res() *SafeResponseWriter {
 	return ctx.w
 }
 
@@ -185,70 +206,45 @@ func (ctx *DefaultCtx) BodyParser(payload interface{}) error {
 //	}
 //	fmt.Println(ms.Name) // John
 func (ctx *DefaultCtx) QueryParser(payload interface{}) error {
-	ct := reflect.ValueOf(payload).Elem()
-	for i := 0; i < ct.NumField(); i++ {
-		field := ct.Type().Field(i)
-		tagVal := field.Tag.Get("query")
-		if tagVal != "" {
-			val := ctx.Req().URL.Query().Get(tagVal)
-			if val == "" {
-				continue
-			}
-			switch field.Type.Name() {
-			case "string":
-				ct.Field(i).SetString(val)
-			case "int":
-				intVal, err := strconv.Atoi(val)
-				if err != nil {
-					return err
-				}
-				ct.Field(i).SetInt(int64(intVal))
-			case "bool":
-				boolVal, err := strconv.ParseBool(val)
-				if err != nil {
-					return err
-				}
-				ct.Field(i).SetBool(boolVal)
-			default:
-				return fmt.Errorf("unsupported type: %s", field.Type.Name())
-			}
-		}
-	}
-	return nil
+	return parser(payload, "query", func(tagVal string) []string {
+		return ctx.Req().URL.Query()[tagVal]
+	})
 }
 
-// ParamParser takes a struct and populates its fields based on the path
+// PathParser takes a struct and populates its fields based on the path
 // parameters in the request. It supports string, int, and bool types.
 // If a field has a "param" tag, it will be populated with the path
 // parameter of the same name. If the path parameter is not present,
 // the field will be skipped.
-func (ctx *DefaultCtx) ParamParser(payload interface{}) error {
-	ct := reflect.ValueOf(payload).Elem()
-	for i := 0; i < ct.NumField(); i++ {
+func (ctx *DefaultCtx) PathParser(payload interface{}) error {
+	return parser(payload, "path", func(tagVal string) []string {
+		return []string{ctx.Req().PathValue(tagVal)}
+	})
+}
+
+func parser(schema any, tagName string, getVal func(tagVal string) []string) error {
+	ct := reflect.ValueOf(schema).Elem()
+	for i := range ct.NumField() {
 		field := ct.Type().Field(i)
-		tagVal := field.Tag.Get("param")
+		tagVal := field.Tag.Get(tagName)
 		if tagVal != "" {
-			val := ctx.Req().PathValue(tagVal)
-			if val == "" {
+			values := getVal(tagVal)
+			if len(values) == 0 {
 				continue
 			}
-			switch field.Type.Name() {
-			case "string":
-				ct.Field(i).SetString(val)
-			case "int":
-				intVal, err := strconv.Atoi(val)
-				if err != nil {
-					return err
+			if !ct.Field(i).CanSet() {
+				return fmt.Errorf("cannot set field %d", i)
+			}
+
+			kind := ct.Field(i).Kind()
+			if kind == reflect.Slice {
+				if err := bindSlice(values, ct.Field(i)); err != nil {
+					return fmt.Errorf("error parsing slice %s: %w", tagVal, err)
 				}
-				ct.Field(i).SetInt(int64(intVal))
-			case "bool":
-				boolVal, err := strconv.ParseBool(val)
-				if err != nil {
-					return err
+			} else {
+				if err := bindSingle(values[0], ct.Field(i)); err != nil {
+					return fmt.Errorf("error parsing field %s: %w", tagVal, err)
 				}
-				ct.Field(i).SetBool(boolVal)
-			default:
-				return fmt.Errorf("unsupported type: %s", field.Type.Name())
 			}
 		}
 	}
@@ -260,8 +256,8 @@ func (ctx *DefaultCtx) Body() interface{} {
 	return ctx.Get(InBody)
 }
 
-// Params returns the route parameters as a given interface.
-func (ctx *DefaultCtx) Params() interface{} {
+// Paths returns the route parameters as a given interface.
+func (ctx *DefaultCtx) Paths() interface{} {
 	return ctx.Get(InPath)
 }
 
@@ -270,16 +266,16 @@ func (ctx *DefaultCtx) Queries() interface{} {
 	return ctx.Get(InQuery)
 }
 
-// Param returns the value of the route parameter with the given key.
+// Path returns the value of the route parameter with the given key.
 // If the parameter is not present, it returns an empty string.
-func (ctx *DefaultCtx) Param(key string) string {
+func (ctx *DefaultCtx) Path(key string) string {
 	val := ctx.r.PathValue(key)
 	return val
 }
 
-// ParamInt returns the value of the route parameter with the given key as an integer.
+// PathInt returns the value of the route parameter with the given key as an integer.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) ParamInt(key string, defaultVal ...int) int {
+func (ctx *DefaultCtx) PathInt(key string, defaultVal ...int) int {
 	val := ctx.r.PathValue(key)
 	intVal, err := strconv.Atoi(val)
 	if err != nil {
@@ -291,9 +287,9 @@ func (ctx *DefaultCtx) ParamInt(key string, defaultVal ...int) int {
 	return intVal
 }
 
-// ParamFloat returns the value of the route parameter with the given key as a float64.
+// PathFloat returns the value of the route parameter with the given key as a float64.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) ParamFloat(key string, defaultVal ...float64) float64 {
+func (ctx *DefaultCtx) PathFloat(key string, defaultVal ...float64) float64 {
 	val := ctx.r.PathValue(key)
 	floatVal, err := strconv.ParseFloat(val, 64)
 	if err != nil {
@@ -305,9 +301,9 @@ func (ctx *DefaultCtx) ParamFloat(key string, defaultVal ...float64) float64 {
 	return floatVal
 }
 
-// ParamBool returns the value of the route parameter with the given key as a boolean.
+// PathBool returns the value of the route parameter with the given key as a boolean.
 // If the parameter is not present, it panics.
-func (ctx *DefaultCtx) ParamBool(key string, defaultVal ...bool) bool {
+func (ctx *DefaultCtx) PathBool(key string, defaultVal ...bool) bool {
 	val := ctx.r.PathValue(key)
 	boolVal, err := strconv.ParseBool(val)
 	if err != nil {
@@ -376,7 +372,7 @@ func (ctx *DefaultCtx) QueryBool(key string, defaultVal ...bool) bool {
 //
 //	ctx.Status(http.StatusOK).JSON(core.Map{"message": "Hello, World!"})
 func (ctx *DefaultCtx) Status(statusCode int) Ctx {
-	ctx.w.WriteHeader(statusCode)
+	ctx.statusCode = statusCode
 	return ctx
 }
 
@@ -393,6 +389,8 @@ func (ctx *DefaultCtx) SetCallHandler(call CallHandler) {
 // If there is an error while encoding the data, it panics.
 func (ctx *DefaultCtx) JSON(data Map) error {
 	ctx.w.Header().Set("Content-Type", "application/json")
+	ctx.w.WriteHeader(ctx.statusCode)
+
 	if ctx.callHandler != nil {
 		data = ctx.callHandler(data)
 	}
@@ -449,7 +447,7 @@ func (ctx *DefaultCtx) Next() error {
 func (ctx *DefaultCtx) Session(key string, val ...interface{}) interface{} {
 	if len(val) > 0 {
 		cookie := ctx.app.session.Set(key, val[0])
-		http.SetCookie(ctx.w, &cookie)
+		http.SetCookie(ctx.w.ResponseWriter, &cookie)
 		return nil
 	}
 	cookie, err := ctx.Req().Cookie(key)
@@ -469,7 +467,8 @@ func (ctx *DefaultCtx) Session(key string, val ...interface{}) interface{} {
 // Req, Res, Headers, etc.
 func NewCtx(app *App) *DefaultCtx {
 	return &DefaultCtx{
-		app: app,
+		app:        app,
+		statusCode: http.StatusOK,
 	}
 }
 
@@ -478,7 +477,7 @@ func NewCtx(app *App) *DefaultCtx {
 //
 // It returns nothing.
 func (ctx *DefaultCtx) SetCtx(w http.ResponseWriter, r *http.Request) {
-	ctx.w = w
+	ctx.w = &SafeResponseWriter{ResponseWriter: w}
 	ctx.r = r
 }
 
@@ -498,11 +497,11 @@ func (ctx *DefaultCtx) SetHandler(h http.Handler) {
 //
 // The returned http.HandlerFunc can be used as a handler for an HTTP request.
 func ParseCtx(app *App, router *Router) http.Handler {
-	ctx := app.pool.Get().(*DefaultCtx)
-	defer app.pool.Put(ctx)
-
-	ctx.SetMetadata(router.Metadata...)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := app.pool.Get().(*DefaultCtx)
+		defer app.pool.Put(ctx)
+
+		ctx.SetMetadata(router.Metadata...)
 		ctx.SetCtx(w, r)
 		if router.interceptor != nil {
 			ctx.SetCallHandler(router.interceptor(ctx))
@@ -512,11 +511,13 @@ func ParseCtx(app *App, router *Router) http.Handler {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("%v", r)
 				app.errorHandler(err, ctx)
+				return
 			}
 		}()
 		err = router.Handler(ctx)
 		if err != nil {
 			app.errorHandler(err, ctx)
+			return
 		}
 	})
 }

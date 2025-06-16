@@ -146,3 +146,23 @@ func OmitStruct[T any](input T, fields []string) any {
 
 	return outputValue.Interface()
 }
+
+func MergeStruct[T any](input ...T) T {
+	var result T
+	resultVal := reflect.ValueOf(&result).Elem()
+
+	for _, item := range input {
+		inputVal := reflect.ValueOf(item)
+		for i := range inputVal.NumField() {
+			field := inputVal.Field(i)
+			resultField := resultVal.Field(i)
+
+			// Set field if result's field is zero and input's field is not zero
+			if resultField.IsZero() && !field.IsZero() {
+				resultField.Set(field)
+			}
+		}
+	}
+
+	return result
+}

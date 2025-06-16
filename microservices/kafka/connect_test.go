@@ -1,6 +1,7 @@
 package kafka_test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -43,8 +44,27 @@ func OrderApp() *core.App {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		orderService := module.Ref(ORDER).(*OrderService)
+		handler.OnEvent("order.created", func(ctx microservices.Ctx) error {
+			var data *Order
+			err := ctx.PayloadParser(&data)
+			if err != nil {
+				return err
+			}
+
+			orderService.mutex.Lock()
+			if orderService.orders[data.ID] == nil {
+				orderService.orders[data.ID] = true
+			}
+			orderService.mutex.Unlock()
+			return nil
+		})
+
 		handler.OnResponse("order.updated", func(ctx microservices.Ctx) error {
-			data := ctx.Payload(&Order{}).(*Order)
+			var data *Order
+			err := ctx.PayloadParser(&data)
+			if err != nil {
+				return err
+			}
 
 			orderService.mutex.Lock()
 			if orderService.orders[data.ID] == nil {
@@ -93,12 +113,15 @@ func ProductApp(addr string) *core.App {
 		ctrl := module.NewController("products")
 
 		ctrl.Post("", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
+			client := microservices.InjectClient(module, microservices.KAFKA)
 
-			client.Send("order.updated", &Order{
+			err := client.Publish("order.created", &Order{
 				ID:   "order1",
 				Name: "order2",
 			})
+			if err != nil {
+				return err
+			}
 			return ctx.JSON(core.Map{
 				"data": []string{"product1", "product2"},
 			})
@@ -110,11 +133,14 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(kafka.NewClient(kafka.Options{
-					Options: kafka.Config{
-						Brokers: []string{addr},
-					},
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: microservices.KAFKA,
+					Transport: kafka.NewClient(kafka.Options{
+						Options: kafka.Config{
+							Brokers: []string{addr},
+						},
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{controller},
 		})
@@ -168,5 +194,6 @@ func Test_Practice(t *testing.T) {
 
 	data, err = io.ReadAll(resp.Body)
 	require.Nil(t, err)
+	fmt.Println(string(data))
 	require.Equal(t, `{"data":{"order1":true}}`, string(data))
 }

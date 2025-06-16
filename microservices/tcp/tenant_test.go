@@ -43,7 +43,7 @@ func AuthApp(addr string) *core.App {
 
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("auth")
-		client := microservices.Inject(module)
+		client := microservices.InjectClient(module, microservices.TCP)
 
 		ctrl.Post("register", func(ctx core.Ctx) error {
 			userService := module.Ref(USER_SERVICE).(*UserService)
@@ -90,17 +90,20 @@ func AuthApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(tcp.NewClient(tcp.Options{
-					Addr:    addr,
-					Timeout: 200 * time.Millisecond,
-					Config: microservices.Config{
-						CompressAlg: compress.Gzip,
-					},
-					RetryOptions: tcp.RetryOptions{
-						Retry: 5,
-						Delay: 1 * time.Second,
-					},
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: microservices.TCP,
+					Transport: tcp.NewClient(tcp.Options{
+						Addr:    addr,
+						Timeout: 200 * time.Millisecond,
+						Config: microservices.Config{
+							CompressAlg: compress.Gzip,
+						},
+						RetryOptions: tcp.RetryOptions{
+							Retry: 5,
+							Delay: 1 * time.Second,
+						},
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{controller},
 			Providers: []core.Providers{
@@ -156,7 +159,12 @@ func DirectoryApp() *core.App {
 				directoryService.directories[tenantID] = []*User{}
 			}
 
-			payload := ctx.Payload(&User{}).(*User)
+			var payload *User
+			err := ctx.PayloadParser(&payload)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
 			directoryService.directories[tenantID] = append(directoryService.directories[tenantID], payload)
 
 			fmt.Printf("Receive payload is %v\n", payload)
@@ -167,7 +175,12 @@ func DirectoryApp() *core.App {
 			tenantID := ctx.Get("tenant").(string)
 
 			fmt.Println("User Logged Data:", ctx.Payload(), tenantID)
-			payload := ctx.Payload(&User{}).(*User)
+			var payload *User
+			err := ctx.PayloadParser(&payload)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
 			if payload != nil {
 				directoryService.currentlyLogged[tenantID] = payload
 			}

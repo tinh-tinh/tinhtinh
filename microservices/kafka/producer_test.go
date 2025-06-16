@@ -14,7 +14,8 @@ func Test_Producer(t *testing.T) {
 	})
 	producer := instance.Producer()
 	producer.Publish(&sarama.ProducerMessage{
-		Topic: "order.updated",
-		Value: sarama.StringEncoder("abc"),
+		Topic: "test.topic.publish",
+		Key:   nil,
+		Value: sarama.StringEncoder("haha"),
 	})
 }

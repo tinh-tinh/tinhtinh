@@ -208,6 +208,94 @@ func Test_RequestProvider(t *testing.T) {
 	require.Equal(t, "modeltest2", res2.Data)
 }
 
+func Test_TransientProvider(t *testing.T) {
+	type StructName struct {
+		Name string
+	}
+	parentModule := func(module core.Module) core.Module {
+		parent := module.New(core.NewModuleOptions{
+			Scope: core.Global,
+		})
+		parent.NewProvider(core.ProviderOptions{
+			Name: "parent",
+			Value: &StructName{
+				Name: "parent",
+			},
+		})
+		parent.Export("parent")
+
+		return parent
+	}
+
+	childModule := func(module core.Module) core.Module {
+		child := module.New(core.NewModuleOptions{
+			Scope: core.Transient,
+		})
+		child.NewProvider(core.ProviderOptions{
+			Name: "child",
+			Factory: func(param ...interface{}) interface{} {
+				parent := param[0].(*StructName)
+				return &StructName{
+					Name: fmt.Sprintf("%vChild", parent.Name),
+				}
+			},
+			Inject: []core.Provide{core.Provide("parent")},
+		})
+		child.Export("child")
+
+		return child
+	}
+
+	module := core.NewModule(core.NewModuleOptions{
+		Imports: []core.Modules{parentModule, childModule},
+	})
+
+	// Singleton
+	oldP, ok := module.Ref("parent").(*StructName)
+	require.True(t, ok)
+	require.Equal(t, "parent", oldP.Name)
+
+	newP, ok := module.Ref("parent").(*StructName)
+	require.True(t, ok)
+	require.Equal(t, "parent", newP.Name)
+
+	require.Same(t, oldP, newP)
+
+	// Transient
+	old, ok := module.Ref("child").(*StructName)
+	require.True(t, ok)
+	require.Equal(t, "parentChild", old.Name)
+
+	newStr, ok := module.Ref("child").(*StructName)
+	require.True(t, ok)
+	require.Equal(t, "parentChild", newStr.Name)
+
+	require.NotSame(t, old, newStr)
+}
+
+func Test_AutoNameProvider(t *testing.T) {
+	type StructName struct {
+		Name string
+	}
+	service := func(module core.Module) core.Provider {
+		return module.NewProvider(&StructName{Name: "module"})
+	}
+
+	module := core.NewModule(core.NewModuleOptions{
+		Providers: []core.Providers{service},
+		Exports:   []core.Providers{service},
+	})
+
+	structName := core.Inject[StructName](module)
+	require.Equal(t, "module", structName.Name)
+
+	type Any struct {
+		Version int
+	}
+	nilValue := core.Inject[Any](module)
+	require.Nil(t, nilValue)
+}
+
 func BenchmarkRequestModule(b *testing.B) {
 	app := core.CreateFactory(tenantModule)
 	app.SetGlobalPrefix("/api")

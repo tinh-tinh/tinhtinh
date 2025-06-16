@@ -72,8 +72,19 @@ jobs:
     - name: Detect changes in microservices/redis
       id: changes
       run: |
-        git fetch origin ${{ github.event.before }} --depth=1
-        CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/redis/' || true)
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          # Fetch the base branch (master) and PR commit (head)
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          TARGET="origin/${{ github.event.pull_request.base.ref }}"
+          PR_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          # Get the diff between the base branch and PR branch
+          CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/redis/' || true)
+        else
+          # Regular push event, compare before and after commits
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/redis/' || true)
+        fi
+
         if [ -z "$CHANGED" ]; then
           echo "No changes in Redis code."
           echo "should_run=false" >> $GITHUB_OUTPUT
@@ -109,14 +120,27 @@ jobs:
           - 4222:4222
 
     steps:
-    # Checkout code
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Ensure full history for diffs
 
     - name: Detect changes in microservices/nats
       id: changes
       run: |
-        git fetch origin ${{ github.event.before }} --depth=1
-        CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/nats/' || true)
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          # Fetch the base branch (master) and PR commit (head)
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          TARGET="origin/${{ github.event.pull_request.base.ref }}"
+          PR_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          # Get the diff between the base branch and PR branch
+          CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/nats/' || true)
+        else
+          # Regular push event, compare before and after commits
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/nats/' || true)
+        fi
+
         if [ -z "$CHANGED" ]; then
           echo "No changes in NATS code."
           echo "should_run=false" >> $GITHUB_OUTPUT
@@ -171,8 +195,19 @@ jobs:
       - name: Detect changes in microservices/amqlib
         id: changes
         run: |
-          git fetch origin ${{ github.event.before }} --depth=1
-          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/amqlib/' || true)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Fetch the base branch (master) and PR commit (head)
+            git fetch origin ${{ github.event.pull_request.base.ref }}
+            TARGET="origin/${{ github.event.pull_request.base.ref }}"
+            PR_SHA="${{ github.event.pull_request.head.sha }}"
+            
+            # Get the diff between the base branch and PR branch
+            CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/amqlib/' || true)
+          else
+            # Regular push event, compare before and after commits
+            CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/amqlib/' || true)
+          fi
+
           if [ -z "$CHANGED" ]; then
             echo "No changes in RabbitMQ code."
             echo "should_run=false" >> $GITHUB_OUTPUT

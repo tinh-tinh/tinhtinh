@@ -65,12 +65,17 @@ func appServer(addr string) microservices.Service {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		handler.OnResponse("user.created", func(ctx microservices.Ctx) error {
-			fmt.Println("User Created Data:", ctx.Payload(&Message{}))
+			fmt.Println("User Created Data:", ctx.Payload())
 			return nil
 		})
 
 		handler.OnEvent("user.updated", func(ctx microservices.Ctx) error {
-			fmt.Println("User Updated Data:", ctx.Payload(&Message{}))
+			var message Message
+			err := ctx.PayloadParser(&message)
+			if err != nil {
+				return err
+			}
+			fmt.Println("User Updated Data:", message)
 			return nil
 		})
 
@@ -98,7 +103,7 @@ func appClient(addr string) *core.App {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("event", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
+			client := microservices.InjectClient(module, TCP_SERVICE)
 			if client == nil {
 				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
 			}
@@ -115,7 +120,7 @@ func appClient(addr string) *core.App {
 		})
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
+			client := microservices.InjectClient(module, TCP_SERVICE)
 			if client == nil {
 				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
 			}
@@ -136,9 +141,14 @@ func appClient(addr string) *core.App {
 
 	clientModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(tcp.Options{
-				Addr: addr,
-			}))},
+			Imports: []core.Modules{
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: TCP_SERVICE,
+					Transport: tcp.NewClient(tcp.Options{
+						Addr: addr,
+					}),
+				}),
+			},
 			Controllers: []core.Controllers{
 				clientController,
 			},

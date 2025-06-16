@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"html"
 )
 
 const (
@@ -88,7 +89,7 @@ func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 				case "http-version":
 					content = strings.Replace(content, "${http-version}", r.Proto, 1)
 				case "user-agent":
-					content = strings.Replace(content, "${user-agent}", r.UserAgent(), 1)
+					content = strings.Replace(content, "${user-agent}", html.EscapeString(r.UserAgent()), 1)
 				case "referer":
 					content = strings.Replace(content, "${referer}", r.Referer(), 1)
 				case "status":

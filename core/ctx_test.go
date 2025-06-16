@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -236,13 +237,13 @@ func Test_Ctx_Body(t *testing.T) {
 
 func Test_Ctx_Params(t *testing.T) {
 	type ID struct {
-		ID string `param:"id"`
+		ID string `path:"id"`
 	}
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Pipe(core.Param(ID{})).Get("/{id}", func(ctx core.Ctx) error {
-			data := ctx.Params().(*ID)
+			data := ctx.Paths().(*ID)
 			return ctx.JSON(core.Map{
 				"data": data.ID,
 			})
@@ -282,6 +283,7 @@ func Test_Ctx_Params(t *testing.T) {
 func Test_Ctx_Queries(t *testing.T) {
 	type QueryData struct {
 		Name string `query:"name"`
+		Age  uint   `query:"age"`
 	}
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
@@ -329,49 +331,49 @@ func Test_Ctx_Param(t *testing.T) {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("/{id}", func(ctx core.Ctx) error {
-			data := ctx.Param("id")
+			data := ctx.Path("id")
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamInt("key", 1)
+			data := ctx.PathInt("key", 1)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key2/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamFloat("key", 1)
+			data := ctx.PathFloat("key", 1)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key3/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamBool("key", true)
+			data := ctx.PathBool("key", true)
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key4/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamInt("key")
+			data := ctx.PathInt("key")
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key5/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamFloat("key")
+			data := ctx.PathFloat("key")
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
 		})
 
 		ctrl.Get("key6/{key}", func(ctx core.Ctx) error {
-			data := ctx.ParamBool("key")
+			data := ctx.PathBool("key")
 			return ctx.JSON(core.Map{
 				"data": data,
 			})
@@ -842,8 +844,14 @@ func Test_Ctx_Status(t *testing.T) {
 
 func Test_QueryParser(t *testing.T) {
 	type QueryData struct {
-		Age    int  `query:"age"`
-		Format bool `query:"format"`
+		Age    uint    `query:"age"`
+		Score  float32 `query:"score"`
+		Format bool    `query:"format"`
+	}
+
+	type UnsupportStruct struct {
+		hidden string         `query:"hidden"`
+		Untype map[string]any `query:"untype"`
 	}
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
@@ -856,6 +864,17 @@ func Test_QueryParser(t *testing.T) {
 			}
 			return ctx.JSON(core.Map{
 				"data": queryData,
+			})
+		})
+
+		ctrl.Get("unsupport", func(ctx core.Ctx) error {
+			var queryData UnsupportStruct
+			err := ctx.QueryParser(&queryData)
+			if err != nil {
+				return common.InternalServerException(ctx.Res(), err.Error())
+			}
+			return ctx.JSON(core.Map{
+				"data": queryData.hidden,
 			})
 		})
 
@@ -877,7 +896,7 @@ func Test_QueryParser(t *testing.T) {
 	defer testServer.Close()
 	testClient := testServer.Client()
 
-	resp, err := testClient.Get(testServer.URL + "/api/test?age=12&format=true")
+	resp, err := testClient.Get(testServer.URL + "/api/test?age=12&format=true&score=4.5")
 
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -888,19 +907,40 @@ func Test_QueryParser(t *testing.T) {
 	var res Response
 	err = json.Unmarshal(data, &res)
 	require.Nil(t, err)
+	require.Equal(t, map[string]interface{}(map[string]interface{}{"Age": float64(12), "Format": true, "Score": 4.5}), res.Data)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test?age=true")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test?format=35")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test?score=string")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/unsupport?untype=string")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test/unsupport?hidden=string")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 }
 
 func Test_ParamParser(t *testing.T) {
 	type ParamData struct {
-		ID     int  `param:"id"`
-		Export bool `param:"export"`
+		ID     int  `path:"id"`
+		Export bool `path:"export"`
 	}
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("{id}/{export}", func(ctx core.Ctx) error {
 			var queryData ParamData
-			err := ctx.ParamParser(&queryData)
+			err := ctx.PathParser(&queryData)
 			if err != nil {
 				return common.InternalServerException(ctx.Res(), err.Error())
 			}
@@ -1198,12 +1238,125 @@ func Test_Redirect(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
+func Test_ArrayQuery(t *testing.T) {
+	type QueryData struct {
+		IdsInt     []int     `query:"idsInt" json:"idsInt"`
+		IdsInt8    []int8    `query:"idsInt8" json:"idsInt8"`
+		IdsInt16   []int16   `query:"idsInt16" json:"idsInt16"`
+		IdsInt32   []int32   `query:"idsInt32" json:"idsInt32"`
+		IdsInt64   []int64   `query:"idsInt64" json:"idsInt64"`
+		IdsUInt    []uint    `query:"idsUInt" json:"idsUInt"`
+		IdsUInt8   []uint8   `query:"idsUInt8" json:"idsUInt8"`
+		IdsUInt16  []uint16  `query:"idsUInt16" json:"idsUInt16"`
+		IdsUInt32  []uint32  `query:"idsUInt32" json:"idsUInt32"`
+		IdsUInt64  []uint64  `query:"idsUInt64" json:"idsUInt64"`
+		IdsFloat32 []float32 `query:"idsFloat32" json:"idsFloat32"`
+		IdsFloat64 []float64 `query:"idsFloat64" json:"idsFloat64"`
+		IdsStr     []string  `query:"idsStr" json:"idsStr"`
+		IdsBool    []bool    `query:"idsBool" json:"idsBool"`
+	}
+
+	controller := func(module core.Module) core.Controller {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			var queryData QueryData
+			err := ctx.QueryParser(&queryData)
+			if err != nil {
+				return common.InternalServerException(ctx.Res(), err.Error())
+			}
+
+			return ctx.JSON(core.Map{
+				"data": queryData,
+			})
+		})
+
+		return ctrl
+	}
+
+	module := func() core.Module {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controllers{controller},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+	tests := []struct {
+		field  string
+		values []string
+		expect any
+		isErr  bool
+	}{
+		{"idsInt", []string{"1", "2"}, []any{float64(1), float64(2)}, false}, // expect error
+		{"idsInt8", []string{"1", "2"}, []any{float64(1), float64(2)}, false},
+		{"idsInt16", []string{"1", "2"}, []any{float64(1), float64(2)}, false},
+		{"idsInt32", []string{"1", "2"}, []any{float64(1), float64(2)}, false},
+		{"idsInt64", []string{"1", "2"}, []any{float64(1), float64(2)}, false},
+		{"idsUInt", []string{"3", "4"}, []any{float64(3), float64(4)}, false},
+		{"idsUInt16", []string{"3", "4"}, []any{float64(3), float64(4)}, false},
+		{"idsUInt32", []string{"3", "4"}, []any{float64(3), float64(4)}, false},
+		{"idsUInt64", []string{"3", "4"}, []any{float64(3), float64(4)}, false},
+		{"idsFloat32", []string{"1.5", "2.5"}, []any{1.5, 2.5}, false},
+		{"idsFloat64", []string{"1.5", "2.5"}, []any{1.5, 2.5}, false},
+		{"idsStr", []string{"abc", "def"}, []any{"abc", "def"}, false},
+		{"idsBool", []string{"true", "false"}, []any{true, false}, false},
+		{"idsInt", []string{"1", "true"}, []any{float64(1), float64(2)}, true}, // expect error
+		{"idsInt8", []string{"1", "2true"}, []any{float64(1), float64(2)}, true},
+		{"idsInt16", []string{"1", "2true"}, []any{float64(1), float64(2)}, true},
+		{"idsInt32", []string{"1", "2true"}, []any{float64(1), float64(2)}, true},
+		{"idsInt64", []string{"1", "2true"}, []any{float64(1), float64(2)}, true},
+		{"idsUInt", []string{"3", "4true"}, []any{float64(3), float64(4)}, true},
+		{"idsUInt16", []string{"3", "4true"}, []any{float64(3), float64(4)}, true},
+		{"idsUInt32", []string{"3", "4true"}, []any{float64(3), float64(4)}, true},
+		{"idsUInt64", []string{"3", "4true"}, []any{float64(3), float64(4)}, true},
+		{"idsFloat32", []string{"1.5", "2.5true"}, []any{1.5, 2.5}, true},
+		{"idsFloat64", []string{"1.5", "2.5true"}, []any{1.5, 2.5}, true},
+		{"idsBool", []string{"true", "25"}, []any{true, false}, true},
+	}
+
+	for _, test := range tests {
+		url := testServer.URL + "/api/test?"
+		for _, v := range test.values {
+			url += fmt.Sprintf("%s=%s&", test.field, v)
+		}
+		resp, err := testClient.Get(url)
+		require.Nil(t, err)
+		if test.isErr {
+			require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+			continue
+		}
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		data, err := io.ReadAll(resp.Body)
+		require.Nil(t, err)
+
+		var res Response
+		err = json.Unmarshal(data, &res)
+		require.Nil(t, err)
+
+		mapper := res.Data.(map[string]any)
+		require.NotNil(t, mapper[test.field])
+		require.Equal(t, test.expect, mapper[test.field], fmt.Sprintf("Failed by case %s", test.field))
+
+		// resp, err = testClient.Get(testServer.URL + "/api/test?idsInt=true&idsInt=2")
+		// require.Nil(t, err)
+		// require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	}
+}
+
 func Benchmark_CtxJson(b *testing.B) {
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			return ctx.JSON(core.Map{
+			return ctx.Status(http.StatusOK).JSON(core.Map{
 				"data": "ok",
 			})
 		})

@@ -13,13 +13,16 @@ const PIPE CtxKey = "pipe"
 func PipeMiddleware(dto core.PipeDto) Middleware {
 	return func(ctx Ctx) error {
 		payload := dto.GetValue()
-		schema := ctx.Payload(payload)
-
-		err := validator.Scanner(schema)
+		err := ctx.PayloadParser(payload)
 		if err != nil {
-			panic(exception.ThrowRpc(err.Error()))
+			return exception.ThrowRpc(err.Error())
 		}
-		ctx.Set(PIPE, schema)
+
+		err = validator.Scanner(payload)
+		if err != nil {
+			return exception.ThrowRpc(err.Error())
+		}
+		ctx.Set(PIPE, payload)
 		return ctx.Next()
 	}
 }

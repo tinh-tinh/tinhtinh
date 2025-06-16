@@ -49,7 +49,11 @@ func OrderApp() *core.App {
 
 		orderService := module.Ref(ORDER).(*OrderService)
 		handler.OnResponse("order.created", func(ctx microservices.Ctx) error {
-			data := ctx.Payload(&Order{}).(*Order)
+			var data *Order
+			err := ctx.PayloadParser(&data)
+			if err != nil {
+				return err
+			}
 
 			orderService.mutex.Lock()
 			if orderService.orders[data.ID] == nil {
@@ -104,7 +108,7 @@ func ProductApp(addr string) *core.App {
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("products")
 
-		client := microservices.Inject(module)
+		client := microservices.InjectClient(module, microservices.MQTT)
 		ctrl.Post("", func(ctx core.Ctx) error {
 			go client.Send("order.created", &Order{
 				ID:   "order1",
@@ -132,9 +136,12 @@ func ProductApp(addr string) *core.App {
 		opts := mqtt_store.NewClientOptions().AddBroker(addr).SetClientID("product-app")
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(mqtt.NewClient(mqtt.Options{
-					ClientOptions: opts,
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: microservices.MQTT,
+					Transport: mqtt.NewClient(mqtt.Options{
+						ClientOptions: opts,
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{controller},
 		})
@@ -152,7 +159,13 @@ func DeliveryApp(addr string) microservices.Service {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		handler.OnEvent("order.*", func(ctx microservices.Ctx) error {
-			fmt.Println("Delivery when have order:", ctx.Payload(&Order{}))
+			var data *Order
+			err := ctx.PayloadParser(&data)
+			if err != nil {
+				return err
+			}
+
+			fmt.Println("Delivery when have order:", data)
 			return nil
 		})
 

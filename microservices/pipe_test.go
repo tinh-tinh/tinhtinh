@@ -13,6 +13,8 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/microservices/tcp"
 )
 
+const TCP_SERVICE core.Provide = "TCP_SERVICE"
+
 type User struct {
 	Name string `json:"name" validate:"isAlpha"`
 	Age  int    `json:"age" validate:"isInt"`
@@ -38,6 +40,10 @@ func Test_Pipe(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
+	resp, err = testClient.Get(testServer.URL + "/api/test/failed")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
 	time.Sleep(100 * time.Millisecond)
 }
 
@@ -46,6 +52,11 @@ func appPipe(addr string) microservices.Service {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
 		handler.Pipe(microservices.Payload(User{})).OnResponse("user.created", func(ctx microservices.Ctx) error {
+			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
+			return nil
+		})
+
+		handler.Pipe(microservices.Payload(User{})).OnResponse("user.failed", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
 			return nil
 		})
@@ -74,7 +85,7 @@ func clientPipe(addr string) *core.App {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
+			client := microservices.InjectClient(module, TCP_SERVICE)
 			if client == nil {
 				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
 			}
@@ -91,14 +102,29 @@ func clientPipe(addr string) *core.App {
 			return ctx.JSON(core.Map{"data": "ok"})
 		})
 
+		ctrl.Get("failed", func(ctx core.Ctx) error {
+			client := microservices.InjectClient(module, TCP_SERVICE)
+			if client == nil {
+				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
+			}
+
+			client.Send("user.failed", 23)
+			return ctx.JSON(core.Map{"data": "ok"})
+		})
+
 		return ctrl
 	}
 
 	clientModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.RegisterClient(tcp.NewClient(tcp.Options{
-				Addr: addr,
-			}))},
+			Imports: []core.Modules{
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: TCP_SERVICE,
+					Transport: tcp.NewClient(tcp.Options{
+						Addr: addr,
+					}),
+				}),
+			},
 			Controllers: []core.Controllers{
 				clientController,
 			},

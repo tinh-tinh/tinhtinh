@@ -50,7 +50,7 @@ func clientGuard(addr string, event string) *core.App {
 		ctrl := module.NewController("test")
 
 		ctrl.Get("", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
+			client := microservices.InjectClient(module, TCP_SERVICE)
 			if client == nil {
 				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
 			}
@@ -81,11 +81,12 @@ func clientGuard(addr string, event string) *core.App {
 	module := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(
-					tcp.NewClient(tcp.Options{
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: TCP_SERVICE,
+					Transport: tcp.NewClient(tcp.Options{
 						Addr: addr,
 					}),
-				),
+				}),
 			},
 			Controllers: []core.Controllers{
 				controller,
