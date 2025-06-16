@@ -5,12 +5,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
 func Test_Scanner(t *testing.T) {
-	require.Panics(t, func() {
+	assert.Panics(t, func() {
 		_ = validator.Scanner(nil)
 	})
 	type Enum int
@@ -45,7 +46,7 @@ func Test_Scanner(t *testing.T) {
 		MinLength        string    `validate:"minLength=3"`
 		MaxLength        string    `validate:"maxLength=10"`
 	}
-	require.Panics(t, func() {
+	assert.Panics(t, func() {
 		_ = validator.Scanner(Input{})
 	})
 
@@ -76,7 +77,7 @@ func Test_Scanner(t *testing.T) {
 	}
 
 	err := validator.Scanner(happyCase)
-	require.Nil(t, err)
+	assert.Nil(t, err)
 
 	badCaseStr := &Input{
 		IsAlpha:          "$#%",
@@ -93,8 +94,8 @@ func Test_Scanner(t *testing.T) {
 		MaxLength: "qwerteryuiiuoopo[o[bggnfnghmj,sccsbbhmjk,kk]]",
 	}
 	err = validator.Scanner(badCaseStr)
-	require.NotNil(t, err)
-	require.Equal(t, "Required is required\nIsAlpha is not a valid alpha\nIsAlphanumeric is not a valid alpha numeric\nIsEmail is not a valid email\nIsStrongPassword is not a valid strong password\nIsUUID is not a valid UUID\nIsObjectId is not a valid ObjectID\nIsAlpha is not a valid alpha\nIsAlpha is not a valid alpha\nMinLength is minimim length is 3\nMaxLength is maximum length is 10", err.Error())
+	assert.NotNil(t, err)
+	assert.Equal(t, "Required is required\nIsAlpha is not a valid alpha\nIsAlphanumeric is not a valid alpha numeric\nIsEmail is not a valid email\nIsStrongPassword is not a valid strong password\nIsUUID is not a valid UUID\nIsObjectId is not a valid ObjectID\nIsAlpha is not a valid alpha\nIsAlpha is not a valid alpha\nMinLength is minimim length is 3\nMaxLength is maximum length is 10", err.Error())
 
 	type BadCase struct {
 		IsFloat      any `validate:"isFloat"`
@@ -112,8 +113,31 @@ func Test_Scanner(t *testing.T) {
 		IsNumber:     "fff",
 	}
 	err = validator.Scanner(badCaseNum)
-	require.NotNil(t, err)
-	require.Equal(t, "IsFloat is not a valid float\nIsInt is not a valid int\nIsBool is not a valid bool\nIsDateString is not a valid date time\nIsNumber is not a valid number", err.Error())
+	assert.NotNil(t, err)
+	assert.Equal(t, "IsFloat is not a valid float\nIsInt is not a valid int\nIsBool is not a valid bool\nIsDateString is not a valid date time\nIsNumber is not a valid number", err.Error())
+
+	err = validator.Scanner(&CustomScanner{
+		IsCustom: "abc",
+	})
+	assert.Nil(t, err)
+
+	var customScanner = &CustomScanner{
+		IsCustom: "def",
+	}
+	err = validator.Scanner(customScanner)
+	assert.NotNil(t, err)
+	assert.Equal(t, "custom scan error", err.Error())
+}
+
+type CustomScanner struct {
+	IsCustom string
+}
+
+func (c *CustomScanner) Scan() error {
+	if c.IsCustom == "abc" {
+		return nil
+	}
+	return fmt.Errorf("custom scan error")
 }
 
 func Benchmark_Scanner(b *testing.B) {
