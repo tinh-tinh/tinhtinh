@@ -97,10 +97,10 @@ func AuthApp(addr string) *core.App {
 						Timeout: 200 * time.Millisecond,
 						Config: microservices.Config{
 							CompressAlg: compress.Gzip,
-						},
-						RetryOptions: tcp.RetryOptions{
-							Retry: 5,
-							Delay: 1 * time.Second,
+							RetryOptions: microservices.RetryOptions{
+								Retry: 3,
+								Delay: 100 * time.Millisecond,
+							},
 						},
 					}),
 				}),

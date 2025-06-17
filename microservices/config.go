@@ -3,6 +3,7 @@ package microservices
 import (
 	"encoding/json"
 	"reflect"
+	"time"
 
 	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
@@ -18,6 +19,12 @@ type Config struct {
 	ErrorHandler ErrorHandler
 	Logger       *logger.Logger
 	CompressAlg  compress.Alg
+	RetryOptions RetryOptions
+}
+
+type RetryOptions struct {
+	Retry int
+	Delay time.Duration
 }
 
 func DefaultConfig() Config {
