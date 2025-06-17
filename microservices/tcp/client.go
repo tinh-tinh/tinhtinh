@@ -14,9 +14,8 @@ type RetryOptions struct {
 
 type Options struct {
 	microservices.Config
-	Addr         string
-	Timeout      time.Duration
-	RetryOptions RetryOptions
+	Addr    string
+	Timeout time.Duration
 }
 
 type Client struct {
