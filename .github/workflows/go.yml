@@ -33,6 +33,10 @@ jobs:
     - name: Clear cache
       run: go clean -testcache
 
+    - name: Increase ulimit
+      run: ulimit -n 4096
+      shell: bash
+
     - name: Test
       run: go test -cover -bench=. ./... -coverprofile=coverage.txt
 
