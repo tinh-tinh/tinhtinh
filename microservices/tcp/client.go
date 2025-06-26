@@ -30,9 +30,8 @@ func NewClient(opt Options) microservices.ClientProxy {
 			time.Sleep(opt.RetryOptions.Delay)
 			opt.RetryOptions.Retry--
 			return NewClient(opt)
-		} else {
-			panic(err)
 		}
+		panic(err)
 	}
 
 	if opt.Timeout > 0 {
