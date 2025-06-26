@@ -2,6 +2,7 @@ package core_test
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
@@ -1349,6 +1350,66 @@ func Test_ArrayQuery(t *testing.T) {
 		// require.Nil(t, err)
 		// require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 	}
+}
+
+func Test_XML(t *testing.T) {
+	type User struct {
+		XMLName xml.Name `xml:"user"`
+		Name    string   `xml:"name"`
+		Email   string   `xml:"email"`
+	}
+
+	controller := func(module core.Module) core.Controller {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			user := User{Name: "Alice", Email: "alice@example.com"}
+
+			return ctx.Status(http.StatusOK).XML(user)
+		})
+
+		ctrl.Get("error", func(ctx core.Ctx) error {
+			type Bad struct {
+				C chan int // channels cannot be marshaled
+			}
+			bad := Bad{C: make(chan int)}
+			return ctx.Status(500).XML(bad)
+		})
+
+		return ctrl
+	}
+
+	module := func() core.Module {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controllers{controller},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	testClient := testServer.Client()
+	resp, err := testClient.Get(testServer.URL + "/api/test/error")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	resp, err = testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	var user User
+	err = xml.Unmarshal(data, &user)
+	require.Nil(t, err)
+	require.Equal(t, "Alice", user.Name)
+	require.Equal(t, "alice@example.com", user.Email)
 }
 
 func Benchmark_CtxJson(b *testing.B) {
