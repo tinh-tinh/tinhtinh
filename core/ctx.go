@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -52,6 +53,7 @@ type Ctx interface {
 	GetMetadata(key string) interface{}
 	ExportCSV(name string, body [][]string) error
 	Status(statusCode int) Ctx
+	XML(data any) error
 }
 
 // Custom ResponseWriter to prevent duplicate WriteHeader calls
@@ -395,6 +397,26 @@ func (ctx *DefaultCtx) JSON(data any) error {
 		data = ctx.callHandler(data)
 	}
 	res, err := ctx.app.encoder(data)
+	if err != nil {
+		return err
+	}
+
+	_, err = ctx.w.Write(res)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ctx *DefaultCtx) XML(data any) error {
+	ctx.w.Header().Set("Content-Type", "application/xml")
+	ctx.w.WriteHeader(ctx.statusCode)
+
+	if ctx.callHandler != nil {
+		data = ctx.callHandler(data)
+	}
+	res, err := xml.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return err
 	}
