@@ -37,7 +37,7 @@ type Ctx interface {
 	QueryFloat(key string, defaultVal ...float64) float64
 	QueryBool(key string, defaultVal ...bool) bool
 	SetCallHandler(call CallHandler)
-	JSON(data Map) error
+	JSON(data any) error
 	Get(key interface{}) interface{}
 	Set(key interface{}, val interface{})
 	Next() error
@@ -387,7 +387,7 @@ func (ctx *DefaultCtx) SetCallHandler(call CallHandler) {
 // The Content-Type of the response is set to "application/json".
 //
 // If there is an error while encoding the data, it panics.
-func (ctx *DefaultCtx) JSON(data Map) error {
+func (ctx *DefaultCtx) JSON(data any) error {
 	ctx.w.Header().Set("Content-Type", "application/json")
 	ctx.w.WriteHeader(ctx.statusCode)
 

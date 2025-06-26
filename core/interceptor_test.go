@@ -15,9 +15,9 @@ import (
 func Transform(ctx core.Ctx) core.CallHandler {
 	fmt.Println("Before ...")
 	now := time.Now()
-	return func(data core.Map) core.Map {
+	return func(data any) any {
 		res := make(core.Map)
-		for key, val := range data {
+		for key, val := range data.(core.Map) {
 			if val != nil {
 				res[key] = val
 			}

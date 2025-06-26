@@ -1,6 +1,6 @@
 package core
 
-type CallHandler func(data Map) Map
+type CallHandler func(data any) any
 
 type Interceptor func(ctx Ctx) CallHandler
 

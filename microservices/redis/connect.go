@@ -36,6 +36,11 @@ func NewClient(opt Options) microservices.ClientProxy {
 	}
 
 	if err := connect.Conn.Ping(connect.Context).Err(); err != nil {
+		if opt.RetryOptions.Retry != 0 {
+			time.Sleep(opt.RetryOptions.Delay)
+			opt.RetryOptions.Retry--
+			return NewClient(opt)
+		}
 		panic(err)
 	}
 
