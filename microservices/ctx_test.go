@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/microservices"
+	"github.com/tinh-tinh/tinhtinh/microservices/tcp"
 	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices/tcp"
 )
 
 func Test_Ctx(t *testing.T) {

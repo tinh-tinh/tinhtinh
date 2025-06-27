@@ -4,7 +4,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
+	"github.com/tinh-tinh/tinhtinh/microservices"
 )
 
 type RetryOptions struct {
