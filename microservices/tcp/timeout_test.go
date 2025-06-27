@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices/tcp"
+	"github.com/tinh-tinh/tinhtinh/microservices/tcp"
 )
 
 func Test_Timeout(t *testing.T) {

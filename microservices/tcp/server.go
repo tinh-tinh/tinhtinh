@@ -9,9 +9,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
 type Server struct {

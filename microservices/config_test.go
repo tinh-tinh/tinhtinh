@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
+	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
 

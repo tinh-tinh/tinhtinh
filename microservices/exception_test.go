@@ -1,4 +1,4 @@
-package exception_test
+package microservices_test
 
 import (
 	"net/http"
@@ -7,15 +7,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/microservices"
+	"github.com/tinh-tinh/tinhtinh/microservices/tcp"
 	"github.com/tinh-tinh/tinhtinh/v2/common/exception"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices/tcp"
 )
 
-const TCP_SERVICE core.Provide = "TCP_SERVICE"
-
-func appServer(add string) microservices.Service {
+func appServerException(add string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
@@ -44,7 +42,7 @@ func appServer(add string) microservices.Service {
 	return app
 }
 
-func appClient(addr string) *core.App {
+func appClientException(addr string) *core.App {
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
@@ -80,7 +78,7 @@ func appClient(addr string) *core.App {
 }
 
 func Test_RCP_Exception(t *testing.T) {
-	app := appServer("localhost:8083")
+	app := appServerException("localhost:8083")
 
 	go func() {
 		app.Listen()
@@ -89,7 +87,7 @@ func Test_RCP_Exception(t *testing.T) {
 	// Allow some time for the server to start
 	time.Sleep(100 * time.Millisecond)
 
-	clientApp := appClient("localhost:8083")
+	clientApp := appClientException("localhost:8083")
 	testServer := httptest.NewServer(clientApp.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
