@@ -11,7 +11,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"text/template"
 
+	"github.com/tinh-tinh/tinhtinh/v2/common/exception"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/cookie"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/storage"
 )
@@ -54,6 +56,7 @@ type Ctx interface {
 	ExportCSV(name string, body [][]string) error
 	Status(statusCode int) Ctx
 	XML(data any) error
+	Render(name string, bind Map, layouts ...string) error
 }
 
 // Custom ResponseWriter to prevent duplicate WriteHeader calls
@@ -427,6 +430,18 @@ func (ctx *DefaultCtx) XML(data any) error {
 	}
 
 	return nil
+}
+
+func (ctx *DefaultCtx) Render(name string, bind Map, layouts ...string) error {
+	ctx.w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	ctx.w.WriteHeader(ctx.statusCode)
+
+	tmpl, err := template.New(name).ParseFiles(layouts...)
+	if err != nil {
+		return exception.InternalServer(fmt.Sprintf("Failed to parse template files: %v", err))
+	}
+
+	return tmpl.ExecuteTemplate(ctx.w, name, bind)
 }
 
 // Get returns the value associated with the given key from the request context.

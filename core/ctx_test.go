@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -1410,6 +1411,99 @@ func Test_XML(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, "Alice", user.Name)
 	require.Equal(t, "alice@example.com", user.Email)
+}
+
+func createHTMLFile(filename, content string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(content)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func Test_Render(t *testing.T) {
+	// Prepare a simple HTML content
+	layoutContent := `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{block "title" .}}Default Title{{end}}</title>
+</head>
+<body>
+    {{block "content" .}}Default Content{{end}}
+</body>
+</html>`
+	err := createHTMLFile("layout.html", layoutContent)
+	require.Nil(t, err)
+
+	homeContent := `
+{{define "title"}}Home Page{{end}}
+{{define "content"}}
+<h1>Welcome, {{.Name}}!</h1>
+{{end}}`
+
+	err = createHTMLFile("home.html", homeContent)
+	require.Nil(t, err)
+
+	controller := func(module core.Module) core.Controller {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.Render("layout.html", core.Map{
+				"Name": ctx.Query("name"),
+			}, "layout.html", "home.html")
+		})
+
+		return ctrl
+	}
+
+	module := func() core.Module {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controllers{controller},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	testClient := testServer.Client()
+	resp, err := testClient.Get(testServer.URL + "/api/test?name=John")
+	require.Nil(t, err)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	res := string(data)
+	require.NotEmpty(t, res)
+	require.Contains(t, res, "<h1>Welcome, John!</h1>")
+	require.Contains(t, res, "<title>Home Page</title>")
+
+	// Test with missing template files
+	os.Remove("layout.html")
+	os.Remove("home.html")
+
+	resp, err = testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	// require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	var resMap core.Map
+	err = json.Unmarshal(data, &resMap)
+	require.Nil(t, err)
+	require.Equal(t, float64(500), resMap["statusCode"])
 }
 
 func Benchmark_CtxJson(b *testing.B) {
