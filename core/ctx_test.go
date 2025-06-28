@@ -1506,6 +1506,90 @@ func Test_Render(t *testing.T) {
 	require.Equal(t, float64(500), resMap["statusCode"])
 }
 
+func Test_Steaming(t *testing.T) {
+	dataCSV := [][]string{
+		{"Name", "Age", "Country"},
+		{"Alice", "30", "USA"},
+		{"Bob", "25", "UK"},
+	}
+
+	err := createCSVFile("output.csv", dataCSV)
+	require.Nil(t, err)
+
+	controller := func(module core.Module) core.Controller {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.StreamableFile("output.csv", core.StreamableFileOptions{
+				Download: ctx.QueryBool("download", false),
+				FilePath: ctx.Query("filePath"),
+			})
+		})
+
+		ctrl.Get("error", func(ctx core.Ctx) error {
+			os.Create("example.xyz") // Create a dummy file for testing
+			return ctx.StreamableFile("example.xyz")
+		})
+
+		return ctrl
+	}
+
+	module := func() core.Module {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controllers{controller},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	// Test successful streaming
+	testClient := testServer.Client()
+	resp, err := testClient.Get(testServer.URL + "/api/test?download=true&filePath=data.csv")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+
+	fileContent, err := os.ReadFile("output.csv")
+	require.Nil(t, err)
+	require.Equal(t, string(fileContent), string(data))
+
+	// Test streaming without download
+	resp, err = testClient.Get(testServer.URL + "/api/test?filePath=data.csv")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, string(fileContent), string(data))
+
+	// Test without filePath
+	resp, err = testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	os.Remove("output.csv")
+
+	// Test error case for streaming
+	resp, err = testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	// Test special file
+	resp, err = testClient.Get(testServer.URL + "/api/test/error")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	os.Remove("example.xyz")
+}
+
 func Benchmark_CtxJson(b *testing.B) {
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")

@@ -57,6 +57,7 @@ type Ctx interface {
 	Status(statusCode int) Ctx
 	XML(data any) error
 	Render(name string, bind Map, layouts ...string) error
+	StreamableFile(filePath string, opts ...StreamableFileOptions) error
 }
 
 // Custom ResponseWriter to prevent duplicate WriteHeader calls

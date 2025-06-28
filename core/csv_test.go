@@ -1,9 +1,11 @@
 package core_test
 
 import (
+	"encoding/csv"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -87,4 +89,22 @@ func Test_Csv(t *testing.T) {
 
 	require.Equal(t, "UserID,FullName,Email\n", string(data))
 
+}
+
+func createCSVFile(filename string, data [][]string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	for _, row := range data {
+		if err := writer.Write(row); err != nil {
+			return err
+		}
+	}
+	return nil
 }
