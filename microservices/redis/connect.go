@@ -7,9 +7,9 @@ import (
 	"time"
 
 	redis_store "github.com/redis/go-redis/v9"
+	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/v2/common/era"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
 type Options struct {
