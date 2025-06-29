@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/microservices/amqlib"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
 type Order struct {
@@ -43,7 +43,11 @@ func OrderApp() *core.App {
 
 		orderService := module.Ref(ORDER).(*OrderService)
 		handler.OnResponse("order.created", func(ctx microservices.Ctx) error {
-			data := ctx.Payload(&Order{}).(*Order)
+			var data *Order
+			err := ctx.PayloadParser(&data)
+			if err != nil {
+				return err
+			}
 
 			orderService.mutex.Lock()
 			if orderService.orders[data.ID] == nil {
@@ -92,9 +96,9 @@ func ProductApp(addr string) *core.App {
 		ctrl := module.NewController("products")
 
 		ctrl.Post("", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
+			client := microservices.InjectClient(module, microservices.RMQ)
 
-			client.Send("order.created", &Order{
+			go client.Send("order.created", &Order{
 				ID:   "order1",
 				Name: "order1",
 			})
@@ -109,9 +113,12 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(amqlib.NewClient(amqlib.Options{
-					Addr: addr,
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: microservices.RMQ,
+					Transport: amqlib.NewClient(amqlib.Options{
+						Addr: addr,
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{controller},
 		})
@@ -154,7 +161,7 @@ func Test_Practice(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(2000 * time.Millisecond)
 
 	resp, err = testClientOrder.Get(testOrderServer.URL + "/order-api/orders")
 	require.Nil(t, err)
