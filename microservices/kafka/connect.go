@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/IBM/sarama"
+	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
 type Options struct {
