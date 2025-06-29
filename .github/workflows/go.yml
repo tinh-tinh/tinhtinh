@@ -68,6 +68,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Ensure full history for diffs
 
     - name: Detect changes in microservices/redis
       id: changes
@@ -191,7 +193,9 @@ jobs:
     steps:
       # Checkout code
       - uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0  # Ensure full history for diffs
+          
       - name: Detect changes in microservices/amqlib
         id: changes
         run: |
