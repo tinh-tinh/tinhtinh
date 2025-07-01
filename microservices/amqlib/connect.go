@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/rabbitmq/amqp091-go"
+	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
 type Options struct {
@@ -28,9 +28,11 @@ type Connect struct {
 func NewClient(opt Options) microservices.ClientProxy {
 	conn, err := amqp091.Dial(opt.Addr)
 	if err != nil {
+		fmt.Printf("Failed to connect to RabbitMQ: %v\n", err)
 		panic(err)
 	}
 
+	fmt.Printf("Connected to RabbitMQ at %s\n", opt.Addr)
 	connect := &Connect{
 		Context: context.Background(),
 		Conn:    conn,
@@ -54,7 +56,7 @@ func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
 }
 
 func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	defer c.Conn.Close()
+	// defer c.Conn.Close()
 
 	ch, err := c.Conn.Channel()
 	if err != nil {
@@ -199,6 +201,7 @@ func Open(opts ...Options) core.Service {
 				panic(err)
 			}
 			connect.Conn = conn
+			fmt.Printf("Connected to RabbitMQ at %s\n", opts[0].Addr)
 		}
 		if !reflect.ValueOf(opts[0].Config).IsZero() {
 			connect.config = microservices.ParseConfig(opts[0].Config)
@@ -260,7 +263,6 @@ func (c *Connect) Listen() {
 			if err != nil {
 				panic(err)
 			}
-			go c.Handler(ch, q.Name, sub)
 		}
 	}
 
@@ -275,12 +277,13 @@ func (c *Connect) Listen() {
 			if err != nil {
 				panic(err)
 			}
-			go c.Handler(ch, q.Name, sub)
 		}
 	}
+	subscribers := append(store.GetRPC(), store.GetPubSub()...)
+	c.Handler(ch, q.Name, subscribers)
 }
 
-func (c *Connect) Handler(ch *amqp091.Channel, q string, sub *microservices.SubscribeHandler) {
+func (c *Connect) Handler(ch *amqp091.Channel, q string, subscribers []*microservices.SubscribeHandler) {
 	msgs, err := ch.Consume(
 		q,     // queue
 		"",    // consumer
@@ -291,16 +294,35 @@ func (c *Connect) Handler(ch *amqp091.Channel, q string, sub *microservices.Subs
 		nil,   // args
 	)
 	if err != nil {
+		fmt.Printf("Error consuming messages: %v\n", err)
 		return
 	}
 	for d := range msgs {
 		message := microservices.DecodeMessage(c, d.Body)
+		fmt.Printf("Received message: %v for event %s\n", message.Data, message.Event)
+		sub, ok := Find(subscribers, func(sub *microservices.SubscribeHandler) bool {
+			return sub.Name == message.Event
+		})
+		if !ok {
+			fmt.Printf("No subscriber found for event %s\n", message.Event)
+			continue
+		}
 		if reflect.ValueOf(message).IsZero() {
 			sub.Handle(c, microservices.Message{
-				Data: d.Body,
+				Bytes: d.Body,
 			})
 		} else {
 			sub.Handle(c, message)
 		}
 	}
+}
+
+func Find[T any](list []T, match func(T) bool) (T, bool) {
+	var zero T
+	for _, item := range list {
+		if match(item) {
+			return item, true
+		}
+	}
+	return zero, false
 }
