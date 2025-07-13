@@ -105,13 +105,13 @@ func (log *Logger) Logf(level Level, msg string, args ...any) {
 func (log *Logger) write(level Level, msg string) {
 	dir := log.Path
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.Mkdir(dir, 0755)
+		err := os.Mkdir(dir, 0o755)
 		check(err)
 	}
 
 	current := time.Now().Format("2006-01-02")
 	fileName := current + "-" + getLevelName(level)
-	file, _ := os.OpenFile(filepath.Join(dir, fileName+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, _ := os.OpenFile(filepath.Join(dir, fileName+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
 	fi, _ := file.Stat()
 	currentSize := fi.Size()
 
@@ -122,7 +122,7 @@ func (log *Logger) write(level Level, msg string) {
 		} else {
 			idx := 1
 			for idx > 0 {
-				file, _ = os.OpenFile(filepath.Join(dir, fileName+"-"+fmt.Sprint(idx)+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+				file, _ = os.OpenFile(filepath.Join(dir, fileName+"-"+fmt.Sprint(idx)+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
 				fi, _ := file.Stat()
 				currentSize = fi.Size()
 				if currentSize < log.Max*1000*1000 {

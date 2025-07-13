@@ -195,6 +195,7 @@ func Test_Nil(t *testing.T) {
 		_ = core.CreateFactory(appModule)
 	})
 }
+
 func Test_Import(t *testing.T) {
 	const SUB_PROVIDER core.Provide = "sub"
 	subModule := func(module core.Module) core.Module {

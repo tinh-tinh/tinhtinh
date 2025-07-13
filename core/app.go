@@ -51,18 +51,20 @@ type App struct {
 	Services     []Service
 }
 
-type ModuleParam func() Module
-type AppOptions struct {
-	// Encoder is the encoder that the App uses to initialize itself.
-	Encoder Encode
-	// Decoder is the decoder that the App uses to initialize itself.
-	Decoder Decode
-	// Session is the session that the App uses to initialize itself.
-	Session *session.Config
-	// ErrorHandler is the error handler that the App uses to initialize itself.
-	ErrorHandler ErrorHandler
-	Timeout      time.Duration
-}
+type (
+	ModuleParam func() Module
+	AppOptions  struct {
+		// Encoder is the encoder that the App uses to initialize itself.
+		Encoder Encode
+		// Decoder is the decoder that the App uses to initialize itself.
+		Decoder Decode
+		// Session is the session that the App uses to initialize itself.
+		Session *session.Config
+		// ErrorHandler is the error handler that the App uses to initialize itself.
+		ErrorHandler ErrorHandler
+		Timeout      time.Duration
+	}
+)
 
 type Service interface {
 	Create(module Module)

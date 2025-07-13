@@ -128,7 +128,7 @@ func HandlerFile(r *http.Request, opt UploadFileOption, fieldFiles ...FieldFile)
 
 			if destFolder != "" {
 				if _, err := os.Stat(destFolder); os.IsNotExist(err) {
-					err := os.MkdirAll(destFolder, 0755)
+					err := os.MkdirAll(destFolder, 0o755)
 					if err != nil {
 						return nil, err
 					}

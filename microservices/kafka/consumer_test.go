@@ -30,5 +30,4 @@ func Test_Consumer(t *testing.T) {
 	})
 
 	time.Sleep(1000 * time.Millisecond)
-
 }

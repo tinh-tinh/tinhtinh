@@ -1527,7 +1527,10 @@ func Test_Steaming(t *testing.T) {
 		})
 
 		ctrl.Get("error", func(ctx core.Ctx) error {
-			os.Create("example.xyz") // Create a dummy file for testing
+			_, err := os.Create("example.xyz") // Create a dummy file for testing
+			if err != nil {
+				return err
+			}
 			return ctx.StreamableFile("example.xyz")
 		})
 

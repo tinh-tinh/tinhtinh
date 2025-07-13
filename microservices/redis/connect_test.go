@@ -401,5 +401,4 @@ func Test_Server_Error(t *testing.T) {
 }
 
 func Test_Timeout(t *testing.T) {
-
 }

@@ -207,7 +207,7 @@ func Test_AssertType(t *testing.T) {
 	require.Nil(t, err)
 
 	var partialPerson PartialPerson
-	json.Unmarshal([]byte(partialJSON), &partialPerson)
+	err = json.Unmarshal([]byte(partialJSON), &partialPerson)
 	require.Nil(t, err)
 	require.Equal(t, "John", *partialPerson.Name)
 	require.Equal(t, 30, *partialPerson.Age)

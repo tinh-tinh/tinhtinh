@@ -102,7 +102,6 @@ func Test_FileInterceptor(t *testing.T) {
 				return strings.HasPrefix(file.Filename, "test")
 			},
 		})).Post("happy", func(ctx core.Ctx) error {
-
 			return ctx.JSON(core.Map{
 				"data": ctx.UploadedFile().OriginalName,
 			})
