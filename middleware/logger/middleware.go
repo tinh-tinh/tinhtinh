@@ -2,10 +2,10 @@ package logger
 
 import (
 	"fmt"
+	"html"
 	"net/http"
 	"strings"
 	"time"
-	"html"
 )
 
 const (

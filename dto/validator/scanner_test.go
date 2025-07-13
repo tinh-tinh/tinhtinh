@@ -121,7 +121,7 @@ func Test_Scanner(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	var customScanner = &CustomScanner{
+	customScanner := &CustomScanner{
 		IsCustom: "def",
 	}
 	err = validator.Scanner(customScanner)
@@ -141,7 +141,6 @@ func (c *CustomScanner) Scan() error {
 }
 
 func Benchmark_Scanner(b *testing.B) {
-
 	type UserDetail struct {
 		ID       string    `validate:"isObjectId"`
 		Name     string    `validate:"required,isAlpha"`

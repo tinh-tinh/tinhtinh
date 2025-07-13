@@ -613,5 +613,5 @@ func (ctx *DefaultCtx) Redirect(uri string) error {
 //
 // If no value is associated with the key, it returns nil.
 func (ctx *DefaultCtx) Ref(name Provide) interface{} {
-	return ctx.Get(name)
+	return ctx.app.Module.Ref(name, ctx)
 }

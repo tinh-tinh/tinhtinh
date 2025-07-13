@@ -51,13 +51,13 @@ func (module *DynamicModule) ParseGuard(guard Guard) Middleware {
 }
 
 func (module *DynamicModule) Guard(guards ...Guard) Module {
-	middlewares := []Middleware{}
-
 	for _, v := range guards {
 		mid := module.ParseGuard(v)
-		middlewares = append(middlewares, mid)
+		module.Middlewares = append(module.Middlewares, mid)
+		for _, router := range module.Routers {
+			router.Middlewares = append(router.Middlewares, mid)
+		}
 	}
 
-	module.Use(middlewares...)
 	return module
 }
