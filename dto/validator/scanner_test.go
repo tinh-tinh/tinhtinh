@@ -11,9 +11,8 @@ import (
 )
 
 func Test_Scanner(t *testing.T) {
-	assert.Panics(t, func() {
-		_ = validator.Scanner(nil)
-	})
+	err := validator.Scanner(nil)
+	assert.NotNil(t, err)
 	type Enum int
 	const (
 		Pending Enum = iota
@@ -46,9 +45,8 @@ func Test_Scanner(t *testing.T) {
 		MinLength        string    `validate:"minLength=3"`
 		MaxLength        string    `validate:"maxLength=10"`
 	}
-	assert.Panics(t, func() {
-		_ = validator.Scanner(Input{})
-	})
+	err = validator.Scanner(Input{})
+	assert.NotNil(t, err)
 
 	happyCase := &Input{
 		Required:         "required",
@@ -76,7 +74,7 @@ func Test_Scanner(t *testing.T) {
 		MaxLength: "xyz",
 	}
 
-	err := validator.Scanner(happyCase)
+	err = validator.Scanner(happyCase)
 	assert.Nil(t, err)
 
 	badCaseStr := &Input{

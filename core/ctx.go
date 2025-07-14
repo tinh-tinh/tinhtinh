@@ -58,6 +58,7 @@ type Ctx interface {
 	XML(data any) error
 	Render(name string, bind Map, layouts ...string) error
 	StreamableFile(filePath string, opts ...StreamableFileOptions) error
+	Scan(val any) error
 }
 
 // Custom ResponseWriter to prevent duplicate WriteHeader calls
@@ -494,6 +495,10 @@ func (ctx *DefaultCtx) Session(key string, val ...interface{}) interface{} {
 	}
 	data := ctx.app.session.Get(cookie.Value)
 	return data
+}
+
+func (ctx *DefaultCtx) Scan(val any) error {
+	return ctx.app.pipe(val)
 }
 
 // NewCtx creates a new Ctx from the given http.ResponseWriter and *http.Request.
