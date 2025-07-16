@@ -13,7 +13,7 @@ import (
 
 func Test_Compose(t *testing.T) {
 	// Guard
-	guard := func(ctrl core.RefProvider, ctx core.Ctx) bool {
+	guard := func(ctx core.Ctx) bool {
 		return ctx.Query("key") == "value"
 	}
 
