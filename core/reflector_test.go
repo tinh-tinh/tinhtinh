@@ -17,7 +17,7 @@ func Test_Reflector(t *testing.T) {
 		return core.SetMetadata(role_key, roles)
 	}
 
-	guard := func(ctrl core.RefProvider, ctx core.Ctx) bool {
+	guard := func(ctx core.Ctx) bool {
 		roles := core.Reflector[[]string](role_key, ctx)
 		if len(roles) == 0 {
 			return true
