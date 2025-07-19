@@ -7,11 +7,6 @@ import (
 	"github.com/tinh-tinh/tinhtinh/microservices"
 )
 
-type RetryOptions struct {
-	Retry int
-	Delay time.Duration
-}
-
 type Options struct {
 	microservices.Config
 	Addr    string

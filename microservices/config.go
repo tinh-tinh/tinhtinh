@@ -9,7 +9,6 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
-	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
 
 type Header map[string]string
@@ -19,7 +18,6 @@ type Config struct {
 	Deserializer     core.Decode
 	Header           Header
 	ErrorHandler     ErrorHandler
-	Logger           *logger.Logger
 	CompressAlg      compress.Alg
 	RetryOptions     RetryOptions
 	CustomValidation core.PipeFnc
@@ -31,13 +29,11 @@ type RetryOptions struct {
 }
 
 func DefaultConfig() Config {
-	logger := logger.Create(logger.Options{})
 	return Config{
 		Serializer:       json.Marshal,
 		Deserializer:     json.Unmarshal,
 		Header:           make(Header),
-		ErrorHandler:     DefaultErrorHandler(logger),
-		Logger:           logger,
+		ErrorHandler:     DefaultErrorHandler(),
 		CustomValidation: validator.Scanner,
 	}
 }
@@ -62,13 +58,6 @@ func ParseConfig(cfg ...Config) Config {
 
 		if mergeConfig.ErrorHandler != nil {
 			defaultConfig.ErrorHandler = mergeConfig.ErrorHandler
-		}
-
-		if mergeConfig.Logger != nil {
-			defaultConfig.Logger = mergeConfig.Logger
-			if mergeConfig.ErrorHandler == nil {
-				defaultConfig.ErrorHandler = DefaultErrorHandler(cfg[0].Logger)
-			}
 		}
 
 		if mergeConfig.CompressAlg != "" {
