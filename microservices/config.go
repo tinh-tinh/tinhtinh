@@ -28,6 +28,7 @@ type RetryOptions struct {
 	Delay time.Duration
 }
 
+// DefaultConfig returns a Config instance with default serialization, deserialization, error handling, header, and validation settings.
 func DefaultConfig() Config {
 	return Config{
 		Serializer:       json.Marshal,
@@ -38,6 +39,8 @@ func DefaultConfig() Config {
 	}
 }
 
+// ParseConfig merges one or more Config instances into a single Config, overriding default values with non-zero fields from the provided configs.
+// If multiple configs are provided, later configs take precedence for overlapping fields. Header maps are merged by key. Returns the resulting merged Config.
 func ParseConfig(cfg ...Config) Config {
 	defaultConfig := DefaultConfig()
 	if len(cfg) > 0 {
