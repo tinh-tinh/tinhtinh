@@ -8,6 +8,7 @@ import (
 
 type ErrorHandler func(err error)
 
+// DefaultErrorHandler returns an ErrorHandler that prints formatted RPC error codes and messages to standard output.
 func DefaultErrorHandler() ErrorHandler {
 	return func(err error) {
 		instance := exception.AdapterRpcError(err)
