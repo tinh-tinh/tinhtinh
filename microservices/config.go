@@ -5,21 +5,24 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
 
 type Header map[string]string
 
 type Config struct {
-	Serializer   core.Encode
-	Deserializer core.Decode
-	Header       Header
-	ErrorHandler ErrorHandler
-	Logger       *logger.Logger
-	CompressAlg  compress.Alg
-	RetryOptions RetryOptions
+	Serializer       core.Encode
+	Deserializer     core.Decode
+	Header           Header
+	ErrorHandler     ErrorHandler
+	Logger           *logger.Logger
+	CompressAlg      compress.Alg
+	RetryOptions     RetryOptions
+	CustomValidation core.PipeFnc
 }
 
 type RetryOptions struct {
@@ -30,44 +33,54 @@ type RetryOptions struct {
 func DefaultConfig() Config {
 	logger := logger.Create(logger.Options{})
 	return Config{
-		Serializer:   json.Marshal,
-		Deserializer: json.Unmarshal,
-		Header:       make(Header),
-		ErrorHandler: DefaultErrorHandler(logger),
-		Logger:       logger,
+		Serializer:       json.Marshal,
+		Deserializer:     json.Unmarshal,
+		Header:           make(Header),
+		ErrorHandler:     DefaultErrorHandler(logger),
+		Logger:           logger,
+		CustomValidation: validator.Scanner,
 	}
 }
 
 func ParseConfig(cfg ...Config) Config {
 	defaultConfig := DefaultConfig()
 	if len(cfg) > 0 {
-		if cfg[0].Serializer != nil {
-			defaultConfig.Serializer = cfg[0].Serializer
+		mergeConfig := common.MergeStruct(cfg...)
+		if mergeConfig.Serializer != nil {
+			defaultConfig.Serializer = mergeConfig.Serializer
 		}
 
-		if cfg[0].Deserializer != nil {
-			defaultConfig.Deserializer = cfg[0].Deserializer
+		if mergeConfig.Deserializer != nil {
+			defaultConfig.Deserializer = mergeConfig.Deserializer
 		}
 
 		if len(cfg[0].Header) > 0 {
-			for k, v := range cfg[0].Header {
+			for k, v := range mergeConfig.Header {
 				defaultConfig.Header[k] = v
 			}
 		}
 
-		if cfg[0].ErrorHandler != nil {
-			defaultConfig.ErrorHandler = cfg[0].ErrorHandler
+		if mergeConfig.ErrorHandler != nil {
+			defaultConfig.ErrorHandler = mergeConfig.ErrorHandler
 		}
 
-		if cfg[0].Logger != nil {
-			defaultConfig.Logger = cfg[0].Logger
-			if cfg[0].ErrorHandler == nil {
+		if mergeConfig.Logger != nil {
+			defaultConfig.Logger = mergeConfig.Logger
+			if mergeConfig.ErrorHandler == nil {
 				defaultConfig.ErrorHandler = DefaultErrorHandler(cfg[0].Logger)
 			}
 		}
 
-		if cfg[0].CompressAlg != "" {
-			defaultConfig.CompressAlg = cfg[0].CompressAlg
+		if mergeConfig.CompressAlg != "" {
+			defaultConfig.CompressAlg = mergeConfig.CompressAlg
+		}
+
+		if !reflect.ValueOf(mergeConfig.RetryOptions).IsZero() {
+			defaultConfig.RetryOptions = mergeConfig.RetryOptions
+		}
+
+		if mergeConfig.CustomValidation != nil {
+			defaultConfig.CustomValidation = mergeConfig.CustomValidation
 		}
 	}
 

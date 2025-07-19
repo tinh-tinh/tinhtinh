@@ -16,6 +16,7 @@ type Ctx interface {
 	Set(key interface{}, value interface{})
 	Get(key interface{}) interface{}
 	Next() error
+	Scan(val any) error
 }
 
 type DefaultCtx struct {
@@ -84,4 +85,8 @@ func (c *DefaultCtx) Get(key interface{}) interface{} {
 
 func (c *DefaultCtx) Headers(key string) string {
 	return c.message.Headers[key]
+}
+
+func (c *DefaultCtx) Scan(val any) error {
+	return c.service.Config().CustomValidation(val)
 }
