@@ -11,6 +11,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/microservices/tcp"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
 const TCP_SERVICE core.Provide = "TCP_SERVICE"
@@ -75,6 +76,9 @@ func appPipe(addr string) microservices.Service {
 	}
 	app := tcp.New(appModule, tcp.Options{
 		Addr: addr,
+		Config: microservices.Config{
+			CustomValidation: validator.Scanner,
+		},
 	})
 
 	return app

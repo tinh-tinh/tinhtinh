@@ -2,7 +2,6 @@ package microservices
 
 import (
 	"github.com/tinh-tinh/tinhtinh/v2/common/exception"
-	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
 type CtxKey string
@@ -17,7 +16,7 @@ func PipeMiddleware(dto PipeDto) Middleware {
 			return exception.ThrowRpc(err.Error())
 		}
 
-		err = validator.Scanner(payload)
+		err = ctx.Scan(payload)
 		if err != nil {
 			return exception.ThrowRpc(err.Error())
 		}
