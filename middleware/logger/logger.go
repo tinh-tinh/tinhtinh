@@ -18,11 +18,13 @@ const (
 	LevelFatal
 )
 
+type Metadata map[string]any
 type Logger struct {
 	Path   string
 	Rotate bool
 	// Max Size in MB of each file log. Default is infinity.
-	Max int64
+	Max      int64
+	Metadata Metadata
 }
 
 type Options struct {
@@ -32,6 +34,8 @@ type Options struct {
 	Rotate bool
 	// Max Size in MB of each file log. Default is infinity.
 	Max int64
+	// metadata
+	Metadata Metadata
 }
 
 // Create a new Logger with the specified options.
@@ -48,61 +52,62 @@ func Create(opt Options) *Logger {
 		opt.Max = 20
 	}
 	return &Logger{
-		Path:   opt.Path,
-		Rotate: opt.Rotate,
-		Max:    opt.Max,
+		Path:     opt.Path,
+		Rotate:   opt.Rotate,
+		Max:      opt.Max,
+		Metadata: opt.Metadata,
 	}
 }
 
-func (log *Logger) Info(msg string) {
-	log.write(LevelInfo, msg)
+func (log *Logger) Info(msg string, meta ...Metadata) {
+	log.write(LevelInfo, msg, meta...)
 }
 
 func (log *Logger) Infof(msg string, args ...any) {
 	log.write(LevelInfo, fmt.Sprintf(msg, args...))
 }
 
-func (log *Logger) Debug(msg string) {
-	log.write(LevelDebug, msg)
+func (log *Logger) Debug(msg string, meta ...Metadata) {
+	log.write(LevelDebug, msg, meta...)
 }
 
 func (log *Logger) Debugf(msg string, args ...any) {
 	log.write(LevelDebug, fmt.Sprintf(msg, args...))
 }
 
-func (log *Logger) Warn(msg string) {
-	log.write(LevelWarn, msg)
+func (log *Logger) Warn(msg string, meta ...Metadata) {
+	log.write(LevelWarn, msg, meta...)
 }
 
 func (log *Logger) Warnf(msg string, args ...any) {
 	log.write(LevelWarn, fmt.Sprintf(msg, args...))
 }
 
-func (log *Logger) Error(msg string) {
-	log.write(LevelError, msg)
+func (log *Logger) Error(msg string, meta ...Metadata) {
+	log.write(LevelError, msg, meta...)
 }
 
 func (log *Logger) Errorf(msg string, args ...any) {
 	log.write(LevelError, fmt.Sprintf(msg, args...))
 }
 
-func (log *Logger) Fatal(msg string) {
-	log.write(LevelFatal, msg)
+func (log *Logger) Fatal(msg string, meta ...Metadata) {
+	log.write(LevelFatal, msg, meta...)
 }
 
 func (log *Logger) Fatalf(msg string, args ...any) {
 	log.write(LevelFatal, fmt.Sprintf(msg, args...))
 }
 
-func (log *Logger) Log(level Level, msg string) {
-	log.write(level, msg)
+func (log *Logger) Log(level Level, msg string, meta ...Metadata) {
+	log.write(level, msg, meta...)
 }
 
 func (log *Logger) Logf(level Level, msg string, args ...any) {
 	log.write(level, fmt.Sprintf(msg, args...))
 }
 
-func (log *Logger) write(level Level, msg string) {
+func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 	dir := log.Path
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err := os.Mkdir(dir, 0o755)
@@ -135,7 +140,27 @@ func (log *Logger) write(level Level, msg string) {
 
 	iw := io.MultiWriter(os.Stdout, file)
 
-	message := time.Now().Format("2006-01-02 15:04:05") + " " + msg + "\n"
+	// Merge default and per-call metadata
+	merged := make(Metadata)
+	for k, v := range log.Metadata {
+		merged[k] = v
+	}
+	if len(meta) > 0 {
+		for k, v := range meta[0] {
+			merged[k] = v
+		}
+	}
+	metaStr := ""
+	for k, v := range merged {
+		metaStr += fmt.Sprintf("[%s=%s] ", k, v)
+	}
+
+	message := fmt.Sprintf("%s [%s] %s%s\n",
+		time.Now().Format("2006-01-02 15:04:05"),
+		getLevelName(level),
+		metaStr,
+		msg,
+	)
 	_, err := iw.Write([]byte(message))
 	if err != nil {
 		panic(err)
