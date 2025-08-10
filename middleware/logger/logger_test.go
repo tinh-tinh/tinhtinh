@@ -69,6 +69,31 @@ func Test_Create(t *testing.T) {
 		}
 		log.Logf(logger.LevelDebug, "alayws have ata %d", i)
 	}
+
+	for i := range 1000 {
+		val := strconv.Itoa(i)
+		if i%2 == 0 {
+			log.Info(val, logger.Metadata{
+				"function": "Test",
+			})
+		} else if i%3 == 0 {
+			log.Warn(val, logger.Metadata{
+				"function": "Test",
+			})
+		} else if i%5 == 0 {
+			log.Error(val, logger.Metadata{
+				"function": "Test",
+			})
+		} else if i%7 == 0 {
+			log.Fatal(val, logger.Metadata{
+				"function": "Test",
+			})
+		} else {
+			log.Debug(val, logger.Metadata{
+				"function": "Test",
+			})
+		}
+	}
 }
 
 func randomBigStr() string {
