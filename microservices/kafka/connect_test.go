@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -156,9 +157,9 @@ func Test_Practice(t *testing.T) {
 	orderApp := OrderApp()
 	orderApp.ConnectMicroservice(kafka.Open(kafka.Options{
 		Options: kafka.Config{
-			Brokers: []string{"127.0.0.1:9092"},
+			Brokers: []string{os.Getenv("KAFKA_BROKERS")},
 		},
-		GroupID: "order--app",
+		GroupID: "order-app",
 	}))
 
 	orderApp.StartAllMicroservices()
@@ -175,7 +176,7 @@ func Test_Practice(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, `{"data":{}}`, string(data))
 
-	productApp := ProductApp("127.0.0.1:9092")
+	productApp := ProductApp(os.Getenv("KAFKA_BROKERS"))
 	testProductServer := httptest.NewServer(productApp.PrepareBeforeListen())
 	defer testProductServer.Close()
 
