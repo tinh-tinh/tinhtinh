@@ -221,3 +221,29 @@ func Test_Array(t *testing.T) {
 	}
 	require.Nil(t, validator.Scanner(user))
 }
+
+func TestOptional(t *testing.T) {
+	type Contact struct {
+		ContactName  string `json:"name" validator:"isAlphanumeric"`
+		ContactEmail string `json:"email" validate:"isEmail"`
+		ContactPhone string `json:"phone"`
+	}
+
+	type Location struct {
+		Name     *string  `json:"name,omitempty"`
+		Line     *string  `json:"addressLine,omitempty"`
+		City     *string  `json:"city,omitempty"`
+		State    *string  `json:"state,omitempty"`
+		Country  *string  `json:"country,omitempty"`
+		Zipcode  *string  `json:"zipCode,omitempty"`
+		Timezone *string  `json:"timezone,omitempty"`
+		MapUrl   *string  `json:"mapUrl,omitempty"`
+		Contact  *Contact `json:"contact,omitempty" validate:"nested"`
+	}
+
+	input := &Location{}
+	name := "name"
+	input.Name = &name
+	err := validator.Scanner(input)
+	require.Nil(t, err)
+}
