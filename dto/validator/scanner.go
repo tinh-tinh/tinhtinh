@@ -38,13 +38,13 @@ func Scanner(val interface{}) error {
 		}
 
 		required := slices.IndexFunc(validators, func(v string) bool { return v == "required" })
-		if required == -1 && value == "" {
+		if required == -1 && IsEmpty(value) {
 			continue
 		}
 		for _, validate := range validators {
 			switch validate {
 			case "required":
-				if IsNil(value) {
+				if IsEmpty(value) {
 					errMsg = append(errMsg, field.Name+" is required")
 				}
 			case "isAlpha":
@@ -113,7 +113,8 @@ func Scanner(val interface{}) error {
 				}
 			case "nested":
 				if field.Type.Kind() == reflect.Pointer {
-					err := Scanner(ct.Field(i).Interface())
+					ptr := ct.Field(i).Interface()
+					err := Scanner(ptr)
 					if err != nil {
 						errMsg = append(errMsg, err.Error())
 					}

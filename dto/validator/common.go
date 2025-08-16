@@ -302,18 +302,20 @@ func IsBool(input any) bool {
 	}
 }
 
-func IsNil(val any) bool {
-	switch v := val.(type) {
-	case string:
-		return len(v) == 0
-	case []string:
-		return len(v) == 0
-	case []any:
-		return len(v) == 0
-	case map[string]any:
-		return len(v) == 0
+func IsEmpty(v any) bool {
+	if v == nil {
+		return true
+	}
+	val := reflect.ValueOf(v)
+	switch val.Kind() {
+	case reflect.Pointer:
+		return val.IsNil()
+	case reflect.Array, reflect.Slice:
+		return val.Len() == 0
+	case reflect.Map:
+		return val.Len() == 0
 	default:
-		return val == nil
+		return val.IsZero()
 	}
 }
 
