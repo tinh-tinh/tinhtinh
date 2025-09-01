@@ -243,7 +243,7 @@ func Inject[P any](module RefProvider) *P {
 func getProvideName(param any) string {
 	ctModel := reflect.ValueOf(param).Elem()
 
-	fnc := ctModel.MethodByName("CollectionName")
+	fnc := ctModel.MethodByName("ProvideName")
 	var name string
 	if fnc.IsValid() {
 		name = fnc.Call(nil)[0].String()
