@@ -296,6 +296,34 @@ func Test_AutoNameProvider(t *testing.T) {
 	require.Nil(t, nilValue)
 }
 
+type ProviderRef struct {
+	Name string
+}
+
+func (ProviderRef) ProvideName() string {
+	return "ref"
+}
+
+func Test_RefProvide(t *testing.T) {
+	service := func(module core.Module) core.Provider {
+		return module.NewProvider(&ProviderRef{Name: "module"})
+	}
+
+	module := core.NewModule(core.NewModuleOptions{
+		Providers: []core.Providers{service},
+		Exports:   []core.Providers{service},
+	})
+
+	providerRef := core.Inject[ProviderRef](module)
+	require.Equal(t, "module", providerRef.Name)
+
+	type Any struct {
+		Version int
+	}
+	nilValue := core.Inject[Any](module)
+	require.Nil(t, nilValue)
+}
+
 func BenchmarkRequestModule(b *testing.B) {
 	app := core.CreateFactory(tenantModule)
 	app.SetGlobalPrefix("/api")

@@ -5,14 +5,14 @@ import (
 )
 
 // Guard is a function that checks access permission for a controller
-type Guard func(ref RefProvider, ctx Ctx) bool
+type Guard func(ctx Ctx) bool
 
 // ParseGuard wraps a Guard function into a Middleware that checks access permission
 // for the given DynamicController. If the guard function returns false, it responds
 // with a forbidden error, otherwise it calls the next middleware in the chain.
 func (ctrl *DynamicController) ParseGuard(guard Guard) Middleware {
 	return func(ctx Ctx) error {
-		isAccess := guard(ctrl, ctx)
+		isAccess := guard(ctx)
 		if !isAccess {
 			return common.ForbiddenException(ctx.Res(), "you can not access")
 		}
@@ -42,7 +42,7 @@ func (c *DynamicController) Guard(guards ...Guard) Controller {
 // with a forbidden error, otherwise it calls the next middleware in the chain.
 func (module *DynamicModule) ParseGuard(guard Guard) Middleware {
 	return func(ctx Ctx) error {
-		isAccess := guard(module, ctx)
+		isAccess := guard(ctx)
 		if !isAccess {
 			return common.ForbiddenException(ctx.Res(), "you can not access")
 		}
@@ -51,13 +51,13 @@ func (module *DynamicModule) ParseGuard(guard Guard) Middleware {
 }
 
 func (module *DynamicModule) Guard(guards ...Guard) Module {
-	middlewares := []Middleware{}
-
 	for _, v := range guards {
 		mid := module.ParseGuard(v)
-		middlewares = append(middlewares, mid)
+		module.Middlewares = append(module.Middlewares, mid)
+		for _, router := range module.Routers {
+			router.Middlewares = append(router.Middlewares, mid)
+		}
 	}
 
-	module.Use(middlewares...)
 	return module
 }

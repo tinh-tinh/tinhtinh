@@ -16,6 +16,7 @@ import (
 
 	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/common/color"
+	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/cors"
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/session"
 )
@@ -49,20 +50,26 @@ type App struct {
 	errorHandler ErrorHandler
 	timeout      time.Duration
 	Services     []Service
+	pipe         PipeFnc
 }
 
-type ModuleParam func() Module
-type AppOptions struct {
-	// Encoder is the encoder that the App uses to initialize itself.
-	Encoder Encode
-	// Decoder is the decoder that the App uses to initialize itself.
-	Decoder Decode
-	// Session is the session that the App uses to initialize itself.
-	Session *session.Config
-	// ErrorHandler is the error handler that the App uses to initialize itself.
-	ErrorHandler ErrorHandler
-	Timeout      time.Duration
-}
+type (
+	ModuleParam func() Module
+	AppOptions  struct {
+		// Encoder is the encoder that the App uses to initialize itself.
+		Encoder Encode
+		// Decoder is the decoder that the App uses to initialize itself.
+		Decoder Decode
+		// Session is the session that the App uses to initialize itself.
+		Session *session.Config
+		// ErrorHandler is the error handler that the App uses to initialize itself.
+		ErrorHandler ErrorHandler
+		// Timeout
+		Timeout time.Duration
+		// Custom Validate
+		CustomValidation PipeFnc
+	}
+)
 
 type Service interface {
 	Create(module Module)
@@ -90,6 +97,7 @@ func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 		encoder:      json.Marshal,
 		decoder:      json.Unmarshal,
 		errorHandler: ErrorHandlerDefault,
+		pipe:         validator.Scanner,
 	}
 
 	app.pool = sync.Pool{
@@ -99,20 +107,24 @@ func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 	}
 
 	if len(opt) > 0 {
-		if opt[0].Encoder != nil {
-			app.encoder = opt[0].Encoder
+		mergeOpts := common.MergeStruct(opt...)
+		if mergeOpts.Encoder != nil {
+			app.encoder = mergeOpts.Encoder
 		}
-		if opt[0].Decoder != nil {
-			app.decoder = opt[0].Decoder
+		if mergeOpts.Decoder != nil {
+			app.decoder = mergeOpts.Decoder
 		}
-		if opt[0].Session != nil {
-			app.session = opt[0].Session
+		if mergeOpts.Session != nil {
+			app.session = mergeOpts.Session
 		}
-		if opt[0].ErrorHandler != nil {
-			app.errorHandler = opt[0].ErrorHandler
+		if mergeOpts.ErrorHandler != nil {
+			app.errorHandler = mergeOpts.ErrorHandler
 		}
-		if opt[0].Timeout != 0 {
-			app.timeout = opt[0].Timeout
+		if mergeOpts.Timeout != 0 {
+			app.timeout = mergeOpts.Timeout
+		}
+		if mergeOpts.CustomValidation != nil {
+			app.pipe = mergeOpts.CustomValidation
 		}
 	}
 

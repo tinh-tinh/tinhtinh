@@ -40,7 +40,6 @@ type Module interface {
 	Consumer(consumer *Consumer) Module
 	Guard(guards ...Guard) Module
 	Use(middleware ...Middleware) Module
-	UseRef(middlewareRefs ...MiddlewareRef) Module
 	GetDataProviders() []Provider
 	AppendDataProviders(providers ...Provider)
 	GetScope() Scope
@@ -57,9 +56,11 @@ type DynamicModule struct {
 	interceptor   Interceptor
 }
 
-type Modules func(module Module) Module
-type Controllers func(module Module) Controller
-type Providers func(module Module) Provider
+type (
+	Modules     func(module Module) Module
+	Controllers func(module Module) Controller
+	Providers   func(module Module) Provider
+)
 
 type NewModuleOptions struct {
 	Scope       Scope

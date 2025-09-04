@@ -230,17 +230,21 @@ func Test_IsBool(t *testing.T) {
 	assert.False(t, validator.IsBool("123"))
 }
 
-func Test_IsNil(t *testing.T) {
+func Test_IsEmpty(t *testing.T) {
 	t.Parallel()
 
-	assert.True(t, validator.IsNil(nil))
-	assert.True(t, validator.IsNil([]string{}))
+	assert.True(t, validator.IsEmpty(nil))
+	assert.True(t, validator.IsEmpty([]string{}))
 
 	a := []interface{}{}
-	assert.True(t, validator.IsNil(a))
+	assert.True(t, validator.IsEmpty(a))
 
 	b := make(map[string]interface{})
-	assert.True(t, validator.IsNil(b))
+	assert.True(t, validator.IsEmpty(b))
+
+	type Pointer struct{}
+	var c *Pointer
+	assert.True(t, validator.IsEmpty(c))
 }
 
 func Test_Validators_Edge_Cases(t *testing.T) {

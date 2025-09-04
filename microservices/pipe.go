@@ -2,15 +2,13 @@ package microservices
 
 import (
 	"github.com/tinh-tinh/tinhtinh/v2/common/exception"
-	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
 type CtxKey string
 
 const PIPE CtxKey = "pipe"
 
-func PipeMiddleware(dto core.PipeDto) Middleware {
+func PipeMiddleware(dto PipeDto) Middleware {
 	return func(ctx Ctx) error {
 		payload := dto.GetValue()
 		err := ctx.PayloadParser(payload)
@@ -18,7 +16,7 @@ func PipeMiddleware(dto core.PipeDto) Middleware {
 			return exception.ThrowRpc(err.Error())
 		}
 
-		err = validator.Scanner(payload)
+		err = ctx.Scan(payload)
 		if err != nil {
 			return exception.ThrowRpc(err.Error())
 		}
@@ -27,13 +25,19 @@ func PipeMiddleware(dto core.PipeDto) Middleware {
 	}
 }
 
-func (h *Handler) Pipe(value core.PipeDto) *Handler {
+func (h *Handler) Pipe(value PipeDto) *Handler {
 	h.middlewares = append(h.middlewares, PipeMiddleware(value))
 	return h
 }
 
-func Payload[P any](dto P) core.PipeDto {
-	return &core.Pipe[P]{
-		In: core.InBody,
-	}
+type PipeDto interface {
+	GetValue() interface{}
+}
+
+type PayloadParser[P any] struct {
+}
+
+func (p PayloadParser[P]) GetValue() interface{} {
+	var payload P
+	return &payload
 }

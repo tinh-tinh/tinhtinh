@@ -15,7 +15,6 @@ type Controller interface {
 	Guard(guards ...Guard) Controller
 	Interceptor(interceptor Interceptor) Controller
 	Use(middleware ...Middleware) Controller
-	UseRef(middlewareRefs ...MiddlewareRef) Controller
 	Composition(ctrl Controller) Controller
 	Registry() Controller
 	Get(path string, handler Handler)
@@ -26,7 +25,6 @@ type Controller interface {
 	Handler(path string, handler http.Handler)
 	Ref(name Provide, ctx ...Ctx) interface{}
 	getMiddlewares() []Middleware
-	getGlobalMiddlewares() []Middleware
 	getMetadata() []*Metadata
 	GetDtos() []PipeDto
 	Sse(path string, sseFnc SseFnc)

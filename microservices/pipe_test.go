@@ -11,6 +11,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/microservices/tcp"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
 const TCP_SERVICE core.Provide = "TCP_SERVICE"
@@ -51,12 +52,12 @@ func appPipe(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, core.ProviderOptions{})
 
-		handler.Pipe(microservices.Payload(User{})).OnResponse("user.created", func(ctx microservices.Ctx) error {
+		handler.Pipe(microservices.PayloadParser[User]{}).OnResponse("user.created", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
 			return nil
 		})
 
-		handler.Pipe(microservices.Payload(User{})).OnResponse("user.failed", func(ctx microservices.Ctx) error {
+		handler.Pipe(microservices.PayloadParser[User]{}).OnResponse("user.failed", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
 			return nil
 		})
@@ -75,6 +76,9 @@ func appPipe(addr string) microservices.Service {
 	}
 	app := tcp.New(appModule, tcp.Options{
 		Addr: addr,
+		Config: microservices.Config{
+			CustomValidation: validator.Scanner,
+		},
 	})
 
 	return app

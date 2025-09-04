@@ -91,9 +91,10 @@ func (svc *Server) handler(conn net.Conn, store *microservices.Store) {
 		}
 
 		msg := microservices.DecodeMessage(svc, []byte(message))
-		if msg.Type == microservices.RPC {
+		switch msg.Type {
+		case microservices.RPC:
 			svc.handlerRPC(store.GetRPC(), msg)
-		} else if msg.Type == microservices.PubSub {
+		case microservices.PubSub:
 			svc.handlerPubSub(store.GetPubSub(), msg)
 		}
 	}

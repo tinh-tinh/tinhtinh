@@ -58,6 +58,7 @@ type Ctx interface {
 	XML(data any) error
 	Render(name string, bind Map, layouts ...string) error
 	StreamableFile(filePath string, opts ...StreamableFileOptions) error
+	Scan(val any) error
 }
 
 // Custom ResponseWriter to prevent duplicate WriteHeader calls
@@ -496,6 +497,10 @@ func (ctx *DefaultCtx) Session(key string, val ...interface{}) interface{} {
 	return data
 }
 
+func (ctx *DefaultCtx) Scan(val any) error {
+	return ctx.app.pipe(val)
+}
+
 // NewCtx creates a new Ctx from the given http.ResponseWriter and *http.Request.
 //
 // It returns a new Ctx with the given http.ResponseWriter and *http.Request set
@@ -613,5 +618,5 @@ func (ctx *DefaultCtx) Redirect(uri string) error {
 //
 // If no value is associated with the key, it returns nil.
 func (ctx *DefaultCtx) Ref(name Provide) interface{} {
-	return ctx.Get(name)
+	return ctx.app.Module.Ref(name, ctx)
 }

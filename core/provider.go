@@ -1,6 +1,7 @@
 package core
 
 import (
+	"reflect"
 	"slices"
 
 	"github.com/tinh-tinh/tinhtinh/v2/common"
@@ -124,7 +125,7 @@ func (module *DynamicModule) NewProvider(param ProviderParams) Provider {
 	if ok {
 		return InitProviders(module, providerOptions)
 	}
-	nameProvide := common.GetStructName(param)
+	nameProvide := getProvideName(param)
 	options := ProviderOptions{
 		Name:  Provide(nameProvide),
 		Value: param,
@@ -231,10 +232,24 @@ func InitProviders(module Module, opt ProviderOptions) Provider {
 
 func Inject[P any](module RefProvider) *P {
 	var provider P
-	name := common.GetStructName(provider)
-	svc, ok := module.Ref(Provide(name)).(*P)
+	nameProvide := getProvideName(&provider)
+	svc, ok := module.Ref(Provide(nameProvide)).(*P)
 	if !ok {
 		return nil
 	}
 	return svc
+}
+
+func getProvideName(param any) string {
+	ctModel := reflect.ValueOf(param).Elem()
+
+	fnc := ctModel.MethodByName("ProvideName")
+	var name string
+	if fnc.IsValid() {
+		name = fnc.Call(nil)[0].String()
+	} else {
+		name = common.GetStructName(param)
+	}
+
+	return name
 }

@@ -14,10 +14,10 @@ import (
 func Scanner(val interface{}) error {
 	var errMsg []string
 	if val == nil {
-		panic(fmt.Sprintf("%v should be not nil", val))
+		return fmt.Errorf("%v should be not nil", val)
 	}
 	if reflect.TypeOf(val).Kind() == reflect.Struct {
-		panic(fmt.Sprintf("%v should be a value not struct", val))
+		return fmt.Errorf("%v should be a value not struct", val)
 	}
 
 	ct := reflect.ValueOf(val).Elem()
@@ -38,13 +38,13 @@ func Scanner(val interface{}) error {
 		}
 
 		required := slices.IndexFunc(validators, func(v string) bool { return v == "required" })
-		if required == -1 && value == "" {
+		if required == -1 && IsEmpty(value) {
 			continue
 		}
 		for _, validate := range validators {
 			switch validate {
 			case "required":
-				if IsNil(value) {
+				if IsEmpty(value) {
 					errMsg = append(errMsg, field.Name+" is required")
 				}
 			case "isAlpha":
@@ -113,7 +113,8 @@ func Scanner(val interface{}) error {
 				}
 			case "nested":
 				if field.Type.Kind() == reflect.Pointer {
-					err := Scanner(ct.Field(i).Interface())
+					ptr := ct.Field(i).Interface()
+					err := Scanner(ptr)
 					if err != nil {
 						errMsg = append(errMsg, err.Error())
 					}
@@ -134,12 +135,13 @@ func Scanner(val interface{}) error {
 					subValidators := strings.Split(validate, "=")
 					subField := subValidators[0]
 					subValue := subValidators[1]
-					if subField == "minLength" {
+					switch subField {
+					case "minLength":
 						length, _ := strconv.Atoi(subValue)
 						if !MinLength(value, length) {
 							errMsg = append(errMsg, field.Name+" is minimim length is "+subValue)
 						}
-					} else if subField == "maxLength" {
+					case "maxLength":
 						length, _ := strconv.Atoi(subValue)
 						if !MaxLength(value, length) {
 							errMsg = append(errMsg, field.Name+" is maximum length is "+subValue)
