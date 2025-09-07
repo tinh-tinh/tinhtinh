@@ -106,8 +106,10 @@ func (c *DynamicController) Registry() Controller {
 	c.globalMiddlewares = append(c.globalMiddlewares, c.middlewares...)
 	c.middlewares = []Middleware{}
 	c.globalMetadata = append(c.globalMetadata, c.metadata...)
-	c.globalInterceptor = c.interceptor
 	c.metadata = []*Metadata{}
+	if c.interceptor != nil {
+		c.globalInterceptor = c.interceptor
+	}
 
 	return c
 }
