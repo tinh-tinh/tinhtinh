@@ -101,6 +101,9 @@ func (m *DynamicModule) New(opt NewModuleOptions) Module {
 	newMod := &DynamicModule{isRoot: false}
 	newMod.DataProviders = append(newMod.DataProviders, m.GetExports()...)
 	newMod.Middlewares = append(newMod.Middlewares, m.Middlewares...)
+	if newMod.interceptor == nil {
+		newMod.interceptor = m.interceptor
+	}
 
 	initModule(newMod, opt)
 	return newMod
