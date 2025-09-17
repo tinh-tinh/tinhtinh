@@ -64,7 +64,7 @@ func Test_Client_Factory(t *testing.T) {
 
 func Test_HybridApp(t *testing.T) {
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
 		handler.OnResponse("user.created", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Payload())

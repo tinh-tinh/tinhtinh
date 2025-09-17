@@ -15,7 +15,7 @@ import (
 
 func appServerException(add string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
 		handler.OnResponse("exception", func(ctx microservices.Ctx) error {
 			panic(exception.ThrowRpc("error"))
