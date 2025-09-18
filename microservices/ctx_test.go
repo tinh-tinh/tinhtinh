@@ -8,7 +8,6 @@ import (
 	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/microservices/tcp"
 	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
-	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
 func Test_Ctx(t *testing.T) {
@@ -16,7 +15,7 @@ func Test_Ctx(t *testing.T) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-	svc := tcp.New(func() core.Module { return nil }, tcp.Options{Addr: "127.0.0.1:5173"})
+	svc := tcp.New(nil, tcp.Options{Addr: "127.0.0.1:5173"})
 	input := `"email": "xyz@gmail.com", "password": "12345678@Tc"`
 
 	// Wrap the string into valid JSON format

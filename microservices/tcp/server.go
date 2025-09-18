@@ -20,9 +20,9 @@ type Server struct {
 	config microservices.Config
 }
 
-func New(module core.ModuleParam, opts ...Options) microservices.Service {
+func New(module core.Module, opts ...Options) microservices.Service {
 	svc := &Server{
-		Module: module(),
+		Module: module,
 		config: microservices.DefaultConfig(),
 	}
 
