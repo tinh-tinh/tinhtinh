@@ -40,7 +40,7 @@ func Test_Client_Error(t *testing.T) {
 		return module
 	}
 
-	server := tcp.New(serverModule, tcp.Options{
+	server := tcp.New(serverModule(), tcp.Options{
 		Addr: "localhost:9000",
 	})
 	go server.Listen()
@@ -100,7 +100,7 @@ func Test_Server_Error(t *testing.T) {
 			})
 			return module
 		}
-		server := tcp.New(serverModule, tcp.Options{
+		server := tcp.New(serverModule(), tcp.Options{
 			Addr: "localhost",
 		})
 		server.Listen()
@@ -111,7 +111,7 @@ func Test_Server_Error(t *testing.T) {
 			module := core.NewModule(core.NewModuleOptions{})
 			return module
 		}
-		server := tcp.New(serverModule, tcp.Options{
+		server := tcp.New(serverModule(), tcp.Options{
 			Addr: "localhost:9090",
 		})
 		server.Listen()
