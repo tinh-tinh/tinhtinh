@@ -24,7 +24,7 @@ func appMiddleware(addr string) microservices.Service {
 	}
 
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
 		handler.Use(middleware).OnResponse("middleware", func(ctx microservices.Ctx) error {
 			fmt.Printf("Receive data %v with key is %v\n", ctx.Payload(), ctx.Get("key"))

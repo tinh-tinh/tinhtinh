@@ -50,7 +50,7 @@ func Test_Pipe(t *testing.T) {
 
 func appPipe(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
 		handler.Pipe(microservices.PayloadParser[User]{}).OnResponse("user.created", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))

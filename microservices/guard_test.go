@@ -19,7 +19,7 @@ func appGuard(addr string) microservices.Service {
 	}
 
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
 		handler.Guard(guard).OnResponse("guard", func(ctx microservices.Ctx) error {
 			fmt.Printf("Receive data %v\n", ctx.Payload())

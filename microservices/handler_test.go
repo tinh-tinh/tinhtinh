@@ -62,7 +62,7 @@ func Test_Event(t *testing.T) {
 
 func appServer(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
 		handler.OnResponse("user.created", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Payload())

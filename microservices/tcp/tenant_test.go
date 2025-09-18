@@ -149,7 +149,7 @@ func DirectoryApp() *core.App {
 	}
 
 	handlers := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{}).Use(middleware).Registry()
+		handler := microservices.NewHandler(module, microservices.TCP).Use(middleware).Registry()
 
 		directoryService := module.Ref(DIRECTORY_SERVICE).(*DirectoryService)
 		handler.OnResponse("user.created", func(ctx microservices.Ctx) error {
@@ -211,7 +211,7 @@ func DirectoryApp() *core.App {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports:     []core.Modules{microservices.Register()},
+			Imports:     []core.Modules{microservices.Register(microservices.TCP)},
 			Controllers: []core.Controllers{controller},
 			Providers:   []core.Providers{service, handlers},
 		})
