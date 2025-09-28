@@ -40,7 +40,7 @@ func OrderApp() *core.App {
 	}
 
 	handlerService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module, microservices.NATS)
 
 		orderService := module.Ref(ORDER).(*OrderService)
 		handler.OnEvent("order.created", func(ctx microservices.Ctx) error {
@@ -77,7 +77,7 @@ func OrderApp() *core.App {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports:     []core.Modules{microservices.Register()},
+			Imports:     []core.Modules{microservices.Register(microservices.NATS)},
 			Controllers: []core.Controllers{controller},
 			Providers: []core.Providers{
 				service,
@@ -176,7 +176,7 @@ func Test_Hybrid(t *testing.T) {
 
 func Test_Standalone(t *testing.T) {
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module, microservices.NATS)
 
 		handler.OnEvent("order.*", func(ctx microservices.Ctx) error {
 			fmt.Println("User Event Data:", ctx.Payload())
@@ -188,7 +188,7 @@ func Test_Standalone(t *testing.T) {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.Register()},
+			Imports: []core.Modules{microservices.Register(microservices.NATS)},
 			Providers: []core.Providers{
 				appService,
 			},

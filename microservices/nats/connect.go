@@ -44,21 +44,12 @@ func (c *Connect) Config() microservices.Config {
 	return c.config
 }
 
-func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	return microservices.DefaultSend(c)(event, data, headers...)
-}
-
 func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	return microservices.DefaultPublish(c)(event, data, headers...)
-}
-
-func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
-	c.timeout = duration
-	return c
-}
-
-func (c *Connect) Emit(event string, message microservices.Message) error {
-	payload, err := microservices.EncodeMessage(c, message)
+	payload, err := microservices.EncodeMessage(c, microservices.Message{
+		Event:   event,
+		Headers: microservices.AssignHeader(c.Config().Header, headers...),
+		Data:    data,
+	})
 	if err != nil {
 		c.config.ErrorHandler(err)
 		return err
@@ -76,6 +67,11 @@ func (c *Connect) Emit(event string, message microservices.Message) error {
 		return err
 	}
 	return nil
+}
+
+func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
+	c.timeout = duration
+	return c
 }
 
 // Server usage
@@ -128,25 +124,25 @@ func (c *Connect) Create(module core.Module) {
 
 func (c *Connect) Listen() {
 	fmt.Println("Listening to NATS")
-	store := c.Module.Ref(microservices.STORE).(*microservices.Store)
-	if store == nil {
-		panic("store not found")
+
+	var subscribers []*microservices.SubscribeHandler
+	store, ok := c.Module.Ref(microservices.STORE).(*microservices.Store)
+	if ok && store != nil {
+		subscribers = append(subscribers, store.Subscribers...)
+	}
+	natsStore, ok := c.Module.Ref(microservices.ToTransport(microservices.NATS)).(*microservices.Store)
+	if ok && natsStore != nil {
+		subscribers = append(subscribers, natsStore.Subscribers...)
 	}
 
-	if store.GetRPC() != nil {
-		for _, sub := range store.GetRPC() {
-			go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
-				c.Handler(msg, sub)
-			})
-		}
+	if store == nil && natsStore == nil {
+		panic("store required")
 	}
 
-	if store.GetPubSub() != nil {
-		for _, sub := range store.GetPubSub() {
-			go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
-				c.Handler(msg, sub)
-			})
-		}
+	for _, sub := range subscribers {
+		go c.Conn.Subscribe(sub.Name, func(msg *nats_connect.Msg) {
+			c.Handler(msg, sub)
+		})
 	}
 }
 
