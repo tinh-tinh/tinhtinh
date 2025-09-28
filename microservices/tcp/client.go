@@ -20,6 +20,7 @@ type Client struct {
 
 func NewClient(opt Options) microservices.ClientProxy {
 	conn, err := net.Dial("tcp", opt.Addr)
+
 	if err != nil {
 		if opt.RetryOptions.Retry != 0 {
 			time.Sleep(opt.RetryOptions.Delay)
@@ -45,24 +46,12 @@ func (client *Client) Config() microservices.Config {
 	return client.config
 }
 
-func (client *Client) Send(event string, data interface{}, headers ...microservices.Header) error {
-	return microservices.DefaultSend(client)(event, data, headers...)
-}
-
 func (client *Client) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	return microservices.DefaultPublish(client)(event, data, headers...)
-}
-
-func (client *Client) Timeout(duration time.Duration) microservices.ClientProxy {
-	err := client.Conn.SetWriteDeadline(time.Now().Add(duration))
-	if err != nil {
-		panic(err)
-	}
-	return client
-}
-
-func (client *Client) Emit(event string, message microservices.Message) error {
-	payload, err := microservices.EncodeMessage(client, message)
+	payload, err := microservices.EncodeMessage(client, microservices.Message{
+		Event:   event,
+		Headers: microservices.AssignHeader(client.Config().Header, headers...),
+		Data:    data,
+	})
 	if err != nil {
 		client.config.ErrorHandler(err)
 		return err
@@ -76,4 +65,12 @@ func (client *Client) Emit(event string, message microservices.Message) error {
 	}
 
 	return nil
+}
+
+func (client *Client) Timeout(duration time.Duration) microservices.ClientProxy {
+	err := client.Conn.SetWriteDeadline(time.Now().Add(duration))
+	if err != nil {
+		panic(err)
+	}
+	return client
 }

@@ -52,12 +52,12 @@ func appPipe(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module)
 
-		handler.Pipe(microservices.PayloadParser[User]{}).OnResponse("user.created", func(ctx microservices.Ctx) error {
+		handler.Pipe(microservices.PayloadParser[User]{}).OnEvent("user.created", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
 			return nil
 		})
 
-		handler.Pipe(microservices.PayloadParser[User]{}).OnResponse("user.failed", func(ctx microservices.Ctx) error {
+		handler.Pipe(microservices.PayloadParser[User]{}).OnEvent("user.failed", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
 			return nil
 		})
@@ -100,7 +100,7 @@ func clientPipe(addr string) *core.App {
 			}
 
 			for _, msg := range messages {
-				client.Send("user.created", msg)
+				client.Publish("user.created", msg)
 			}
 
 			return ctx.JSON(core.Map{"data": "ok"})
@@ -112,7 +112,7 @@ func clientPipe(addr string) *core.App {
 				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
 			}
 
-			client.Send("user.failed", 23)
+			client.Publish("user.failed", 23)
 			return ctx.JSON(core.Map{"data": "ok"})
 		})
 

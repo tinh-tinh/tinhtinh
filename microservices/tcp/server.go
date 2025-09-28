@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/tinh-tinh/tinhtinh/microservices"
-	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
@@ -91,21 +90,7 @@ func (svc *Server) handler(conn net.Conn, store *microservices.Store) {
 		}
 
 		msg := microservices.DecodeMessage(svc, []byte(message))
-		switch msg.Type {
-		case microservices.RPC:
-			svc.handlerRPC(store.GetRPC(), msg)
-		case microservices.PubSub:
-			svc.handlerPubSub(store.GetPubSub(), msg)
-		}
-	}
-}
-
-func (svc *Server) handlerRPC(handlers []*microservices.SubscribeHandler, msg microservices.Message) {
-	subscriber := common.Filter(handlers, func(e *microservices.SubscribeHandler) bool {
-		return e.Name == msg.Event
-	})
-	for _, sub := range subscriber {
-		sub.Handle(svc, msg)
+		svc.handlerPubSub(store.Subscribers, msg)
 	}
 }
 

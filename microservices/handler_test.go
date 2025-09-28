@@ -64,7 +64,7 @@ func appServer(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module)
 
-		handler.OnResponse("user.created", func(ctx microservices.Ctx) error {
+		handler.OnEvent("user.created", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Payload())
 			return nil
 		})
@@ -130,7 +130,7 @@ func appClient(addr string) *core.App {
 			}
 
 			for _, msg := range messages {
-				client.Send("user.created", msg)
+				client.Publish("user.created", msg)
 			}
 
 			return ctx.JSON(core.Map{"data": "ok"})

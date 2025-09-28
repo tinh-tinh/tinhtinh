@@ -26,7 +26,7 @@ func appMiddleware(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module)
 
-		handler.Use(middleware).OnResponse("middleware", func(ctx microservices.Ctx) error {
+		handler.Use(middleware).OnEvent("middleware", func(ctx microservices.Ctx) error {
 			fmt.Printf("Receive data %v with key is %v\n", ctx.Payload(), ctx.Get("key"))
 			return nil
 		})
@@ -70,9 +70,9 @@ func clientMiddleware(addr string, event string) *core.App {
 
 			for i, msg := range messages {
 				if i%2 == 0 {
-					go client.Send(event, msg, microservices.Header{"key": "value"})
+					go client.Publish(event, msg, microservices.Header{"key": "value"})
 				} else {
-					client.Send(event, msg)
+					client.Publish(event, msg)
 				}
 			}
 

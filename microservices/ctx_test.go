@@ -22,7 +22,6 @@ func Test_Ctx(t *testing.T) {
 	jsonString := fmt.Sprintf("{%s}", input)
 
 	message := microservices.Message{
-		Type:  microservices.RPC,
 		Event: "test",
 		Headers: map[string]string{
 			"key": "value",
@@ -44,7 +43,6 @@ func Test_Ctx(t *testing.T) {
 	require.Equal(t, "value", headers)
 
 	message2 := microservices.Message{
-		Type:  microservices.RPC,
 		Event: "test",
 		Headers: map[string]string{
 			"key": "value",

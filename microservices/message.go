@@ -5,15 +5,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 )
 
-type EventType string
-
-const (
-	RPC    EventType = "rpc"
-	PubSub EventType = "pubsub"
-)
-
 type Message struct {
-	Type    EventType         `json:"type"`
 	Event   string            `json:"event"`
 	Headers map[string]string `json:"headers"`
 	Data    interface{}       `json:"data"`
