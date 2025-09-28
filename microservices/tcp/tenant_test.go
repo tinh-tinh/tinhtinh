@@ -56,7 +56,7 @@ func AuthApp(addr string) *core.App {
 			userService.users = append(userService.users, user)
 			atomic.AddInt64(&userService.total, 1)
 
-			go client.Send("user.created", user, microservices.Header{"x-tenant-id": tenantID})
+			go client.Publish("user.created", user, microservices.Header{"x-tenant-id": tenantID})
 			return ctx.JSON(core.Map{"data": user})
 		})
 
@@ -152,7 +152,7 @@ func DirectoryApp() *core.App {
 		handler := microservices.NewHandler(module, microservices.TCP).Use(middleware).Registry()
 
 		directoryService := module.Ref(DIRECTORY_SERVICE).(*DirectoryService)
-		handler.OnResponse("user.created", func(ctx microservices.Ctx) error {
+		handler.OnEvent("user.created", func(ctx microservices.Ctx) error {
 			tenantID := ctx.Get("tenant").(string)
 
 			if directoryService.directories[tenantID] == nil {
@@ -171,7 +171,7 @@ func DirectoryApp() *core.App {
 			return nil
 		})
 
-		handler.OnEvent("user.logined", func(ctx microservices.Ctx) error {
+		handler.OnEvent("user.login", func(ctx microservices.Ctx) error {
 			tenantID := ctx.Get("tenant").(string)
 
 			fmt.Println("User Logged Data:", ctx.Payload(), tenantID)

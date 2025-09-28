@@ -17,7 +17,7 @@ func appServerException(add string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module)
 
-		handler.OnResponse("exception", func(ctx microservices.Ctx) error {
+		handler.OnEvent("exception", func(ctx microservices.Ctx) error {
 			panic(exception.ThrowRpc("error"))
 		})
 
@@ -48,7 +48,7 @@ func appClientException(addr string) *core.App {
 
 		ctrl.Get("", func(ctx core.Ctx) error {
 			client := microservices.InjectClient(module, TCP_SERVICE)
-			go client.Send("exception", map[string]interface{}{"data": "ok"})
+			go client.Publish("exception", map[string]interface{}{"data": "ok"})
 			return ctx.JSON(core.Map{})
 		})
 

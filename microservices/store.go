@@ -5,7 +5,7 @@ import "github.com/tinh-tinh/tinhtinh/v2/core"
 const STORE core.Provide = "STORE"
 
 type Store struct {
-	Subscribers map[EventType][]*SubscribeHandler
+	Subscribers []*SubscribeHandler
 }
 
 func Register(transports ...string) core.Modules {
@@ -14,7 +14,7 @@ func Register(transports ...string) core.Modules {
 
 		handlerModule.NewProvider(core.ProviderOptions{
 			Name:  STORE,
-			Value: &Store{Subscribers: make(map[EventType][]*SubscribeHandler)},
+			Value: &Store{},
 		})
 		handlerModule.Export(STORE)
 
@@ -23,7 +23,7 @@ func Register(transports ...string) core.Modules {
 				name := ToTransport(transport)
 				handlerModule.NewProvider(core.ProviderOptions{
 					Name:  name,
-					Value: &Store{Subscribers: make(map[EventType][]*SubscribeHandler)},
+					Value: &Store{},
 				})
 				handlerModule.Export(name)
 			}
@@ -31,14 +31,6 @@ func Register(transports ...string) core.Modules {
 
 		return handlerModule
 	}
-}
-
-func (store *Store) GetRPC() []*SubscribeHandler {
-	return store.Subscribers[RPC]
-}
-
-func (store *Store) GetPubSub() []*SubscribeHandler {
-	return store.Subscribers[PubSub]
 }
 
 func ToTransport(transport string) core.Provide {

@@ -52,7 +52,7 @@ func Test_Client_Error(t *testing.T) {
 
 		client := microservices.InjectClient(module, microservices.TCP)
 		ctrl.Get("", func(ctx core.Ctx) error {
-			go client.Timeout(1*time.Microsecond).Send("abc", 1000)
+			go client.Timeout(1*time.Microsecond).Publish("abc", 1000)
 			return ctx.JSON(core.Map{"data": "ok"})
 		})
 
