@@ -27,8 +27,12 @@ type Handler struct {
 // called when an event is triggered. The provider will be registered with the
 // same scope as the handler.
 func (h *Handler) OnEvent(name string, fnc FactoryFunc) {
-	refNames := []core.Provide{STORE}
-	refNames = append(refNames, h.transports...)
+	var refNames []core.Provide
+	if len(h.transports) > 0 {
+		refNames = append(refNames, h.transports...)
+	} else {
+		refNames = []core.Provide{STORE}
+	}
 
 	for _, refName := range refNames {
 		store, ok := h.module.Ref(refName).(*Store)
