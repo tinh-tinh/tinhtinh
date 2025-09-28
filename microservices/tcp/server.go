@@ -63,9 +63,19 @@ func (svc *Server) Listen() {
 	if err != nil {
 		panic(err)
 	}
+
+	var subscribers []*microservices.SubscribeHandler
 	store, ok := svc.Module.Ref(microservices.STORE).(*microservices.Store)
-	if !ok {
-		panic("store not found")
+	if ok && store != nil {
+		subscribers = append(subscribers, store.Subscribers...)
+	}
+	tcpStore, ok := svc.Module.Ref(microservices.ToTransport(microservices.TCP)).(*microservices.Store)
+	if ok && tcpStore != nil {
+		subscribers = append(subscribers, tcpStore.Subscribers...)
+	}
+
+	if store == nil && tcpStore == nil {
+		panic("store required")
 	}
 
 	go http.Serve(listener, nil)
@@ -74,11 +84,11 @@ func (svc *Server) Listen() {
 		if errr != nil {
 			panic(errr)
 		}
-		go svc.handler(conn, store)
+		go svc.handler(conn, subscribers)
 	}
 }
 
-func (svc *Server) handler(conn net.Conn, store *microservices.Store) {
+func (svc *Server) handler(conn net.Conn, subscribers []*microservices.SubscribeHandler) {
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
@@ -90,20 +100,20 @@ func (svc *Server) handler(conn net.Conn, store *microservices.Store) {
 		}
 
 		msg := microservices.DecodeMessage(svc, []byte(message))
-		svc.handlerPubSub(store.Subscribers, msg)
+		svc.handlerPubSub(subscribers, msg)
 	}
 }
 
 func (svc *Server) handlerPubSub(handlers []*microservices.SubscribeHandler, msg microservices.Message) {
 	if msg.Event == "*" {
 		for _, sub := range handlers {
-			sub.Handle(svc, msg)
+			go sub.Handle(svc, msg)
 		}
 	} else if strings.ContainsAny(msg.Event, "*") {
 		prefix := strings.TrimSuffix(msg.Event, "*")
 		for _, sub := range handlers {
 			if strings.HasPrefix(string(sub.Name), prefix) {
-				sub.Handle(svc, msg)
+				go sub.Handle(svc, msg)
 			}
 		}
 	} else {
@@ -112,7 +122,7 @@ func (svc *Server) handlerPubSub(handlers []*microservices.SubscribeHandler, msg
 		})
 		if findEvent != -1 {
 			sub := handlers[findEvent]
-			sub.Handle(svc, msg)
+			go sub.Handle(svc, msg)
 		}
 	}
 }
