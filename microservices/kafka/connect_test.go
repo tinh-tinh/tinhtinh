@@ -40,7 +40,7 @@ func OrderApp() *core.App {
 	}
 
 	handlerService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module, microservices.KAFKA)
 
 		orderService := module.Ref(ORDER).(*OrderService)
 		handler.OnEvent("order.created", func(ctx microservices.Ctx) error {
@@ -58,7 +58,7 @@ func OrderApp() *core.App {
 			return nil
 		})
 
-		handler.OnResponse("order.updated", func(ctx microservices.Ctx) error {
+		handler.OnEvent("order.updated", func(ctx microservices.Ctx) error {
 			var data *Order
 			err := ctx.PayloadParser(&data)
 			if err != nil {
@@ -91,7 +91,7 @@ func OrderApp() *core.App {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports:     []core.Modules{microservices.Register()},
+			Imports:     []core.Modules{microservices.Register(microservices.KAFKA)},
 			Controllers: []core.Controllers{controller},
 			Providers: []core.Providers{
 				service,
