@@ -6,6 +6,7 @@ const STORE core.Provide = "STORE"
 
 type Store struct {
 	Subscribers []*SubscribeHandler
+	Rpcs        []RpcHandler
 }
 
 func Register(transports ...string) core.Modules {
