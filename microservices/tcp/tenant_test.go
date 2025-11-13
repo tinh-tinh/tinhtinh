@@ -111,7 +111,6 @@ func AuthApp(addr string) *core.App {
 			},
 		})
 
-		module.NewController("auth")
 		return module
 	}
 

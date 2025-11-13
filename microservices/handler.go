@@ -37,7 +37,7 @@ func (h *Handler) OnEvent(name string, fnc FactoryFunc) {
 	for _, refName := range refNames {
 		store, ok := h.module.Ref(refName).(*Store)
 		if !ok {
-			return
+			continue
 		}
 		store.Subscribers = append(store.Subscribers, &SubscribeHandler{
 			Name:        name,
@@ -46,6 +46,23 @@ func (h *Handler) OnEvent(name string, fnc FactoryFunc) {
 		})
 	}
 	h.middlewares = nil
+}
+
+func (h *Handler) RegisterRPC(handler RpcHandler) {
+	var refNames []core.Provide
+	if len(h.transports) > 0 {
+		refNames = append(refNames, h.transports...)
+	} else {
+		refNames = []core.Provide{STORE}
+	}
+
+	for _, refName := range refNames {
+		store, ok := h.module.Ref(refName).(*Store)
+		if !ok {
+			return
+		}
+		store.Rpcs = append(store.Rpcs, handler)
+	}
 }
 
 func (h *Handler) Ref(name core.Provide, ctx ...core.Ctx) interface{} {

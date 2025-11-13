@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/rpc"
 	"reflect"
 	"slices"
 	"strings"
@@ -65,26 +66,50 @@ func (svc *Server) Listen() {
 	}
 
 	var subscribers []*microservices.SubscribeHandler
+	var rpcHandlers []microservices.RpcHandler
 	store, ok := svc.Module.Ref(microservices.STORE).(*microservices.Store)
 	if ok && store != nil {
 		subscribers = append(subscribers, store.Subscribers...)
+		rpcHandlers = append(rpcHandlers, store.Rpcs...)
 	}
 	tcpStore, ok := svc.Module.Ref(microservices.ToTransport(microservices.TCP)).(*microservices.Store)
 	if ok && tcpStore != nil {
 		subscribers = append(subscribers, tcpStore.Subscribers...)
+		rpcHandlers = append(rpcHandlers, tcpStore.Rpcs...)
 	}
 
 	if store == nil && tcpStore == nil {
 		panic("store required")
 	}
 
+	if len(rpcHandlers) > 0 {
+		for _, rpcHandler := range rpcHandlers {
+			err := rpc.Register(rpcHandler)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
 	go http.Serve(listener, nil)
 	for {
-		conn, errr := listener.Accept()
-		if errr != nil {
-			panic(errr)
+		conn, err := listener.Accept()
+		if err != nil {
+			panic(err)
 		}
-		go svc.handler(conn, subscribers)
+
+		// Route based on what's available
+		if len(rpcHandlers) > 0 && len(subscribers) == 0 {
+			// RPC-only mode
+			go rpc.ServeConn(conn)
+		} else if len(subscribers) > 0 && len(rpcHandlers) == 0 {
+			// Pub/Sub-only mode
+			go svc.handler(conn, subscribers)
+		} else {
+			// Both available - need protocol multiplexing or separate ports
+			conn.Close()
+			panic("cannot serve both RPC and pub/sub on same connection without multiplexing")
+		}
 	}
 }
 
