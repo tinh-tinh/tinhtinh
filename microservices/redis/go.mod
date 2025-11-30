@@ -3,10 +3,10 @@ module github.com/tinh-tinh/tinhtinh/microservices/redis
 go 1.24.1
 
 require (
-	github.com/redis/go-redis/v9 v9.11.0
+	github.com/redis/go-redis/v9 v9.17.1
 	github.com/stretchr/testify v1.10.0
-	github.com/tinh-tinh/tinhtinh/microservices v1.0.0
-	github.com/tinh-tinh/tinhtinh/v2 v2.2.0
+	github.com/tinh-tinh/tinhtinh/microservices v1.4.0
+	github.com/tinh-tinh/tinhtinh/v2 v2.3.4
 )
 
 require (
@@ -18,4 +18,5 @@ require (
 )
 
 replace github.com/tinh-tinh/tinhtinh/v2 => ../../
+
 replace github.com/tinh-tinh/tinhtinh/microservices => ../
