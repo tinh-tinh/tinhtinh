@@ -7,6 +7,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/tinh-tinh/tinhtinh/microservices"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
@@ -62,17 +63,7 @@ func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
 	return c
 }
 
-func (c *Connect) Emit(event string, message microservices.Message) error {
-	payload, err := microservices.EncodeMessage(c, message)
-	if err != nil {
-		c.config.ErrorHandler(err)
-		return err
-	}
-	producer := c.Conn.Producer()
-	producer.Publish(&sarama.ProducerMessage{
-		Topic: event,
-		Value: sarama.StringEncoder(string(payload)),
-	})
+func (c *Connect) Send(path string, request, response any, headers ...microservices.Header) error {
 	return nil
 }
 
@@ -84,14 +75,15 @@ func New(module core.ModuleParam, opts ...Options) core.Service {
 	}
 
 	if len(opts) > 0 {
-		if opts[0].GroupID != "" {
-			connect.GroupID = opts[0].GroupID
+		options := common.MergeStruct(opts...)
+		if options.GroupID != "" {
+			connect.GroupID = options.GroupID
 		}
-		if !reflect.ValueOf(opts[0].Config).IsZero() {
-			connect.config = microservices.ParseConfig(opts[0].Config)
+		if !reflect.ValueOf(options.Config).IsZero() {
+			connect.config = microservices.ParseConfig(options.Config)
 		}
-		if !reflect.ValueOf(opts[0].Options).IsZero() {
-			conn := NewInstance(opts[0].Options)
+		if !reflect.ValueOf(options.Options).IsZero() {
+			conn := NewInstance(options.Options)
 			connect.Conn = conn
 		}
 	}
@@ -105,14 +97,15 @@ func Open(opts ...Options) core.Service {
 	}
 
 	if len(opts) > 0 {
-		if opts[0].GroupID != "" {
-			connect.GroupID = opts[0].GroupID
+		options := common.MergeStruct(opts...)
+		if options.GroupID != "" {
+			connect.GroupID = options.GroupID
 		}
-		if !reflect.ValueOf(opts[0].Config).IsZero() {
-			connect.config = microservices.ParseConfig(opts[0].Config)
+		if !reflect.ValueOf(options.Config).IsZero() {
+			connect.config = microservices.ParseConfig(options.Config)
 		}
-		if !reflect.ValueOf(opts[0].Options).IsZero() {
-			conn := NewInstance(opts[0].Options)
+		if !reflect.ValueOf(options.Options).IsZero() {
+			conn := NewInstance(options.Options)
 			connect.Conn = conn
 		}
 	}
@@ -138,9 +131,9 @@ func (c *Connect) Listen() {
 	if ok && store != nil {
 		subscribers = append(subscribers, store.Subscribers...)
 	}
-	natsStore, ok := c.Module.Ref(microservices.ToTransport(microservices.KAFKA)).(*microservices.Store)
-	if ok && natsStore != nil {
-		subscribers = append(subscribers, natsStore.Subscribers...)
+	kafkaStore, ok := c.Module.Ref(microservices.ToTransport(microservices.KAFKA)).(*microservices.Store)
+	if ok && kafkaStore != nil {
+		subscribers = append(subscribers, kafkaStore.Subscribers...)
 	}
 
 	// Topics
