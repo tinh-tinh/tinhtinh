@@ -2,11 +2,13 @@ package kafka
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/tinh-tinh/tinhtinh/microservices"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
@@ -39,7 +41,7 @@ func (c *Connect) Config() microservices.Config {
 	return c.config
 }
 
-func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
+func (c *Connect) Publish(event string, data any, headers ...microservices.Header) error {
 	payload, err := microservices.EncodeMessage(c, microservices.Message{
 		Event:   event,
 		Headers: microservices.AssignHeader(c.config.Header, headers...),
@@ -62,17 +64,8 @@ func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
 	return c
 }
 
-func (c *Connect) Emit(event string, message microservices.Message) error {
-	payload, err := microservices.EncodeMessage(c, message)
-	if err != nil {
-		c.config.ErrorHandler(err)
-		return err
-	}
-	producer := c.Conn.Producer()
-	producer.Publish(&sarama.ProducerMessage{
-		Topic: event,
-		Value: sarama.StringEncoder(string(payload)),
-	})
+func (c *Connect) Send(path string, request, response any, headers ...microservices.Header) error {
+	log.Println("Kafka not support rpc")
 	return nil
 }
 
@@ -84,14 +77,15 @@ func New(module core.ModuleParam, opts ...Options) core.Service {
 	}
 
 	if len(opts) > 0 {
-		if opts[0].GroupID != "" {
-			connect.GroupID = opts[0].GroupID
+		options := common.MergeStruct(opts...)
+		if options.GroupID != "" {
+			connect.GroupID = options.GroupID
 		}
-		if !reflect.ValueOf(opts[0].Config).IsZero() {
-			connect.config = microservices.ParseConfig(opts[0].Config)
+		if !reflect.ValueOf(options.Config).IsZero() {
+			connect.config = microservices.ParseConfig(options.Config)
 		}
-		if !reflect.ValueOf(opts[0].Options).IsZero() {
-			conn := NewInstance(opts[0].Options)
+		if !reflect.ValueOf(options.Options).IsZero() {
+			conn := NewInstance(options.Options)
 			connect.Conn = conn
 		}
 	}
@@ -105,14 +99,15 @@ func Open(opts ...Options) core.Service {
 	}
 
 	if len(opts) > 0 {
-		if opts[0].GroupID != "" {
-			connect.GroupID = opts[0].GroupID
+		options := common.MergeStruct(opts...)
+		if options.GroupID != "" {
+			connect.GroupID = options.GroupID
 		}
-		if !reflect.ValueOf(opts[0].Config).IsZero() {
-			connect.config = microservices.ParseConfig(opts[0].Config)
+		if !reflect.ValueOf(options.Config).IsZero() {
+			connect.config = microservices.ParseConfig(options.Config)
 		}
-		if !reflect.ValueOf(opts[0].Options).IsZero() {
-			conn := NewInstance(opts[0].Options)
+		if !reflect.ValueOf(options.Options).IsZero() {
+			conn := NewInstance(options.Options)
 			connect.Conn = conn
 		}
 	}
@@ -138,9 +133,9 @@ func (c *Connect) Listen() {
 	if ok && store != nil {
 		subscribers = append(subscribers, store.Subscribers...)
 	}
-	natsStore, ok := c.Module.Ref(microservices.ToTransport(microservices.KAFKA)).(*microservices.Store)
-	if ok && natsStore != nil {
-		subscribers = append(subscribers, natsStore.Subscribers...)
+	kafkaStore, ok := c.Module.Ref(microservices.ToTransport(microservices.KAFKA)).(*microservices.Store)
+	if ok && kafkaStore != nil {
+		subscribers = append(subscribers, kafkaStore.Subscribers...)
 	}
 
 	// Topics
@@ -164,9 +159,19 @@ func (c *Connect) Handler(msg *sarama.ConsumerMessage, subscribers []*microservi
 	message := microservices.DecodeMessage(c, msg.Value)
 	if reflect.ValueOf(message).IsZero() {
 		sub.Handle(c, microservices.Message{
-			Data: msg.Value,
+			Event:   msg.Topic,
+			Headers: c.convertHeaders(msg.Headers),
+			Data:    msg.Value,
 		})
 	} else {
 		sub.Handle(c, message)
 	}
+}
+
+func (c *Connect) convertHeaders(headers []*sarama.RecordHeader) microservices.Header {
+	header := microservices.Header{}
+	for _, h := range headers {
+		header[string(h.Key)] = string(h.Value)
+	}
+	return header
 }

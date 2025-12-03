@@ -3,10 +3,10 @@ module github.com/tinh-tinh/tinhtinh/microservices/kafka
 go 1.24.1
 
 require (
-	github.com/IBM/sarama v1.46.1
+	github.com/IBM/sarama v1.46.3
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9
 	github.com/stretchr/testify v1.11.1
-	github.com/tinh-tinh/tinhtinh/microservices v1.3.0
+	github.com/tinh-tinh/tinhtinh/microservices v1.4.0
 	github.com/tinh-tinh/tinhtinh/v2 v2.3.4
 )
 
@@ -22,7 +22,7 @@ require (
 	github.com/jcmturner/gofork v1.7.6 // indirect
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
+	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
