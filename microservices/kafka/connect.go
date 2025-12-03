@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"time"
 
@@ -40,7 +41,7 @@ func (c *Connect) Config() microservices.Config {
 	return c.config
 }
 
-func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
+func (c *Connect) Publish(event string, data any, headers ...microservices.Header) error {
 	payload, err := microservices.EncodeMessage(c, microservices.Message{
 		Event:   event,
 		Headers: microservices.AssignHeader(c.config.Header, headers...),
@@ -64,6 +65,7 @@ func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
 }
 
 func (c *Connect) Send(path string, request, response any, headers ...microservices.Header) error {
+	log.Println("Kafka not support rpc")
 	return nil
 }
 
@@ -157,9 +159,19 @@ func (c *Connect) Handler(msg *sarama.ConsumerMessage, subscribers []*microservi
 	message := microservices.DecodeMessage(c, msg.Value)
 	if reflect.ValueOf(message).IsZero() {
 		sub.Handle(c, microservices.Message{
-			Data: msg.Value,
+			Event:   msg.Topic,
+			Headers: c.convertHeaders(msg.Headers),
+			Data:    msg.Value,
 		})
 	} else {
 		sub.Handle(c, message)
 	}
+}
+
+func (c *Connect) convertHeaders(headers []*sarama.RecordHeader) microservices.Header {
+	header := microservices.Header{}
+	for _, h := range headers {
+		header[string(h.Key)] = string(h.Value)
+	}
+	return header
 }
