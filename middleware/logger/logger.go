@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const MiB = 1 << 20 // 1 MiB
+
 type Level int
 
 const (
@@ -186,6 +188,5 @@ func checkAvailableFile(filename string, max int64) bool {
 		check(err)
 		return false
 	}
-	const MiB = 1024 * 1024
 	return fi.Size() < max*MiB
 }
