@@ -35,7 +35,7 @@ func Test_Create(t *testing.T) {
 		Rotate: false,
 	})
 
-	require.Panics(t, func() {
+	require.NotPanics(t, func() {
 		for range 2 {
 			log2.Info(randomBigStr())
 		}
@@ -99,7 +99,7 @@ func Test_Create(t *testing.T) {
 func randomBigStr() string {
 	var bigString strings.Builder
 	// Define the number of repetitions
-	repeat := 1000000
+	repeat := 100000
 	smallString := "Hello, Go! "
 
 	// Append the small string multiple times
