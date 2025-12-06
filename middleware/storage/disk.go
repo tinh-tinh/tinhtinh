@@ -70,21 +70,8 @@ func HandlerFile(r *http.Request, opt UploadFileOption, fieldFiles ...FieldFile)
 	}
 
 	// Validate limit
-	if opt.Limit != nil {
-		if opt.Limit.FileSize > 0 {
-			err := r.ParseMultipartForm(opt.Limit.FileSize)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if opt.Limit.Fields > 0 {
-			numFields := len(r.MultipartForm.File)
-			if numFields > opt.Limit.Fields {
-				errStr := fmt.Sprintf("number of fields exceeds limit %d", opt.Limit.Fields)
-				return nil, errors.New(errStr)
-			}
-		}
+	if err := validateLimit(opt.Limit, r); err != nil {
+		return nil, err
 	}
 
 	isUploadSingle := len(fieldFiles) == 0
@@ -161,4 +148,41 @@ func HandlerFile(r *http.Request, opt UploadFileOption, fieldFiles ...FieldFile)
 	}
 
 	return uploadFiles, nil
+}
+
+func storeFile(field string, fileHeader *multipart.FileHeader, r *http.Request, opt UploadFileOption) (*File, error) {
+	var destFolder string
+	if opt.Storage.Destination != nil {
+		destFolder = opt.Storage.Destination(r, fileHeader)
+	}
+
+	if destFolder != "" {
+		if _, err := os.Stat(destFolder); os.IsNotExist(err) {
+			err := os.MkdirAll(destFolder, 0o755)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	var fileName string
+	if opt.Storage.FileName != nil {
+		fileName = opt.Storage.FileName(r, fileHeader)
+	}
+
+	destPath := filepath.Join(destFolder, fileName)
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		return nil, err
+	}
+	defer destFile.Close()
+
+	return &File{
+		FieldName:    field,
+		FileName:     fileName,
+		OriginalName: fileHeader.Filename,
+		Size:         fileHeader.Size,
+		Destination:  destFolder,
+		Path:         destPath,
+	}, nil
 }
