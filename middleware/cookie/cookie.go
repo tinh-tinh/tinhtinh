@@ -1,14 +1,16 @@
 package cookie
 
 import (
+	"bytes"
 	"context"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"encoding/base64"
+	"fmt"
+	"io"
 	"net/http"
 )
-
-var bytes = []byte{35, 46, 57, 24, 85, 35, 24, 74, 87, 35, 88, 98, 66, 32, 14, 0o5}
 
 type Options struct {
 	Key string
@@ -45,30 +47,77 @@ func Decode(s string) ([]byte, error) {
 }
 
 func (s *SecureCookie) Encrypt(text string) (string, error) {
-	block, err := aes.NewCipher([]byte(s.Key))
+	key := []byte(s.Key)
+	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("new cipher: %w", err)
 	}
 
-	plainText := []byte(text)
-	cfb := cipher.NewCFBEncrypter(block, bytes)
-	cipherText := make([]byte, len(plainText))
-	cfb.XORKeyStream(cipherText, plainText)
-	return Encode(cipherText), nil
+	// CBC needs a block-sized IV; use a new random IV per encryption.
+	iv := make([]byte, block.BlockSize())
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		return "", fmt.Errorf("iv: %w", err)
+	}
+
+	plain := []byte(text)
+	padded := Pkcs7Pad(plain, block.BlockSize())
+
+	cipherText := make([]byte, len(padded))
+	cipher.NewCBCEncrypter(block, iv).CryptBlocks(cipherText, padded)
+
+	// Prefix IV so it can be used for decryption.
+	out := append(iv, cipherText...)
+
+	return Encode(out), nil
 }
 
 func (s *SecureCookie) Decrypt(text string) (string, error) {
-	block, err := aes.NewCipher([]byte(s.Key))
+	key := []byte(s.Key)
+	block, err := aes.NewCipher(key)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("new cipher: %w", err)
 	}
 
-	cipherText, err := Decode(text)
+	cipherTextWithIV, err := Decode(text)
+	if err != nil {
+		return "", fmt.Errorf("decode: %w", err)
+	}
+	bs := block.BlockSize()
+	if len(cipherTextWithIV) < bs || len(cipherTextWithIV)%bs != 0 {
+		return "", fmt.Errorf("ciphertext too short or misaligned")
+	}
+
+	iv := cipherTextWithIV[:bs]
+	cipherText := cipherTextWithIV[bs:]
+
+	plainPadded := make([]byte, len(cipherText))
+	cipher.NewCBCDecrypter(block, iv).CryptBlocks(plainPadded, cipherText)
+
+	plain, err := Pkcs7Unpad(plainPadded, bs)
 	if err != nil {
 		return "", err
 	}
-	cfb := cipher.NewCFBDecrypter(block, bytes)
-	plainText := make([]byte, len(cipherText))
-	cfb.XORKeyStream(plainText, cipherText)
-	return string(plainText), nil
+	return string(plain), nil
+}
+
+// Pkcs7Pad pads data to a multiple of blockSize.
+func Pkcs7Pad(data []byte, blockSize int) []byte {
+	pad := blockSize - (len(data) % blockSize)
+	return append(data, bytes.Repeat([]byte{byte(pad)}, pad)...)
+}
+
+func Pkcs7Unpad(data []byte, blockSize int) ([]byte, error) {
+	if len(data) == 0 || len(data)%blockSize != 0 {
+		return nil, fmt.Errorf("invalid padding size")
+	}
+	pad := int(data[len(data)-1])
+	if pad == 0 || pad > blockSize || pad > len(data) {
+		return nil, fmt.Errorf("invalid padding")
+	}
+	for _, v := range data[len(data)-pad:] {
+		if int(v) != pad {
+			return nil, fmt.Errorf("invalid padding bytes")
+		}
+	}
+	return data[:len(data)-pad], nil
 }
