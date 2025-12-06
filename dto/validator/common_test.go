@@ -1,10 +1,12 @@
 package validator_test
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
@@ -313,4 +315,27 @@ func Test_MaxLength(t *testing.T) {
 	assert.False(t, validator.MaxLength(false, 0))
 	assert.False(t, validator.MaxLength(map[string]interface{}{}, 0))
 	assert.True(t, validator.MaxLength([]interface{}{}, 0))
+}
+
+func Test_DDOS(t *testing.T) {
+	t.Parallel()
+
+	bigString := randomBigStr()
+	require.False(t, validator.IsAlphanumeric(bigString))
+}
+
+func randomBigStr() string {
+	var bigString strings.Builder
+	// Define the number of repetitions
+	repeat := 100000000
+	smallString := "Hello, Go! "
+
+	// Append the small string multiple times
+	for i := 0; i < repeat; i++ {
+		bigString.WriteString(smallString)
+	}
+
+	// Convert the builder to a string
+	result := bigString.String()
+	return result
 }

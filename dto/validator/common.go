@@ -10,6 +10,8 @@ import (
 	"unicode"
 )
 
+const MiB = 1 << 20 // 1 MiB
+
 func typeof(v any) string {
 	return fmt.Sprintf("%T", v)
 }
@@ -169,8 +171,14 @@ func IsRegexMatch(pattern string, str any) bool {
 	if typeof(str) != "string" {
 		return false
 	}
+
+	assertStr := str.(string)
+	if len(assertStr) > MiB {
+		log.Println("String too long for regex match")
+		return false
+	}
 	regex := regexp.MustCompile(pattern)
-	match := regex.MatchString(str.(string))
+	match := regex.MatchString(assertStr)
 
 	return match
 }
