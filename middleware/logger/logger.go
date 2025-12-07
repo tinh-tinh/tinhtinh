@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const MiB = 1 << 20 // 1 MiB
+
 type Level int
 
 const (
@@ -115,29 +117,33 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 	}
 
 	current := time.Now().Format("2006-01-02")
-	fileName := current + "-" + getLevelName(level)
-	file, _ := os.OpenFile(filepath.Join(dir, fileName+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
-	fi, _ := file.Stat()
-	currentSize := fi.Size()
+	fileName := current + "-" + getLevelName(level) + ".log"
+	filePath := filepath.Join(dir, fileName)
 
-	if log.Max > 0 && currentSize > log.Max*1000*1000 {
-		if !log.Rotate {
-			file.Close()
-			panic("Size log is hit limited storage")
-		} else {
+	flags := os.O_APPEND | os.O_CREATE | os.O_WRONLY
+	if !checkAvailableFile(filePath, log.Max) {
+		if log.Rotate {
 			idx := 1
 			for idx > 0 {
-				file, _ = os.OpenFile(filepath.Join(dir, fileName+"-"+fmt.Sprint(idx)+".log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o666)
-				fi, _ := file.Stat()
-				currentSize = fi.Size()
-				if currentSize < log.Max*1000*1000 {
+				fileName = current + "-" + getLevelName(level) + "-" + fmt.Sprint(idx) + ".log"
+				filePath = filepath.Join(dir, fileName)
+				if checkAvailableFile(filePath, log.Max) {
 					break
 				}
 				idx++
 			}
+		} else {
+			flags = os.O_TRUNC | os.O_CREATE | os.O_WRONLY
 		}
 	}
 
+	file, err := os.OpenFile(filePath, flags, 0o666)
+	if err != nil {
+		check(err)
+	}
+	defer file.Close()
+
+	// Use io.MultiWriter to write to both stdout and the file
 	iw := io.MultiWriter(os.Stdout, file)
 
 	// Merge default and per-call metadata
@@ -146,8 +152,10 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 		merged[k] = v
 	}
 	if len(meta) > 0 {
-		for k, v := range meta[0] {
-			merged[k] = v
+		for _, m := range meta {
+			for k, v := range m {
+				merged[k] = v
+			}
 		}
 	}
 	metaStr := ""
@@ -161,8 +169,24 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 		metaStr,
 		msg,
 	)
-	_, err := iw.Write([]byte(message))
+	_, err = iw.Write([]byte(message))
 	if err != nil {
-		panic(err)
+		check(err)
 	}
+}
+
+func checkAvailableFile(filename string, max int64) bool {
+	if max <= 0 {
+		return true
+	}
+	fi, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		// no file yet = available
+		return true
+	}
+	if err != nil {
+		check(err)
+		return false
+	}
+	return fi.Size() < max*MiB
 }
