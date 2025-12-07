@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"fmt"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -79,6 +81,22 @@ func storeFile(field string, fileHeader *multipart.FileHeader, r *http.Request, 
 		return nil, err
 	}
 	defer destFile.Close()
+
+	// Open the source file and copy its content to the destination
+	srcFile, err := fileHeader.Open()
+	if err != nil {
+		// Clean up the empty destination file
+		os.Remove(destPath)
+		return nil, err
+	}
+	defer srcFile.Close()
+
+	_, err = io.Copy(destFile, srcFile)
+	if err != nil {
+		// Clean up the incomplete destination file
+		os.Remove(destPath)
+		return nil, fmt.Errorf("failed to copy file content: %w", err)
+	}
 
 	return &File{
 		FieldName:    field,
