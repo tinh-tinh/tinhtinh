@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"mime"
+	"fmt"
 	"net/http"
 )
 
@@ -18,47 +18,44 @@ func HandleFiles(r *http.Request, opt UploadFileOption) ([]*File, error) {
 	}
 
 	r.FormFile(opt.FieldName)
-	for field, files := range r.MultipartForm.File {
-		if field != opt.FieldName {
-			continue
+
+	files, ok := r.MultipartForm.File[opt.FieldName]
+	if !ok || len(files) == 0 {
+		return nil, fmt.Errorf("no files uploaded for field %s", opt.FieldName)
+	}
+
+	for _, fileHeader := range files {
+		if err := ValidateFilterFile(r, fileHeader, opt); err != nil {
+			return nil, err
 		}
 
-		for _, fileHeader := range files {
-			if err := ValidateFilterFile(r, fileHeader, opt); err != nil {
-				return nil, err
-			}
-
-			file, err := fileHeader.Open()
-			if err != nil {
-				return nil, err
-			}
-			defer file.Close()
-
-			rs, err := ReadFile(file)
-			if err != nil {
-				return nil, err
-			}
-
-			mimeType, err := DetectAndValidateContentType(rs, fileHeader.Filename)
-			if err != nil {
-				return nil, err
-			}
-			mediaType, params, err := mime.ParseMediaType(mimeType)
-			if err != nil {
-				return nil, err
-			}
-			encode := params["charset"]
-
-			uploadedFile, err := storeFile(field, fileHeader, r, opt)
-			if err != nil {
-				return nil, err
-			}
-
-			uploadedFile.MimeType = mediaType
-			uploadedFile.Encoding = encode
-
-			uploadFiles = append(uploadFiles, uploadedFile)
+		file, err := fileHeader.Open()
+		if err != nil {
+			return nil, err
 		}
+
+		rs, err := ReadFile(file)
+		file.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		mimeType, err := DetectAndValidateContentType(rs, fileHeader.Filename)
+		if err != nil {
+			return nil, err
+		}
+
+		uploadedFile, err := StoreFile(opt.FieldName, fileHeader, r, opt)
+		if err != nil {
+			return nil, err
+		}
+
+		err = AppendMimeExtension(uploadedFile, mimeType)
+		if err != nil {
+			return nil, err
+		}
+
+		uploadFiles = append(uploadFiles, uploadedFile)
 	}
 
 	return uploadFiles, nil

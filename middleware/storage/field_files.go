@@ -2,7 +2,6 @@ package storage
 
 import (
 	"errors"
-	"mime"
 	"net/http"
 	"strconv"
 )
@@ -49,9 +48,14 @@ func HandleFieldFiles(r *http.Request, opt UploadFileOption, fieldFiles ...Field
 			if err != nil {
 				return nil, err
 			}
-			defer file.Close()
 
 			rs, err := ReadFile(file)
+			file.Close()
+			if err != nil {
+				return nil, err
+			}
+
+			uploadedFile, err := StoreFile(field, fileHeader, r, opt)
 			if err != nil {
 				return nil, err
 			}
@@ -60,19 +64,11 @@ func HandleFieldFiles(r *http.Request, opt UploadFileOption, fieldFiles ...Field
 			if err != nil {
 				return nil, err
 			}
-			mediaType, params, err := mime.ParseMediaType(mimeType)
+
+			err = AppendMimeExtension(uploadedFile, mimeType)
 			if err != nil {
 				return nil, err
 			}
-			encode := params["charset"]
-
-			uploadedFile, err := storeFile(field, fileHeader, r, opt)
-			if err != nil {
-				return nil, err
-			}
-
-			uploadedFile.MimeType = mediaType
-			uploadedFile.Encoding = encode
 
 			result[field] = append(result[field], uploadedFile)
 		}

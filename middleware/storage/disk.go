@@ -55,7 +55,7 @@ type FieldFile struct {
 	MaxCount int
 }
 
-func storeFile(field string, fileHeader *multipart.FileHeader, r *http.Request, opt UploadFileOption) (*File, error) {
+func StoreFile(field string, fileHeader *multipart.FileHeader, r *http.Request, opt UploadFileOption) (*File, error) {
 	var destFolder string
 	if opt.Storage.Destination != nil {
 		destFolder = opt.Storage.Destination(r, fileHeader)

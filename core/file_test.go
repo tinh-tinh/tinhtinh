@@ -321,7 +321,7 @@ func Test_FilesInterceptor(t *testing.T) {
 
 	data, err = io.ReadAll(resp.Body)
 	require.Nil(t, err)
-	require.Equal(t, fmt.Sprintln(`{"error":"no file uploaded"}`), string(data))
+	require.Equal(t, fmt.Sprintln(`{"error":"no files uploaded for field file"}`), string(data))
 
 	// Remove all file after test
 	files, er := os.Open("./upload")
