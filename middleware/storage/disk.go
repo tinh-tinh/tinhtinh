@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"io"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -79,6 +80,18 @@ func storeFile(field string, fileHeader *multipart.FileHeader, r *http.Request, 
 		return nil, err
 	}
 	defer destFile.Close()
+
+	// Open the source file and copy its content to the destination
+	srcFile, err := fileHeader.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer srcFile.Close()
+
+	_, err = io.Copy(destFile, srcFile)
+	if err != nil {
+		return nil, err
+	}
 
 	return &File{
 		FieldName:    field,
