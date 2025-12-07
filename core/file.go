@@ -21,15 +21,15 @@ const (
 // If the upload is successful, it sets the ctx key to FILE and calls the next middleware in the chain.
 func FileInterceptor(opt storage.UploadFileOption) Middleware {
 	return func(ctx Ctx) error {
-		files, err := storage.HandlerFile(ctx.Req(), opt)
+		file, err := storage.HandleFile(ctx.Req(), opt)
 		if err != nil {
 			return common.BadRequestException(ctx.Res(), err.Error())
 		}
-		if len(files) == 0 {
+		if file == nil {
 			return common.BadRequestException(ctx.Res(), "no file uploaded")
 		}
 
-		ctx.Set(FILE, files[0])
+		ctx.Set(FILE, file)
 		return ctx.Next()
 	}
 }
@@ -44,7 +44,7 @@ func FileInterceptor(opt storage.UploadFileOption) Middleware {
 // If the upload is successful, it sets the ctx key to FILES and calls the next middleware in the chain.
 func FilesInterceptor(opt storage.UploadFileOption) Middleware {
 	return func(ctx Ctx) error {
-		files, err := storage.HandlerFile(ctx.Req(), opt)
+		files, err := storage.HandleFiles(ctx.Req(), opt)
 		if err != nil {
 			return common.BadRequestException(ctx.Res(), err.Error())
 		}
@@ -71,22 +71,14 @@ func FilesInterceptor(opt storage.UploadFileOption) Middleware {
 // if the number of files exceeds the maxCount.
 func FileFieldsInterceptor(opt storage.UploadFileOption, fieldFiles ...storage.FieldFile) Middleware {
 	return func(ctx Ctx) error {
-		files, err := storage.HandlerFile(ctx.Req(), opt, fieldFiles...)
+		files, err := storage.HandleFieldFiles(ctx.Req(), opt, fieldFiles...)
 		if err != nil {
 			return common.BadRequestException(ctx.Res(), err.Error())
 		}
 		if len(files) == 0 {
 			return common.BadRequestException(ctx.Res(), "no file uploaded")
 		}
-		mapFiles := make(map[string][]*storage.File)
-		for _, file := range files {
-			if mapFiles[file.FieldName] == nil {
-				mapFiles[file.FieldName] = []*storage.File{file}
-			} else {
-				mapFiles[file.FileName] = append(mapFiles[file.FileName], file)
-			}
-		}
-		ctx.Set(FIELD_FILES, mapFiles)
+		ctx.Set(FIELD_FILES, files)
 		return ctx.Next()
 	}
 }
