@@ -85,6 +85,8 @@ func storeFile(field string, fileHeader *multipart.FileHeader, r *http.Request, 
 	// Open the source file and copy its content to the destination
 	srcFile, err := fileHeader.Open()
 	if err != nil {
+		// Clean up the empty destination file
+		os.Remove(destPath)
 		return nil, err
 	}
 	defer srcFile.Close()
