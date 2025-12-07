@@ -189,7 +189,7 @@ func Test_FileInterceptor(t *testing.T) {
 
 	data, err = io.ReadAll(resp.Body)
 	require.Nil(t, err)
-	require.Equal(t, fmt.Sprintln(`{"error":"no file uploaded"}`), string(data))
+	require.Equal(t, fmt.Sprintln(`{"error":"http: no such file"}`), string(data))
 
 	// Remove all file after test
 	files, er := os.Open("./upload")
@@ -321,7 +321,7 @@ func Test_FilesInterceptor(t *testing.T) {
 
 	data, err = io.ReadAll(resp.Body)
 	require.Nil(t, err)
-	require.Equal(t, fmt.Sprintln(`{"error":"no file uploaded"}`), string(data))
+	require.Equal(t, fmt.Sprintln(`{"error":"no files uploaded for field file"}`), string(data))
 
 	// Remove all file after test
 	files, er := os.Open("./upload")
@@ -452,7 +452,7 @@ func Test_FieldFileInterceptor(t *testing.T) {
 
 	data, err = io.ReadAll(resp.Body)
 	require.Nil(t, err)
-	require.Equal(t, fmt.Sprintln(`{"error":"number of field file1 exceeds limit 2"}`), string(data))
+	require.Equal(t, fmt.Sprintln(`{"error":"number of files for field file1 exceeds limit 2"}`), string(data))
 
 	// Case 4: Not File Upload
 	body4 := &bytes.Buffer{}
