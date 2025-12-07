@@ -17,7 +17,7 @@ func ValidateLimit(limit *UploadFileLimit, r *http.Request) error {
 	}
 
 	if limit.FileSize > 0 {
-		err := r.ParseMultipartForm(limit.FileSize << 20)
+		err := r.ParseMultipartForm(limit.FileSize)
 		if err != nil {
 			return err
 		}
@@ -80,4 +80,15 @@ func ReadFile(file multipart.File) (io.ReadSeeker, error) {
 		rs = bytes.NewReader(buf)
 	}
 	return rs, nil
+}
+
+func AppendMimeExtension(file *File, mimeType string) error {
+	mediaType, params, err := mime.ParseMediaType(mimeType)
+	if err != nil {
+		return err
+	}
+
+	file.MimeType = mediaType
+	file.Encoding = params["charset"]
+	return nil
 }

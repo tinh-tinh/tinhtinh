@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"mime"
 	"net/http"
 )
 
@@ -32,9 +31,14 @@ func HandleFiles(r *http.Request, opt UploadFileOption) ([]*File, error) {
 			if err != nil {
 				return nil, err
 			}
-			defer file.Close()
 
 			rs, err := ReadFile(file)
+			file.Close()
+			if err != nil {
+				return nil, err
+			}
+
+			uploadedFile, err := StoreFile(field, fileHeader, r, opt)
 			if err != nil {
 				return nil, err
 			}
@@ -43,19 +47,11 @@ func HandleFiles(r *http.Request, opt UploadFileOption) ([]*File, error) {
 			if err != nil {
 				return nil, err
 			}
-			mediaType, params, err := mime.ParseMediaType(mimeType)
+
+			err = AppendMimeExtension(uploadedFile, mimeType)
 			if err != nil {
 				return nil, err
 			}
-			encode := params["charset"]
-
-			uploadedFile, err := storeFile(field, fileHeader, r, opt)
-			if err != nil {
-				return nil, err
-			}
-
-			uploadedFile.MimeType = mediaType
-			uploadedFile.Encoding = encode
 
 			uploadFiles = append(uploadFiles, uploadedFile)
 		}
