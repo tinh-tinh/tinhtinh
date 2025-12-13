@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 )
 
@@ -20,13 +22,15 @@ const (
 	LevelFatal
 )
 
+const (
+	TraceOnlyFunc = iota + 1
+	TracerEntryFile
+	TracerFullPath
+)
+
 type Metadata map[string]any
 type Logger struct {
-	Path   string
-	Rotate bool
-	// Max Size in MB of each file log. Default is infinity.
-	Max      int64
-	Metadata Metadata
+	Options
 }
 
 type Options struct {
@@ -38,6 +42,8 @@ type Options struct {
 	Max int64
 	// metadata
 	Metadata Metadata
+	// TraceDepth enables including the caller function name in debug logs.
+	TraceDepth int
 }
 
 // Create a new Logger with the specified options.
@@ -54,10 +60,7 @@ func Create(opt Options) *Logger {
 		opt.Max = 20
 	}
 	return &Logger{
-		Path:     opt.Path,
-		Rotate:   opt.Rotate,
-		Max:      opt.Max,
-		Metadata: opt.Metadata,
+		Options: opt,
 	}
 }
 
@@ -147,17 +150,15 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 	iw := io.MultiWriter(os.Stdout, file)
 
 	// Merge default and per-call metadata
-	merged := make(Metadata)
-	for k, v := range log.Metadata {
-		merged[k] = v
-	}
-	if len(meta) > 0 {
-		for _, m := range meta {
-			for k, v := range m {
-				merged[k] = v
-			}
+	merged := appendMetadata(log.Metadata, meta...)
+	if log.TraceDepth > 0 {
+		pc, _, _, ok := runtime.Caller(2)
+		if ok {
+			fn := runtime.FuncForPC(pc)
+			merged["trace"] = traceDepthName(log.TraceDepth, fn)
 		}
 	}
+
 	metaStr := ""
 	for k, v := range merged {
 		metaStr += fmt.Sprintf("[%s=%s] ", k, v)
@@ -189,4 +190,40 @@ func checkAvailableFile(filename string, max int64) bool {
 		return false
 	}
 	return fi.Size() < max*MiB
+}
+
+func appendMetadata(base Metadata, extra ...Metadata) Metadata {
+	merged := make(Metadata)
+	for k, v := range base {
+		merged[k] = v
+	}
+	if len(extra) > 0 {
+		for _, m := range extra {
+			for k, v := range m {
+				merged[k] = v
+			}
+		}
+	}
+
+	return merged
+}
+
+func traceDepthName(depth int, fn *runtime.Func) string {
+	fullName := fn.Name()
+	switch depth {
+	case TraceOnlyFunc:
+		splits := strings.Split(fullName, ".")
+		shortName := splits[len(splits)-1]
+		return strings.SplitN(shortName, "(", 2)[0]
+	case TracerEntryFile:
+		entryIndex := strings.LastIndex(fullName, "/")
+		entryFile := fullName[entryIndex+1:]
+		return entryFile
+	case TracerFullPath:
+		return fullName
+	default:
+		// Fallback to just the file name
+		_, file, _, _ := runtime.Caller(2)
+		return file
+	}
 }
