@@ -9,6 +9,23 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
 
+type serviceImpl struct{}
+
+func (s *serviceImpl) DoSomething(log *logger.Logger) {
+	log.Debug("Doing something in Service")
+}
+
+func Test_HappyLog(t *testing.T) {
+	log := logger.Create(logger.Options{
+		Max:        1,
+		Rotate:     true,
+		TraceDepth: 2,
+	})
+
+	svc := &serviceImpl{}
+	svc.DoSomething(log)
+}
+
 func Test_Create(t *testing.T) {
 	log := logger.Create(logger.Options{
 		Max:    1,

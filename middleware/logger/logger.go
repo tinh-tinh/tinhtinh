@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"time"
 )
 
@@ -20,13 +22,15 @@ const (
 	LevelFatal
 )
 
+const (
+	TraceOnlyFunc = iota + 1
+	TracerEntryFile
+	TracerFullPath
+)
+
 type Metadata map[string]any
 type Logger struct {
-	Path   string
-	Rotate bool
-	// Max Size in MB of each file log. Default is infinity.
-	Max      int64
-	Metadata Metadata
+	Options
 }
 
 type Options struct {
@@ -38,6 +42,8 @@ type Options struct {
 	Max int64
 	// metadata
 	Metadata Metadata
+	// TraceDepth enables including the caller function name in debug logs.
+	TraceDepth int
 }
 
 // Create a new Logger with the specified options.
@@ -54,10 +60,7 @@ func Create(opt Options) *Logger {
 		opt.Max = 20
 	}
 	return &Logger{
-		Path:     opt.Path,
-		Rotate:   opt.Rotate,
-		Max:      opt.Max,
-		Metadata: opt.Metadata,
+		Options: opt,
 	}
 }
 
@@ -158,6 +161,36 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 			}
 		}
 	}
+
+	if log.TraceDepth > 0 {
+		pc, _, _, ok := runtime.Caller(2)
+		if ok {
+			fn := runtime.FuncForPC(pc)
+			fullName := fn.Name()
+
+			switch log.TraceDepth {
+			case TraceOnlyFunc:
+				// Extract only the function name
+				splits := strings.Split(fullName, ".")
+				shortName := splits[len(splits)-1]
+				merged["trace"] = shortName
+				// If the function is a method, it may contain parentheses
+				merged["trace"] = strings.SplitN(shortName, "(", 2)[0]
+			case TracerEntryFile:
+				// Extract the file name where the function is defined
+				entryIndex := strings.LastIndex(fullName, "/")
+				entryFile := fullName[entryIndex+1:]
+				merged["trace"] = entryFile
+			case TracerFullPath:
+				merged["trace"] = fullName
+			default:
+				// Fallback to just the file name
+				_, file, _, _ := runtime.Caller(2)
+				merged["trace"] = file
+			}
+		}
+	}
+
 	metaStr := ""
 	for k, v := range merged {
 		metaStr += fmt.Sprintf("[%s=%s] ", k, v)
