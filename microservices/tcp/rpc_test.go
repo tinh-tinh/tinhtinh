@@ -35,7 +35,10 @@ func CalculateApp() *core.App {
 	handlers := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, microservices.TCP)
 
-		handler.RegisterRPC(new(Calculator))
+		handler.RegisterRPC(microservices.RpcHandler{
+			Name:  "Calculator",
+			Value: &Calculator{},
+		})
 
 		return handler
 	}

@@ -84,7 +84,7 @@ func (svc *Server) Listen() {
 
 	if len(rpcHandlers) > 0 {
 		for _, rpcHandler := range rpcHandlers {
-			err := rpc.Register(rpcHandler)
+			err := rpc.RegisterName(rpcHandler.Name, rpcHandler.Value)
 			if err != nil {
 				panic(err)
 			}
