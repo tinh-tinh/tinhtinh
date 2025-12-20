@@ -134,7 +134,10 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 	}
 
 	// Parse interceptor
-	module.interceptor = opt.Interceptor
+	if opt.Interceptor != nil {
+		module.interceptor = opt.Interceptor
+
+	}
 
 	// Imports
 	for _, m := range opt.Imports {
