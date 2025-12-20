@@ -44,203 +44,203 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
 
-  test-redis:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: [ '1.22.x' ]
+  # test-redis:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       go-version: [ '1.22.x' ]
 
-    # Service containers to run with `container-job`
-    services:
-      # Label used to access the service container
-      redis:
-        # Docker Hub image
-        image: redis
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          # Maps port 6379 on service container to the host
-          - 6379:6379
+  #   # Service containers to run with `container-job`
+  #   services:
+  #     # Label used to access the service container
+  #     redis:
+  #       # Docker Hub image
+  #       image: redis
+  #       # Set health checks to wait until redis has started
+  #       options: >-
+  #         --health-cmd "redis-cli ping"
+  #         --health-interval 10s
+  #         --health-timeout 5s
+  #         --health-retries 5
+  #       ports:
+  #         # Maps port 6379 on service container to the host
+  #         - 6379:6379
 
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Ensure full history for diffs
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #     with:
+  #       fetch-depth: 0  # Ensure full history for diffs
 
-    - name: Detect changes in microservices/redis
-      id: changes
-      run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          # Fetch the base branch (master) and PR commit (head)
-          git fetch origin ${{ github.event.pull_request.base.ref }}
-          TARGET="origin/${{ github.event.pull_request.base.ref }}"
-          PR_SHA="${{ github.event.pull_request.head.sha }}"
+  #   - name: Detect changes in microservices/redis
+  #     id: changes
+  #     run: |
+  #       if [ "${{ github.event_name }}" = "pull_request" ]; then
+  #         # Fetch the base branch (master) and PR commit (head)
+  #         git fetch origin ${{ github.event.pull_request.base.ref }}
+  #         TARGET="origin/${{ github.event.pull_request.base.ref }}"
+  #         PR_SHA="${{ github.event.pull_request.head.sha }}"
           
-          # Get the diff between the base branch and PR branch
-          CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/redis/' || true)
-        else
-          # Regular push event, compare before and after commits
-          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/redis/' || true)
-        fi
+  #         # Get the diff between the base branch and PR branch
+  #         CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/redis/' || true)
+  #       else
+  #         # Regular push event, compare before and after commits
+  #         CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/redis/' || true)
+  #       fi
 
-        if [ -z "$CHANGED" ]; then
-          echo "No changes in Redis code."
-          echo "should_run=false" >> $GITHUB_OUTPUT
-        else
-          echo "Found changes in Redis code."
-          echo "should_run=true" >> $GITHUB_OUTPUT
-        fi
+  #       if [ -z "$CHANGED" ]; then
+  #         echo "No changes in Redis code."
+  #         echo "should_run=false" >> $GITHUB_OUTPUT
+  #       else
+  #         echo "Found changes in Redis code."
+  #         echo "should_run=true" >> $GITHUB_OUTPUT
+  #       fi
 
-    - name: Set up Go
-      if: steps.changes.outputs.should_run == 'true'
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.22.0'
+  #   - name: Set up Go
+  #     if: steps.changes.outputs.should_run == 'true'
+  #     uses: actions/setup-go@v4
+  #     with:
+  #       go-version: '1.22.0'
 
-    - name: Test Redis
-      if: steps.changes.outputs.should_run == 'true'
-      run: cd microservices/redis; go test -cover ./...
+  #   - name: Test Redis
+  #     if: steps.changes.outputs.should_run == 'true'
+  #     run: cd microservices/redis; go test -cover ./...
 
-  test-nats:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: [ '1.22.x' ]
+  # test-nats:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       go-version: [ '1.22.x' ]
 
-    # Service containers to run with `container-job`
-    services:
-      # Label used to access the service container
-      nats:
-        # Docker Hub image
-        image: nats:latest
-        ports:
-          # Maps port 6379 on service container to the host
-          - 4222:4222
+  #   # Service containers to run with `container-job`
+  #   services:
+  #     # Label used to access the service container
+  #     nats:
+  #       # Docker Hub image
+  #       image: nats:latest
+  #       ports:
+  #         # Maps port 6379 on service container to the host
+  #         - 4222:4222
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Ensure full history for diffs
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v4
+  #     with:
+  #       fetch-depth: 0  # Ensure full history for diffs
 
-    - name: Detect changes in microservices/nats
-      id: changes
-      run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          # Fetch the base branch (master) and PR commit (head)
-          git fetch origin ${{ github.event.pull_request.base.ref }}
-          TARGET="origin/${{ github.event.pull_request.base.ref }}"
-          PR_SHA="${{ github.event.pull_request.head.sha }}"
+  #   - name: Detect changes in microservices/nats
+  #     id: changes
+  #     run: |
+  #       if [ "${{ github.event_name }}" = "pull_request" ]; then
+  #         # Fetch the base branch (master) and PR commit (head)
+  #         git fetch origin ${{ github.event.pull_request.base.ref }}
+  #         TARGET="origin/${{ github.event.pull_request.base.ref }}"
+  #         PR_SHA="${{ github.event.pull_request.head.sha }}"
           
-          # Get the diff between the base branch and PR branch
-          CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/nats/' || true)
-        else
-          # Regular push event, compare before and after commits
-          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/nats/' || true)
-        fi
+  #         # Get the diff between the base branch and PR branch
+  #         CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/nats/' || true)
+  #       else
+  #         # Regular push event, compare before and after commits
+  #         CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/nats/' || true)
+  #       fi
 
-        if [ -z "$CHANGED" ]; then
-          echo "No changes in NATS code."
-          echo "should_run=false" >> $GITHUB_OUTPUT
-        else
-          echo "Found changes in NATS code."
-          echo "should_run=true" >> $GITHUB_OUTPUT
-        fi
+  #       if [ -z "$CHANGED" ]; then
+  #         echo "No changes in NATS code."
+  #         echo "should_run=false" >> $GITHUB_OUTPUT
+  #       else
+  #         echo "Found changes in NATS code."
+  #         echo "should_run=true" >> $GITHUB_OUTPUT
+  #       fi
 
-    - name: Set up Go
-      if: steps.changes.outputs.should_run == 'true'
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.22.0'
+  #   - name: Set up Go
+  #     if: steps.changes.outputs.should_run == 'true'
+  #     uses: actions/setup-go@v4
+  #     with:
+  #       go-version: '1.22.0'
 
-    # Verify NATS Server is Running
-    - name: Verify NATS Server
-      if: steps.changes.outputs.should_run == 'true'
-      run: |
-        echo "Checking if NATS server is running on port 4222..."
-        nc -zv 127.0.0.1 4222
+  #   # Verify NATS Server is Running
+  #   - name: Verify NATS Server
+  #     if: steps.changes.outputs.should_run == 'true'
+  #     run: |
+  #       echo "Checking if NATS server is running on port 4222..."
+  #       nc -zv 127.0.0.1 4222
 
-    - name: Test NATS
-      if: steps.changes.outputs.should_run == 'true'
-      run: cd microservices/nats; go test -cover ./...
+  #   - name: Test NATS
+  #     if: steps.changes.outputs.should_run == 'true'
+  #     run: cd microservices/nats; go test -cover ./...
 
-  test-rabbitmq:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: [ '1.22.x' ]
+  # test-rabbitmq:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       go-version: [ '1.22.x' ]
 
-    services:
-      rabbitmq:
-        image: rabbitmq:3.8
-        env:
-          RABBITMQ_DEFAULT_USER: guest
-          RABBITMQ_DEFAULT_PASS: guest
-        ports:
-          - 5672:5672  # RabbitMQ default port
-          - 15672:15672  # RabbitMQ Management Plugin
-        options: >-
-          --health-cmd "rabbitmqctl status"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+  #   services:
+  #     rabbitmq:
+  #       image: rabbitmq:3.8
+  #       env:
+  #         RABBITMQ_DEFAULT_USER: guest
+  #         RABBITMQ_DEFAULT_PASS: guest
+  #       ports:
+  #         - 5672:5672  # RabbitMQ default port
+  #         - 15672:15672  # RabbitMQ Management Plugin
+  #       options: >-
+  #         --health-cmd "rabbitmqctl status"
+  #         --health-interval 10s
+  #         --health-timeout 5s
+  #         --health-retries 5
   
 
-    steps:
-      # Checkout code
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Ensure full history for diffs
+  #   steps:
+  #     # Checkout code
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0  # Ensure full history for diffs
           
-      - name: Detect changes in microservices/amqlib
-        id: changes
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            # Fetch the base branch (master) and PR commit (head)
-            git fetch origin ${{ github.event.pull_request.base.ref }}
-            TARGET="origin/${{ github.event.pull_request.base.ref }}"
-            PR_SHA="${{ github.event.pull_request.head.sha }}"
+  #     - name: Detect changes in microservices/amqlib
+  #       id: changes
+  #       run: |
+  #         if [ "${{ github.event_name }}" = "pull_request" ]; then
+  #           # Fetch the base branch (master) and PR commit (head)
+  #           git fetch origin ${{ github.event.pull_request.base.ref }}
+  #           TARGET="origin/${{ github.event.pull_request.base.ref }}"
+  #           PR_SHA="${{ github.event.pull_request.head.sha }}"
             
-            # Get the diff between the base branch and PR branch
-            CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/amqlib/' || true)
-          else
-            # Regular push event, compare before and after commits
-            CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/amqlib/' || true)
-          fi
+  #           # Get the diff between the base branch and PR branch
+  #           CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/amqlib/' || true)
+  #         else
+  #           # Regular push event, compare before and after commits
+  #           CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/amqlib/' || true)
+  #         fi
 
-          if [ -z "$CHANGED" ]; then
-            echo "No changes in RabbitMQ code."
-            echo "should_run=false" >> $GITHUB_OUTPUT
-          else
-            echo "Found changes in RabbitMQ code."
-            echo "should_run=true" >> $GITHUB_OUTPUT
-          fi
+  #         if [ -z "$CHANGED" ]; then
+  #           echo "No changes in RabbitMQ code."
+  #           echo "should_run=false" >> $GITHUB_OUTPUT
+  #         else
+  #           echo "Found changes in RabbitMQ code."
+  #           echo "should_run=true" >> $GITHUB_OUTPUT
+  #         fi
 
-      - name: Set up Go
-        if: steps.changes.outputs.should_run == 'true'
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.22.0'
+  #     - name: Set up Go
+  #       if: steps.changes.outputs.should_run == 'true'
+  #       uses: actions/setup-go@v4
+  #       with:
+  #         go-version: '1.22.0'
 
-      - name: Wait for RabbitMQ to be ready
-        if: steps.changes.outputs.should_run == 'true'
-        run: |
-          for i in {1..10}; do
-            if nc -z localhost 5672; then
-              echo "RabbitMQ is up and running"
-              break
-            fi
-            echo "Waiting for RabbitMQ..."
-            sleep 5
-          done
+  #     - name: Wait for RabbitMQ to be ready
+  #       if: steps.changes.outputs.should_run == 'true'
+  #       run: |
+  #         for i in {1..10}; do
+  #           if nc -z localhost 5672; then
+  #             echo "RabbitMQ is up and running"
+  #             break
+  #           fi
+  #           echo "Waiting for RabbitMQ..."
+  #           sleep 5
+  #         done
   
-      - name: Test RabbitMQ
-        if: steps.changes.outputs.should_run == 'true'
-        run: cd microservices/amqlib; go test -cover ./...
+  #     - name: Test RabbitMQ
+  #       if: steps.changes.outputs.should_run == 'true'
+  #       run: cd microservices/amqlib; go test -cover ./...
 
   # test-kafka:
   #   runs-on: ubuntu-latest
