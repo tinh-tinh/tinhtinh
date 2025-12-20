@@ -9,6 +9,47 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
 
+type serviceImpl struct{}
+
+func (s *serviceImpl) DoSomething(log *logger.Logger) {
+	log.Debug("Doing something in Service")
+}
+
+func Test_HappyLog(t *testing.T) {
+	logFullpath := logger.Create(logger.Options{
+		Max:        1,
+		Rotate:     true,
+		TraceDepth: logger.TracerFullPath,
+		Metadata: logger.Metadata{
+			"svc": "AuthSvc",
+		},
+	})
+
+	svc := &serviceImpl{}
+	svc.DoSomething(logFullpath)
+
+	logEntryfile := logger.Create(logger.Options{
+		Max:        1,
+		Rotate:     true,
+		TraceDepth: logger.TracerEntryFile,
+	})
+	svc.DoSomething(logEntryfile)
+
+	logFuncOnly := logger.Create(logger.Options{
+		Max:        1,
+		Rotate:     true,
+		TraceDepth: logger.TraceOnlyFunc,
+	})
+	svc.DoSomething(logFuncOnly)
+
+	loggerAnother := logger.Create(logger.Options{
+		Max:        1,
+		Rotate:     true,
+		TraceDepth: 5,
+	})
+	svc.DoSomething(loggerAnother)
+}
+
 func Test_Create(t *testing.T) {
 	log := logger.Create(logger.Options{
 		Max:    1,
