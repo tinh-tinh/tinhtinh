@@ -31,6 +31,8 @@ type Router struct {
 	httpHandler http.Handler
 	// Interceptor
 	interceptor Interceptor
+	// final handler after all processing
+	finalHandler http.Handler
 }
 
 // getHandler returns a new http.Handler that combines the raw httpHandler

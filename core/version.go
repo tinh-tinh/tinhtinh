@@ -105,13 +105,17 @@ func (v *Version) Get(r *http.Request) string {
 // is dispatched to the first router. Otherwise, the router with the matching
 // version is selected. If no router matches the version, a 500 error is returned.
 func (app *App) versionMiddleware(routers []*Router) http.Handler {
+	for _, r := range routers {
+		r.finalHandler = r.getHandler(app)
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var version string
 		if app.version != nil {
 			version = app.version.Get(r)
 		}
 		if version == "" || len(routers) == 1 {
-			routers[0].getHandler(app).ServeHTTP(w, r)
+			routers[0].finalHandler.ServeHTTP(w, r)
 		} else {
 			idxVersion := slices.IndexFunc(routers, func(e *Router) bool {
 				return e.Version == version
@@ -122,7 +126,7 @@ func (app *App) versionMiddleware(routers []*Router) http.Handler {
 				return
 			}
 
-			routers[idxVersion].getHandler(app).ServeHTTP(w, r)
+			routers[idxVersion].finalHandler.ServeHTTP(w, r)
 		}
 	})
 }
