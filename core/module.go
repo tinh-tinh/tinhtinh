@@ -136,7 +136,6 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 	// Parse interceptor
 	if opt.Interceptor != nil {
 		module.interceptor = opt.Interceptor
-
 	}
 
 	// Imports
