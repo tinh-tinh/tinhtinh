@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/IBM/sarama"
@@ -60,6 +61,7 @@ func (c *Consumer) Subscribe(topics []string, handler Handler) {
 	ctx, cancel := context.WithCancel(context.Background())
 	client, err := sarama.NewConsumerGroup(c.instance.Brokers, c.Group, c.config)
 	if err != nil {
+		fmt.Printf("Config is %v, %v, %v receive error %v\n", c.instance.Brokers, c.Group, c.config, err)
 		log.Panicf("Error creating consumer group client: %v", err)
 	}
 
