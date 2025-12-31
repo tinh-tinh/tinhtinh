@@ -11,6 +11,11 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/dto/transform"
 )
 
+type ScanFnc interface {
+	Scan() error
+}
+
+// Deprecated: use validator.Validator{} instead
 func Scanner(val interface{}) error {
 	var errMsg []string
 	if val == nil {
@@ -139,12 +144,12 @@ func Scanner(val interface{}) error {
 					case "minLength":
 						length, _ := strconv.Atoi(subValue)
 						if !MinLength(value, length) {
-							errMsg = append(errMsg, field.Name+" is minimim length is "+subValue)
+							errMsg = append(errMsg, field.Name+" minimum length is "+subValue)
 						}
 					case "maxLength":
 						length, _ := strconv.Atoi(subValue)
 						if !MaxLength(value, length) {
-							errMsg = append(errMsg, field.Name+" is maximum length is "+subValue)
+							errMsg = append(errMsg, field.Name+" maximum length is "+subValue)
 						}
 					}
 				}

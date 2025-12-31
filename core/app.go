@@ -91,14 +91,14 @@ type Service interface {
 // The App is initialized by calling the init method of the module.
 // The App is then returned.
 func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
+	v := validator.Validator{}
 	app := &App{
 		Module:       module(),
 		Mux:          http.NewServeMux(),
 		encoder:      json.Marshal,
 		decoder:      json.Unmarshal,
 		errorHandler: ErrorHandlerDefault,
-		pipe:         validator.Scanner,
-	}
+		pipe:         v.Validate}
 
 	app.pool = sync.Pool{
 		New: func() any {
