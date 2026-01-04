@@ -152,7 +152,7 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 	// Merge default and per-call metadata
 	merged := appendMetadata(log.Metadata, meta...)
 	if log.TraceDepth > 0 {
-		pc, _, _, ok := runtime.Caller(2)
+		pc, _, _, ok := runtime.Caller(log.TraceDepth)
 		if ok {
 			fn := runtime.FuncForPC(pc)
 			merged["trace"] = traceDepthName(log.TraceDepth, fn)
@@ -223,7 +223,6 @@ func traceDepthName(depth int, fn *runtime.Func) string {
 		return fullName
 	default:
 		// Fallback to just the file name
-		_, file, _, _ := runtime.Caller(2)
-		return file
+		return fullName
 	}
 }

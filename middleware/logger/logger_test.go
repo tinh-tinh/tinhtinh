@@ -9,10 +9,30 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/middleware/logger"
 )
 
-type serviceImpl struct{}
+type serviceImpl struct {
+	logger *flog
+}
 
 func (s *serviceImpl) DoSomething(log *logger.Logger) {
 	log.Debug("Doing something in Service")
+}
+
+func (s *serviceImpl) LogInternal() {
+	s.logger.DoSomething()
+}
+
+type flog struct {
+	log *logger.Logger
+}
+
+func NewFlog(log *logger.Logger) *flog {
+	return &flog{
+		log: log,
+	}
+}
+
+func (f *flog) DoSomething() {
+	f.log.Debug("Doing something in Service")
 }
 
 func Test_HappyLog(t *testing.T) {
@@ -42,12 +62,16 @@ func Test_HappyLog(t *testing.T) {
 	})
 	svc.DoSomething(logFuncOnly)
 
-	loggerAnother := logger.Create(logger.Options{
+	logAnother := logger.Create(logger.Options{
 		Max:        1,
 		Rotate:     true,
-		TraceDepth: 5,
+		TraceDepth: 4,
 	})
-	svc.DoSomething(loggerAnother)
+	f := NewFlog(logAnother)
+	svc2 := &serviceImpl{
+		logger: f,
+	}
+	svc2.LogInternal()
 }
 
 func Test_Create(t *testing.T) {
