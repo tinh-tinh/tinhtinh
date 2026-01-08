@@ -2,7 +2,6 @@ package core
 
 import (
 	"net/http"
-	"runtime"
 	"strings"
 )
 
@@ -209,7 +208,6 @@ func (c *DynamicController) free() {
 	c.Dtos = nil
 	c.interceptor = nil
 	c.metadata = []*Metadata{}
-	runtime.GC()
 }
 
 func (c *DynamicController) Ref(name Provide, ctx ...Ctx) interface{} {
