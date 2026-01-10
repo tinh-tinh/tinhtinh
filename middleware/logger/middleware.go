@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	clogger "github.com/tinh-tinh/tinhtinh/v2/common/logger"
 )
 
 const (
@@ -21,7 +23,7 @@ type MiddlewareOptions struct {
 	// Max Size in MB of each file log. Default is infinity.
 	Max    int64
 	Format string
-	Level  Level
+	Level  clogger.Level
 }
 
 type wrappedWriter struct {
@@ -62,7 +64,7 @@ func (w *wrappedWriter) WriteHeader(statusCode int) {
 // - ${latency}: the latency of the request in milliseconds
 // - ${date}: the current date and time in the format 2006-01-02 15:04:05
 func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
-	logger := Create(Options{
+	logger := clogger.Create(clogger.Options{
 		Path:   opt.Path,
 		Rotate: opt.Rotate,
 		Max:    opt.Max,
@@ -83,7 +85,7 @@ func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 				format = Dev
 			}
 			content := format
-			specs := extractAllContent(format)
+			specs := clogger.ExtractAllContent(format)
 			for _, spec := range specs {
 				switch spec {
 				case "http-version":
@@ -117,14 +119,14 @@ func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 	}
 }
 
-func SeparateBaseStatus(statusCode int) Level {
+func SeparateBaseStatus(statusCode int) clogger.Level {
 	if statusCode < 300 {
-		return LevelInfo
+		return clogger.LevelInfo
 	} else if statusCode < 400 {
-		return LevelWarn
+		return clogger.LevelWarn
 	} else if statusCode < 500 {
-		return LevelError
+		return clogger.LevelError
 	} else {
-		return LevelFatal
+		return clogger.LevelFatal
 	}
 }

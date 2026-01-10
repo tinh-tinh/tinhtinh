@@ -116,11 +116,14 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 	dir := log.Path
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err := os.Mkdir(dir, 0o755)
-		check(err)
+		if err != nil {
+			fmt.Printf("Failed to create log directory: %v\n", err)
+			return
+		}
 	}
 
 	current := time.Now().Format("2006-01-02")
-	fileName := current + "-" + getLevelName(level) + ".log"
+	fileName := current + "-" + GetLevelName(level) + ".log"
 	filePath := filepath.Join(dir, fileName)
 
 	flags := os.O_APPEND | os.O_CREATE | os.O_WRONLY
@@ -128,7 +131,7 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 		if log.Rotate {
 			idx := 1
 			for idx > 0 {
-				fileName = current + "-" + getLevelName(level) + "-" + fmt.Sprint(idx) + ".log"
+				fileName = current + "-" + GetLevelName(level) + "-" + fmt.Sprint(idx) + ".log"
 				filePath = filepath.Join(dir, fileName)
 				if checkAvailableFile(filePath, log.Max) {
 					break
@@ -142,7 +145,8 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 
 	file, err := os.OpenFile(filePath, flags, 0o666)
 	if err != nil {
-		check(err)
+		fmt.Printf("Failed to open log file: %v\n", err)
+		return
 	}
 	defer file.Close()
 
@@ -166,13 +170,14 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 
 	message := fmt.Sprintf("%s [%s] %s%s\n",
 		time.Now().Format("2006-01-02 15:04:05"),
-		getLevelName(level),
+		GetLevelName(level),
 		metaStr,
 		msg,
 	)
 	_, err = iw.Write([]byte(message))
 	if err != nil {
-		check(err)
+		fmt.Printf("Failed to write log: %v\n", err)
+		return
 	}
 }
 
@@ -186,7 +191,7 @@ func checkAvailableFile(filename string, max int64) bool {
 		return true
 	}
 	if err != nil {
-		check(err)
+		fmt.Printf("Failed to check log file: %v\n", err)
 		return false
 	}
 	return fi.Size() < max*MiB

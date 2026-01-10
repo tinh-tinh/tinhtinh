@@ -2,7 +2,7 @@ package logger
 
 import "regexp"
 
-func getLevelName(level Level) string {
+func GetLevelName(level Level) string {
 	switch level {
 	case LevelFatal:
 		return "fatal"
@@ -19,13 +19,7 @@ func getLevelName(level Level) string {
 	}
 }
 
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
-func extractAllContent(s string) []string {
+func ExtractAllContent(s string) []string {
 	re := regexp.MustCompile(`\$\{(.*?)\}`)
 	matches := re.FindAllStringSubmatch(s, -1)
 
