@@ -1,6 +1,10 @@
 package logger
 
-import "regexp"
+import (
+	"fmt"
+	"os"
+	"regexp"
+)
 
 func GetLevelName(level Level) string {
 	switch level {
@@ -31,4 +35,36 @@ func ExtractAllContent(s string) []string {
 	}
 
 	return results
+}
+
+func checkAvailableFile(filename string, max int64) bool {
+	if max <= 0 {
+		return true
+	}
+	fi, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		// no file yet = available
+		return true
+	}
+	if err != nil {
+		fmt.Printf("Failed to check log file: %v\n", err)
+		return false
+	}
+	return fi.Size() < max*MiB
+}
+
+func appendMetadata(base Metadata, extra ...Metadata) Metadata {
+	merged := make(Metadata)
+	for k, v := range base {
+		merged[k] = v
+	}
+	if len(extra) > 0 {
+		for _, m := range extra {
+			for k, v := range m {
+				merged[k] = v
+			}
+		}
+	}
+
+	return merged
 }

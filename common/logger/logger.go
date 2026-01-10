@@ -1,16 +1,19 @@
 package logger
 
 import (
+	"bufio"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
+	"sync"
 	"time"
 )
 
-const MiB = 1 << 20 // 1 MiB
+const (
+	MiB            = 1 << 20    // 1 MiB
+	defaultBufSize = 256 * 1024 // 256KB buffer
+)
 
 type Level int
 
@@ -22,15 +25,34 @@ const (
 	LevelFatal
 )
 
-const (
-	TraceOnlyFunc = iota + 1
-	TracerEntryFile
-	TracerFullPath
-)
-
 type Metadata map[string]any
+
+type fileWriter struct {
+	file      *os.File
+	writer    *bufio.Writer
+	path      string
+	lastFlush time.Time
+	mu        sync.Mutex
+	size      int64
+}
+
+type logEntry struct {
+	level Level
+	msg   string
+	meta  []Metadata
+	time  time.Time
+}
+
 type Logger struct {
 	Options
+	// Performance factors
+	mu         sync.Mutex
+	fileCache  map[string]*fileWriter
+	cacheMu    sync.RWMutex
+	stopCh     chan struct{}
+	wg         sync.WaitGroup
+	logCh      chan *logEntry
+	bufferSize int
 }
 
 type Options struct {
@@ -59,9 +81,27 @@ func Create(opt Options) *Logger {
 	if opt.Max == 0 {
 		opt.Max = 20
 	}
-	return &Logger{
-		Options: opt,
+	l := &Logger{
+		Options:    opt,
+		fileCache:  make(map[string]*fileWriter),
+		stopCh:     make(chan struct{}),
+		logCh:      make(chan *logEntry, 100000),
+		bufferSize: defaultBufSize,
 	}
+
+	if err := os.MkdirAll(l.Path, 0o755); err != nil {
+		fmt.Printf("Failed to create log directory: %v\n", err)
+	}
+
+	// Start async log process
+	l.wg.Add(1)
+	go l.processLog()
+
+	// Start periodic flusher
+	l.wg.Add(1)
+	go l.periodicFlush()
+
+	return l
 }
 
 func (log *Logger) Info(msg string, meta ...Metadata) {
@@ -112,122 +152,212 @@ func (log *Logger) Logf(level Level, msg string, args ...any) {
 	log.write(level, fmt.Sprintf(msg, args...))
 }
 
-func (log *Logger) write(level Level, msg string, meta ...Metadata) {
-	dir := log.Path
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.Mkdir(dir, 0o755)
-		if err != nil {
-			fmt.Printf("Failed to create log directory: %v\n", err)
-			return
-		}
-	}
+func (log *Logger) writeEntryLog(entry *logEntry) {
+	fileName := entry.time.Format("2006-01-02") + "-" + GetLevelName(entry.level) + ".log"
+	filePath := filepath.Join(log.Path, fileName)
 
-	current := time.Now().Format("2006-01-02")
-	fileName := current + "-" + GetLevelName(level) + ".log"
-	filePath := filepath.Join(dir, fileName)
-
-	flags := os.O_APPEND | os.O_CREATE | os.O_WRONLY
-	if !checkAvailableFile(filePath, log.Max) {
-		if log.Rotate {
-			idx := 1
-			for idx > 0 {
-				fileName = current + "-" + GetLevelName(level) + "-" + fmt.Sprint(idx) + ".log"
-				filePath = filepath.Join(dir, fileName)
-				if checkAvailableFile(filePath, log.Max) {
-					break
-				}
-				idx++
-			}
-		} else {
-			flags = os.O_TRUNC | os.O_CREATE | os.O_WRONLY
-		}
-	}
-
-	file, err := os.OpenFile(filePath, flags, 0o666)
-	if err != nil {
-		fmt.Printf("Failed to open log file: %v\n", err)
+	fw := log.getOrCreateFileWriter(filePath, entry.level, entry.time)
+	if fw == nil {
 		return
 	}
-	defer file.Close()
 
-	// Use io.MultiWriter to write to both stdout and the file
-	iw := io.MultiWriter(os.Stdout, file)
-
-	// Merge default and per-call metadata
-	merged := appendMetadata(log.Metadata, meta...)
+	merged := appendMetadata(log.Metadata, entry.meta...)
 	if log.TraceDepth > 0 {
 		pc, _, _, ok := runtime.Caller(log.TraceDepth)
 		if ok {
 			fn := runtime.FuncForPC(pc)
-			merged["trace"] = traceDepthName(log.TraceDepth, fn)
+			merged["trace"] = fn.Name()
 		}
 	}
 
 	metaStr := ""
 	for k, v := range merged {
-		metaStr += fmt.Sprintf("[%s=%s] ", k, v)
+		metaStr += fmt.Sprintf("[%s=%v] ", k, v)
 	}
 
 	message := fmt.Sprintf("%s [%s] %s%s\n",
-		time.Now().Format("2006-01-02 15:04:05"),
-		GetLevelName(level),
+		entry.time.Format("2006-01-02 15:04:05"),
+		GetLevelName(entry.level),
 		metaStr,
-		msg,
+		entry.msg,
 	)
-	_, err = iw.Write([]byte(message))
+
+	fw.mu.Lock()
+	n, err := fw.writer.WriteString(message)
 	if err != nil {
-		fmt.Printf("Failed to write log: %v\n", err)
-		return
+		fmt.Fprintf(os.Stderr, "Failed to write log: %v\n", err)
+	} else {
+		fw.size += int64(n)
+	}
+	fw.mu.Unlock()
+
+	// Also write to stdout (unbuffered for immediate visibility)
+	fmt.Print(message)
+
+	if log.Max > 0 && fw.size >= log.Max*MiB {
+		log.rotateFile(filePath, entry.level, entry.time)
 	}
 }
 
-func checkAvailableFile(filename string, max int64) bool {
-	if max <= 0 {
-		return true
+func (log *Logger) write(level Level, msg string, meta ...Metadata) {
+	entry := &logEntry{
+		level: level,
+		msg:   msg,
+		meta:  meta,
+		time:  time.Now(),
 	}
-	fi, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		// no file yet = available
-		return true
+
+	// Non-blocking send
+	select {
+	case log.logCh <- entry:
+	default:
+		// Channel full, log to stderr
+		fmt.Fprintf(os.Stderr, "LOG CHANNEL FULL: [%s] %s\n", GetLevelName(level), msg)
 	}
-	if err != nil {
-		fmt.Printf("Failed to check log file: %v\n", err)
-		return false
-	}
-	return fi.Size() < max*MiB
 }
 
-func appendMetadata(base Metadata, extra ...Metadata) Metadata {
-	merged := make(Metadata)
-	for k, v := range base {
-		merged[k] = v
+func (log *Logger) processLog() {
+	defer log.wg.Done()
+
+	for {
+		select {
+		case entry := <-log.logCh:
+			log.writeEntryLog(entry)
+		case <-log.stopCh:
+			// Drain remaining logs
+			for len(log.logCh) > 0 {
+				entry := <-log.logCh
+				log.writeEntryLog(entry)
+			}
+			return
+		}
 	}
-	if len(extra) > 0 {
-		for _, m := range extra {
-			for k, v := range m {
-				merged[k] = v
+}
+
+func (log *Logger) periodicFlush() {
+	defer log.wg.Done()
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			log.flushAll()
+		case <-log.stopCh:
+			log.flushAll()
+			return
+		}
+	}
+}
+
+func (log *Logger) flushAll() {
+	log.cacheMu.RLock()
+	defer log.cacheMu.RUnlock()
+
+	for _, writer := range log.fileCache {
+		writer.mu.Lock()
+		writer.writer.Flush()
+		writer.lastFlush = time.Now()
+		writer.mu.Unlock()
+	}
+}
+
+func (log *Logger) getOrCreateFileWriter(filepath string, level Level, t time.Time) *fileWriter {
+	log.cacheMu.RLock()
+	fw, exists := log.fileCache[filepath]
+	log.cacheMu.RUnlock()
+
+	if exists {
+		return fw
+	}
+
+	// If need create new file writer
+	log.cacheMu.Lock()
+	defer log.cacheMu.Unlock()
+
+	// Double-check after acquiring write lock
+	fw, exists = log.fileCache[filepath]
+	if exists {
+		return fw
+	}
+
+	flags := os.O_APPEND | os.O_CREATE | os.O_WRONLY
+	// Check if file needs rotation before opening
+	if log.Max > 0 {
+		if fi, err := os.Stat(filepath); err == nil {
+			if fi.Size() >= log.Max*MiB {
+				filepath = log.getRotatedPath(filepath, level, t)
+				if !log.Rotate {
+					flags = os.O_TRUNC | os.O_CREATE | os.O_WRONLY
+				}
 			}
 		}
 	}
 
-	return merged
+	file, err := os.OpenFile(filepath, flags, 0o666)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to open log file: %v\n", err)
+		return nil
+	}
+
+	var initialSize int64
+	if fi, err := file.Stat(); err == nil {
+		initialSize = fi.Size()
+	}
+
+	fw = &fileWriter{
+		file:      file,
+		writer:    bufio.NewWriterSize(file, log.bufferSize),
+		path:      filepath,
+		lastFlush: time.Now(),
+		size:      initialSize,
+	}
+
+	log.fileCache[filepath] = fw
+	return fw
 }
 
-func traceDepthName(depth int, fn *runtime.Func) string {
-	fullName := fn.Name()
-	switch depth {
-	case TraceOnlyFunc:
-		splits := strings.Split(fullName, ".")
-		shortName := splits[len(splits)-1]
-		return strings.SplitN(shortName, "(", 2)[0]
-	case TracerEntryFile:
-		entryIndex := strings.LastIndex(fullName, "/")
-		entryFile := fullName[entryIndex+1:]
-		return entryFile
-	case TracerFullPath:
-		return fullName
-	default:
-		// Fallback to just the file name
-		return fullName
+func (log *Logger) getRotatedPath(basepath string, level Level, t time.Time) string {
+	if !log.Rotate {
+		return basepath
 	}
+
+	dir := filepath.Dir(basepath)
+	current := t.Format(time.DateOnly)
+	levelName := GetLevelName(level)
+
+	for idx := 1; ; idx++ {
+		fileName := fmt.Sprintf("%s-%s-%d.log", current, levelName, idx)
+		newPath := filepath.Join(dir, fileName)
+		if checkAvailableFile(newPath, log.Max) {
+			return newPath
+		}
+	}
+}
+
+func (log *Logger) rotateFile(oldPath string, level Level, t time.Time) {
+	log.cacheMu.Lock()
+	defer log.cacheMu.Unlock()
+
+	if fw, exists := log.fileCache[oldPath]; exists {
+		fw.mu.Lock()
+		fw.writer.Flush()
+		fw.file.Close()
+		fw.mu.Unlock()
+		delete(log.fileCache, oldPath)
+	}
+}
+
+func (log *Logger) Close() {
+	close(log.stopCh)
+	log.wg.Wait()
+
+	// Close all file writers
+	log.cacheMu.Lock()
+	for _, fw := range log.fileCache {
+		fw.writer.Flush()
+		fw.file.Close()
+	}
+	log.fileCache = nil
+	log.cacheMu.Unlock()
 }
