@@ -66,6 +66,8 @@ type Options struct {
 	Metadata Metadata
 	// TraceDepth enables including the caller function name in debug logs.
 	TraceDepth int
+	// Timestamp enables/disables timestamp in log output. Default is true.
+	Timestamp *bool
 }
 
 // Create a new Logger with the specified options.
@@ -175,12 +177,21 @@ func (log *Logger) writeEntryLog(entry *logEntry) {
 		metaStr += fmt.Sprintf("[%s=%v] ", k, v)
 	}
 
-	message := fmt.Sprintf("%s [%s] %s%s\n",
-		entry.time.Format("2006-01-02 15:04:05"),
-		GetLevelName(entry.level),
-		metaStr,
-		entry.msg,
-	)
+	var message string
+	if log.Timestamp == nil || *log.Timestamp {
+		message = fmt.Sprintf("%s [%s] %s%s\n",
+			entry.time.Format("2006-01-02 15:04:05"),
+			GetLevelName(entry.level),
+			metaStr,
+			entry.msg,
+		)
+	} else {
+		message = fmt.Sprintf("[%s] %s%s\n",
+			GetLevelName(entry.level),
+			metaStr,
+			entry.msg,
+		)
+	}
 
 	fw.mu.Lock()
 	n, err := fw.writer.WriteString(message)
