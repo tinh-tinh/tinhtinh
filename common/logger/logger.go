@@ -210,6 +210,13 @@ func (log *Logger) createHandler(w io.Writer) slog.Handler {
 					return slog.Attr{} // Remove timestamp
 				}
 			}
+			// Handle Fatal level display (ERROR+4 -> FATAL)
+			if a.Key == slog.LevelKey {
+				level := a.Value.Any().(slog.Level)
+				if level == slog.LevelError+4 {
+					a.Value = slog.StringValue("FATAL")
+				}
+			}
 			return a
 		},
 	}
