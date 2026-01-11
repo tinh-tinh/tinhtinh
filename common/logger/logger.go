@@ -2,7 +2,10 @@ package logger
 
 import (
 	"bufio"
+	"context"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -23,6 +26,13 @@ const (
 	LevelWarn
 	LevelError
 	LevelFatal
+)
+
+type Format string
+
+const (
+	FormatText Format = "text"
+	FormatJSON Format = "json"
 )
 
 type Metadata map[string]any
@@ -46,13 +56,14 @@ type logEntry struct {
 type Logger struct {
 	Options
 	// Performance factors
-	mu         sync.Mutex
-	fileCache  map[string]*fileWriter
-	cacheMu    sync.RWMutex
-	stopCh     chan struct{}
-	wg         sync.WaitGroup
-	logCh      chan *logEntry
-	bufferSize int
+	mu             sync.Mutex
+	fileCache      map[string]*fileWriter
+	cacheMu        sync.RWMutex
+	stopCh         chan struct{}
+	wg             sync.WaitGroup
+	logCh          chan *logEntry
+	bufferSize     int
+	consoleHandler slog.Handler
 }
 
 type Options struct {
@@ -68,6 +79,31 @@ type Options struct {
 	TraceDepth int
 	// Timestamp enables/disables timestamp in log output. Default is true.
 	Timestamp *bool
+	// Format specifies the log output format. Default is FormatText.
+	// Supported values: FormatText, FormatJSON.
+	Format Format
+	// BufferSize is the size of the log channel buffer. Default is 100000.
+	BufferSize int
+	// Console enables logging to stdout in addition to files. Default is false.
+	Console bool
+}
+
+// toSlogLevel converts custom Level to slog.Level
+func toSlogLevel(level Level) slog.Level {
+	switch level {
+	case LevelDebug:
+		return slog.LevelDebug
+	case LevelInfo:
+		return slog.LevelInfo
+	case LevelWarn:
+		return slog.LevelWarn
+	case LevelError:
+		return slog.LevelError
+	case LevelFatal:
+		return slog.LevelError + 4 // Fatal is higher than Error
+	default:
+		return slog.LevelInfo
+	}
 }
 
 // Create a new Logger with the specified options.
@@ -83,12 +119,21 @@ func Create(opt Options) *Logger {
 	if opt.Max == 0 {
 		opt.Max = 20
 	}
+	channelSize := opt.BufferSize
+	if channelSize == 0 {
+		channelSize = 100000
+	}
 	l := &Logger{
 		Options:    opt,
 		fileCache:  make(map[string]*fileWriter),
 		stopCh:     make(chan struct{}),
-		logCh:      make(chan *logEntry, 100000),
+		logCh:      make(chan *logEntry, channelSize),
 		bufferSize: defaultBufSize,
+	}
+
+	// Initialize console handler once if enabled
+	if opt.Console {
+		l.consoleHandler = l.createHandler(os.Stdout)
 	}
 
 	if err := os.MkdirAll(l.Path, 0o755); err != nil {
@@ -154,6 +199,27 @@ func (log *Logger) Logf(level Level, msg string, args ...any) {
 	log.write(level, fmt.Sprintf(msg, args...))
 }
 
+// createHandler creates a slog.Handler based on Format option
+func (log *Logger) createHandler(w io.Writer) slog.Handler {
+	opts := &slog.HandlerOptions{
+		Level: slog.LevelDebug, // Allow all levels, filtering done elsewhere
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			// Handle timestamp option
+			if a.Key == slog.TimeKey {
+				if log.Timestamp != nil && !*log.Timestamp {
+					return slog.Attr{} // Remove timestamp
+				}
+			}
+			return a
+		},
+	}
+
+	if log.Format == FormatJSON {
+		return slog.NewJSONHandler(w, opts)
+	}
+	return slog.NewTextHandler(w, opts)
+}
+
 func (log *Logger) writeEntryLog(entry *logEntry) {
 	fileName := entry.time.Format("2006-01-02") + "-" + GetLevelName(entry.level) + ".log"
 	filePath := filepath.Join(log.Path, fileName)
@@ -163,50 +229,34 @@ func (log *Logger) writeEntryLog(entry *logEntry) {
 		return
 	}
 
+	rec := slog.NewRecord(entry.time, toSlogLevel(entry.level), entry.msg, 0)
+	// Build attributes from metadata
 	merged := appendMetadata(log.Metadata, entry.meta...)
+	rec.AddAttrs(merged...)
 	if log.TraceDepth > 0 {
 		pc, _, _, ok := runtime.Caller(log.TraceDepth)
 		if ok {
 			fn := runtime.FuncForPC(pc)
-			merged["trace"] = fn.Name()
+			rec.AddAttrs(slog.String("trace", fn.Name()))
 		}
 	}
 
-	metaStr := ""
-	for k, v := range merged {
-		metaStr += fmt.Sprintf("[%s=%v] ", k, v)
-	}
-
-	var message string
-	if log.Timestamp == nil || *log.Timestamp {
-		message = fmt.Sprintf("%s [%s] %s%s\n",
-			entry.time.Format("2006-01-02 15:04:05"),
-			GetLevelName(entry.level),
-			metaStr,
-			entry.msg,
-		)
-	} else {
-		message = fmt.Sprintf("[%s] %s%s\n",
-			GetLevelName(entry.level),
-			metaStr,
-			entry.msg,
-		)
-	}
-
+	// Write to file
+	fileHandler := log.createHandler(fw.writer)
 	fw.mu.Lock()
-	n, err := fw.writer.WriteString(message)
+	err := fileHandler.Handle(context.Background(), rec)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write log: %v\n", err)
-	} else {
-		fw.size += int64(n)
 	}
 	fw.mu.Unlock()
 
-	// Also write to stdout (unbuffered for immediate visibility)
-	fmt.Print(message)
+	// Write to console if enabled
+	if log.consoleHandler != nil {
+		_ = log.consoleHandler.Handle(context.Background(), rec)
+	}
 
 	if log.Max > 0 && fw.size >= log.Max*MiB {
-		log.rotateFile(filePath, entry.level, entry.time)
+		log.rotateFile(filePath)
 	}
 }
 
@@ -222,8 +272,8 @@ func (log *Logger) write(level Level, msg string, meta ...Metadata) {
 	select {
 	case log.logCh <- entry:
 	default:
-		// Channel full, log to stderr
-		fmt.Fprintf(os.Stderr, "LOG CHANNEL FULL: [%s] %s\n", GetLevelName(level), msg)
+		// Channel full, log warning to stderr
+		fmt.Fprintf(os.Stderr, "[WARN] Log buffer full (size: %d), message dropped: %s\n", cap(log.logCh), msg)
 	}
 }
 
@@ -346,7 +396,7 @@ func (log *Logger) getRotatedPath(basepath string, level Level, t time.Time) str
 	}
 }
 
-func (log *Logger) rotateFile(oldPath string, level Level, t time.Time) {
+func (log *Logger) rotateFile(oldPath string) {
 	log.cacheMu.Lock()
 	defer log.cacheMu.Unlock()
 

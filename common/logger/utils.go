@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 )
@@ -53,15 +54,15 @@ func checkAvailableFile(filename string, max int64) bool {
 	return fi.Size() < max*MiB
 }
 
-func appendMetadata(base Metadata, extra ...Metadata) Metadata {
-	merged := make(Metadata)
+func appendMetadata(base Metadata, extra ...Metadata) []slog.Attr {
+	merged := []slog.Attr{}
 	for k, v := range base {
-		merged[k] = v
+		merged = append(merged, slog.Any(k, v))
 	}
 	if len(extra) > 0 {
 		for _, m := range extra {
 			for k, v := range m {
-				merged[k] = v
+				merged = append(merged, slog.Any(k, v))
 			}
 		}
 	}

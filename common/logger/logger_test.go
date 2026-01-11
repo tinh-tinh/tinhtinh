@@ -441,7 +441,7 @@ func Test_TraceDepth(t *testing.T) {
 			if strings.Contains(file.Name(), "debug") {
 				content, err := os.ReadFile(filepath.Join(tmpDir, file.Name()))
 				require.NoError(t, err)
-				require.Contains(t, string(content), "[trace=")
+				require.Contains(t, string(content), "trace=")
 				break
 			}
 		}
@@ -469,7 +469,7 @@ func Test_TraceDepth(t *testing.T) {
 			if strings.Contains(file.Name(), "debug") {
 				content, err := os.ReadFile(filepath.Join(tmpDir, file.Name()))
 				require.NoError(t, err)
-				require.NotContains(t, string(content), "[trace=")
+				require.NotContains(t, string(content), "trace=")
 				break
 			}
 		}
@@ -643,4 +643,420 @@ func Test_LoggerWithNilMetadata(t *testing.T) {
 
 	l.Info("message with nil global metadata")
 	time.Sleep(100 * time.Millisecond)
+}
+
+// Tests for Format JSON feature
+
+func Test_FormatJSON(t *testing.T) {
+	t.Run("json format outputs valid JSON", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		l := logger.Create(logger.Options{
+			Path:   tmpDir,
+			Max:    100,
+			Format: logger.FormatJSON,
+		})
+
+		l.Info("test json message")
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+
+		// Read the log file and verify it's valid JSON
+		files, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+		require.NotEmpty(t, files)
+
+		for _, file := range files {
+			if strings.Contains(file.Name(), "info") {
+				content, err := os.ReadFile(filepath.Join(tmpDir, file.Name()))
+				require.NoError(t, err)
+
+				// JSON format should have curly braces
+				require.Contains(t, string(content), "{")
+				require.Contains(t, string(content), "}")
+				// Should contain the message in JSON format
+				require.Contains(t, string(content), `"msg"`)
+				require.Contains(t, string(content), "test json message")
+				break
+			}
+		}
+	})
+
+	t.Run("json format with metadata", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		l := logger.Create(logger.Options{
+			Path:   tmpDir,
+			Max:    100,
+			Format: logger.FormatJSON,
+			Metadata: logger.Metadata{
+				"service": "test-service",
+			},
+		})
+
+		l.Info("message with metadata", logger.Metadata{
+			"request_id": "12345",
+		})
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+
+		files, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+		require.NotEmpty(t, files)
+
+		for _, file := range files {
+			if strings.Contains(file.Name(), "info") {
+				content, err := os.ReadFile(filepath.Join(tmpDir, file.Name()))
+				require.NoError(t, err)
+
+				// Should contain metadata keys
+				require.Contains(t, string(content), "service")
+				require.Contains(t, string(content), "test-service")
+				require.Contains(t, string(content), "request_id")
+				require.Contains(t, string(content), "12345")
+				break
+			}
+		}
+	})
+
+	t.Run("json format all log levels", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		l := logger.Create(logger.Options{
+			Path:   tmpDir,
+			Max:    100,
+			Format: logger.FormatJSON,
+		})
+
+		l.Debug("debug json")
+		l.Info("info json")
+		l.Warn("warn json")
+		l.Error("error json")
+		l.Fatal("fatal json")
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+
+		files, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+		require.NotEmpty(t, files)
+
+		// Verify each level file exists and contains JSON
+		levelFiles := make(map[string]bool)
+		for _, file := range files {
+			name := file.Name()
+			if strings.Contains(name, "debug") {
+				levelFiles["debug"] = true
+			} else if strings.Contains(name, "info") {
+				levelFiles["info"] = true
+			} else if strings.Contains(name, "warn") {
+				levelFiles["warn"] = true
+			} else if strings.Contains(name, "error") {
+				levelFiles["error"] = true
+			} else if strings.Contains(name, "fatal") {
+				levelFiles["fatal"] = true
+			}
+
+			content, err := os.ReadFile(filepath.Join(tmpDir, name))
+			require.NoError(t, err)
+			require.Contains(t, string(content), "{", "file %s should contain JSON", name)
+		}
+
+		require.True(t, levelFiles["debug"], "should have debug log file")
+		require.True(t, levelFiles["info"], "should have info log file")
+		require.True(t, levelFiles["warn"], "should have warn log file")
+		require.True(t, levelFiles["error"], "should have error log file")
+		require.True(t, levelFiles["fatal"], "should have fatal log file")
+	})
+
+	t.Run("json format with trace", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		l := logger.Create(logger.Options{
+			Path:       tmpDir,
+			Max:        100,
+			Format:     logger.FormatJSON,
+			TraceDepth: 1,
+		})
+
+		l.Debug("debug with trace")
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+
+		files, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+
+		for _, file := range files {
+			if strings.Contains(file.Name(), "debug") {
+				content, err := os.ReadFile(filepath.Join(tmpDir, file.Name()))
+				require.NoError(t, err)
+				require.Contains(t, string(content), "trace")
+				break
+			}
+		}
+	})
+}
+
+func Test_FormatText(t *testing.T) {
+	t.Run("text format is default", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		l := logger.Create(logger.Options{
+			Path: tmpDir,
+			Max:  100,
+			// Format not specified - should default to text
+		})
+
+		l.Info("test text message")
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+
+		files, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+		require.NotEmpty(t, files)
+
+		for _, file := range files {
+			if strings.Contains(file.Name(), "info") {
+				content, err := os.ReadFile(filepath.Join(tmpDir, file.Name()))
+				require.NoError(t, err)
+
+				// Text format uses key=value pairs, not JSON
+				require.Contains(t, string(content), "msg=")
+				require.Contains(t, string(content), "test text message")
+				break
+			}
+		}
+	})
+
+	t.Run("explicit text format", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		l := logger.Create(logger.Options{
+			Path:   tmpDir,
+			Max:    100,
+			Format: logger.FormatText,
+		})
+
+		l.Info("explicit text format")
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+
+		files, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+		require.NotEmpty(t, files)
+
+		for _, file := range files {
+			if strings.Contains(file.Name(), "info") {
+				content, err := os.ReadFile(filepath.Join(tmpDir, file.Name()))
+				require.NoError(t, err)
+
+				// Text format uses key=value pairs
+				require.Contains(t, string(content), "msg=")
+				break
+			}
+		}
+	})
+}
+
+func Test_FormatWithTimestamp(t *testing.T) {
+	t.Run("json format with timestamp enabled", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		timestampEnabled := true
+		l := logger.Create(logger.Options{
+			Path:      tmpDir,
+			Max:       100,
+			Format:    logger.FormatJSON,
+			Timestamp: &timestampEnabled,
+		})
+
+		l.Info("json with timestamp")
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+
+		files, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+
+		for _, file := range files {
+			if strings.Contains(file.Name(), "info") {
+				content, err := os.ReadFile(filepath.Join(tmpDir, file.Name()))
+				require.NoError(t, err)
+				// Should contain time field in JSON
+				require.Contains(t, string(content), `"time"`)
+				break
+			}
+		}
+	})
+
+	t.Run("json format with timestamp disabled", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		timestampDisabled := false
+		l := logger.Create(logger.Options{
+			Path:      tmpDir,
+			Max:       100,
+			Format:    logger.FormatJSON,
+			Timestamp: &timestampDisabled,
+		})
+
+		l.Info("json without timestamp")
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+
+		files, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+
+		for _, file := range files {
+			if strings.Contains(file.Name(), "info") {
+				content, err := os.ReadFile(filepath.Join(tmpDir, file.Name()))
+				require.NoError(t, err)
+				// Should NOT contain time field in JSON
+				require.NotContains(t, string(content), `"time"`)
+				break
+			}
+		}
+	})
+
+	t.Run("text format with timestamp disabled", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		timestampDisabled := false
+		l := logger.Create(logger.Options{
+			Path:      tmpDir,
+			Max:       100,
+			Format:    logger.FormatText,
+			Timestamp: &timestampDisabled,
+		})
+
+		l.Info("text without timestamp")
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+
+		files, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+
+		for _, file := range files {
+			if strings.Contains(file.Name(), "info") {
+				content, err := os.ReadFile(filepath.Join(tmpDir, file.Name()))
+				require.NoError(t, err)
+				// Should NOT contain time= in text format
+				require.NotContains(t, string(content), "time=")
+				break
+			}
+		}
+	})
+}
+
+func Test_FormatConstants(t *testing.T) {
+	// Test that format constants are defined correctly
+	require.Equal(t, logger.Format("text"), logger.FormatText)
+	require.Equal(t, logger.Format("json"), logger.FormatJSON)
+}
+
+// Test_FormatRealFile creates real log files for manual inspection.
+// Run with: go test -v -run Test_FormatRealFile ./...
+// Check output in: logs/format_test_json and logs/format_test_text
+func Test_FormatRealFile(t *testing.T) {
+	t.Run("json format real file", func(t *testing.T) {
+		logPath := "logs/format_test_json"
+		// Clean up before test
+		os.RemoveAll(logPath)
+
+		l := logger.Create(logger.Options{
+			Path:   logPath,
+			Max:    100,
+			Format: logger.FormatJSON,
+			Metadata: logger.Metadata{
+				"service": "test-service",
+				"env":     "development",
+			},
+		})
+
+		l.Debug("This is a debug message", logger.Metadata{"action": "debugging"})
+		l.Info("User logged in successfully", logger.Metadata{"user_id": "12345", "ip": "192.168.1.1"})
+		l.Warn("Memory usage is high", logger.Metadata{"usage_percent": 85})
+		l.Error("Failed to connect to database", logger.Metadata{"db_host": "localhost", "error": "connection refused"})
+		l.Fatal("Application crashed", logger.Metadata{"reason": "out of memory"})
+
+		time.Sleep(500 * time.Millisecond)
+		l.Close()
+
+		t.Logf("JSON format logs written to: %s", logPath)
+	})
+
+	t.Run("text format real file", func(t *testing.T) {
+		logPath := "logs/format_test_text"
+		// Clean up before test
+		os.RemoveAll(logPath)
+
+		l := logger.Create(logger.Options{
+			Path:   logPath,
+			Max:    100,
+			Format: logger.FormatText,
+			Metadata: logger.Metadata{
+				"service": "test-service",
+				"env":     "development",
+			},
+		})
+
+		l.Debug("This is a debug message", logger.Metadata{"action": "debugging"})
+		l.Info("User logged in successfully", logger.Metadata{"user_id": "12345", "ip": "192.168.1.1"})
+		l.Warn("Memory usage is high", logger.Metadata{"usage_percent": 85})
+		l.Error("Failed to connect to database", logger.Metadata{"db_host": "localhost", "error": "connection refused"})
+		l.Fatal("Application crashed", logger.Metadata{"reason": "out of memory"})
+
+		time.Sleep(500 * time.Millisecond)
+		l.Close()
+
+		t.Logf("Text format logs written to: %s", logPath)
+	})
+}
+
+func Test_ConsoleOption(t *testing.T) {
+	t.Run("console output enabled", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		l := logger.Create(logger.Options{
+			Path:    tmpDir,
+			Max:     100,
+			Console: true, // Enable console output
+		})
+
+		// Should not panic and write to both file and stdout
+		require.NotPanics(t, func() {
+			l.Info("message with console output", logger.Metadata{"key": "value"})
+		})
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+
+		// Verify log file was still created
+		files, err := os.ReadDir(tmpDir)
+		require.NoError(t, err)
+		require.NotEmpty(t, files)
+	})
+
+	t.Run("console with json format", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		l := logger.Create(logger.Options{
+			Path:    tmpDir,
+			Max:     100,
+			Console: true,
+			Format:  logger.FormatJSON,
+		})
+
+		require.NotPanics(t, func() {
+			l.Info("json console output", logger.Metadata{"format": "json"})
+		})
+		time.Sleep(200 * time.Millisecond)
+		l.Close()
+	})
+}
+
+func Test_BufferSizeOption(t *testing.T) {
+	t.Run("custom buffer size", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		l := logger.Create(logger.Options{
+			Path:       tmpDir,
+			Max:        100,
+			BufferSize: 1000, // Custom buffer size
+		})
+		defer l.Close()
+
+		// Should work with custom buffer size
+		require.NotPanics(t, func() {
+			for i := 0; i < 100; i++ {
+				l.Infof("message %d", i)
+			}
+		})
+		time.Sleep(200 * time.Millisecond)
+	})
 }
