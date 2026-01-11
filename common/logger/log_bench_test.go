@@ -223,3 +223,18 @@ func BenchmarkLoggerMixedLevels(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkLoggerJson(b *testing.B) {
+	tmpDir := b.TempDir()
+	l := logger.Create(logger.Options{
+		Path:   tmpDir,
+		Max:    100,
+		Format: logger.FormatJSON,
+	})
+	defer l.Close()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		l.Info("benchmark message")
+	}
+}

@@ -21,9 +21,13 @@ type MiddlewareOptions struct {
 	Rotate             bool
 	SeparateBaseStatus bool
 	// Max Size in MB of each file log. Default is infinity.
-	Max    int64
+	Max int64
+	// Format is the log message template format (e.g., Dev, Common, Combined).
 	Format string
-	Level  clogger.Level
+	// OutputFormat specifies the log output format (text or json).
+	// Uses clogger.FormatText or clogger.FormatJSON.
+	OutputFormat clogger.Format
+	Level        clogger.Level
 }
 
 type wrappedWriter struct {
@@ -63,11 +67,16 @@ func (w *wrappedWriter) WriteHeader(statusCode int) {
 // - ${content-length}: the Content-Length header of the response
 // - ${latency}: the latency of the request in milliseconds
 // - ${date}: the current date and time in the format 2006-01-02 15:04:05
+//
+// The OutputFormat option specifies the log output format:
+// - clogger.FormatText (default): key=value text format
+// - clogger.FormatJSON: JSON format
 func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 	logger := clogger.Create(clogger.Options{
 		Path:   opt.Path,
 		Rotate: opt.Rotate,
 		Max:    opt.Max,
+		Format: opt.OutputFormat,
 	})
 	level := opt.Level
 
