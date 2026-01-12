@@ -458,11 +458,35 @@ func (m *Store) gc(sleep time.Duration) {
 
 **Optimized Timestamp Calculation**
 
-Pre-calculated timestamps for better performance:
+Pre-calculated timestamps using atomic operations for better performance:
 
 ```go
 // common/era/time.go
-// Using pre-calculated timestamps instead of determining at runtime each time
+var (
+    timestampTimer sync.Once
+    timestamp      uint32
+)
+
+// Timestamp returns the current time from an atomic value
+func Timestamp() uint32 {
+    return atomic.LoadUint32(&timestamp)
+}
+
+// StartTimeStampUpdater starts a concurrent function which stores the timestamp
+// to an atomic value per second, which is much better for performance than
+// determining it at runtime each time
+func StartTimeStampUpdater() {
+    timestampTimer.Do(func() {
+        atomic.StoreUint32(&timestamp, uint32(time.Now().Unix()))
+        go func(sleep time.Duration) {
+            ticker := time.NewTicker(sleep)
+            defer ticker.Stop()
+            for t := range ticker.C {
+                atomic.StoreUint32(&timestamp, uint32(t.Unix()))
+            }
+        }(1 * time.Second)
+    })
+}
 ```
 
 ---
@@ -658,6 +682,8 @@ This executes:
 ```bash
 go test ./... -benchmem -bench=. -run=^Benchmark_$
 ```
+
+The `-bench=.` flag runs all benchmark functions, while `-run=^Benchmark_$` skips regular tests to only execute benchmarks. The `-benchmem` flag reports memory allocation statistics.
 
 Key benchmarks are available in:
 - `core/app_test.go` - Application startup and request handling
