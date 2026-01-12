@@ -24,6 +24,7 @@ Tinh Tinh is an easy to use, extensible boilerplate for Go applications. It prov
 - 🛠️ Extensible design
 - 📝 Well-documented codebase
 - 🔧 Built-in development tools
+- ⚡ [Performance optimized](PERFORMANCE.md)
 
 ## Installation
 
