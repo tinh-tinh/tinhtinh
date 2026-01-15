@@ -3,9 +3,13 @@ package core
 import (
 	"reflect"
 	"slices"
+	"sync"
 
 	"github.com/tinh-tinh/tinhtinh/v2/common"
 )
+
+// providerNameCache caches provider names by type to avoid repeated reflection calls
+var providerNameCache sync.Map
 
 type Provide string
 
@@ -241,6 +245,15 @@ func Inject[P any](module RefProvider) *P {
 }
 
 func getProvideName(param any) string {
+	// Get the type of the parameter for cache lookup
+	paramType := reflect.TypeOf(param)
+
+	// Check if the name is already cached
+	if cached, ok := providerNameCache.Load(paramType); ok {
+		return cached.(string)
+	}
+
+	// Not in cache, perform reflection
 	ctModel := reflect.ValueOf(param).Elem()
 
 	fnc := ctModel.MethodByName("ProvideName")
@@ -250,6 +263,9 @@ func getProvideName(param any) string {
 	} else {
 		name = common.GetStructName(param)
 	}
+
+	// Store in cache for future use
+	providerNameCache.Store(paramType, name)
 
 	return name
 }
