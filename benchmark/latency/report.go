@@ -54,9 +54,22 @@ func GenerateHistogram(durations []float64, buckets int) string {
 		return "No data"
 	}
 
+	// Handle single data point or all same values
+	if len(durations) == 1 {
+		return fmt.Sprintf("\nLatency Histogram:\n------------------\n%.2f ms [%5d]: %s\n",
+			ToMilliseconds(durations[0]), 1, strings.Repeat("█", 50))
+	}
+
 	stats := Calculate(durations)
 	min := stats.Min
 	max := stats.Max
+
+	// If all values are the same
+	if min == max {
+		return fmt.Sprintf("\nLatency Histogram:\n------------------\n%.2f ms [%5d]: %s\n",
+			ToMilliseconds(min), len(durations), strings.Repeat("█", 50))
+	}
+
 	bucketSize := (max - min) / float64(buckets)
 
 	// Create buckets
@@ -65,6 +78,9 @@ func GenerateHistogram(durations []float64, buckets int) string {
 		bucketIndex := int((d - min) / bucketSize)
 		if bucketIndex >= buckets {
 			bucketIndex = buckets - 1
+		}
+		if bucketIndex < 0 {
+			bucketIndex = 0
 		}
 		counts[bucketIndex]++
 	}

@@ -4,3 +4,19 @@
 .vscode/
 coverage/
 test/
+
+# Benchmark binaries
+benchmark/loadtest/apps/*/main
+benchmark/loadtest/apps/*/*.exe
+benchmark/loadtest/apps/*/*_app
+benchmark/frameworks/go.sum
+
+# Benchmark results
+benchmark/loadtest/results/
+benchmark/profiling/*.prof
+benchmark/profiling/*.svg
+benchmark/profiling/*.pdf
+
+# Benchmark reports
+benchmark/scripts/*/weekly_report_*.md
+benchmark/scripts/*/weekly_report_*.json
