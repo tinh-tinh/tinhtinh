@@ -2,6 +2,7 @@ package kafka_test
 
 import (
 	"log"
+	"os"
 	"testing"
 	"time"
 
@@ -11,7 +12,7 @@ import (
 
 func Test_Consumer(t *testing.T) {
 	instance := kafka.NewInstance(kafka.Config{
-		Brokers: []string{"127.0.0.1:9092"},
+		Brokers: []string{os.Getenv("KAFKA_BROKERS")},
 	})
 	consumer := instance.Consumer(kafka.ConsumerConfig{
 		GroupID:  "example",

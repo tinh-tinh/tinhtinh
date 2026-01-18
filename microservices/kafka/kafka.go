@@ -33,6 +33,12 @@ func NewInstance(config Config) *Kafka {
 		log.Panicf("Error parsing Kafka version: %v", err)
 	}
 
+	if len(config.Brokers) > 0 {
+		if config.Brokers[0] == "" {
+			config.Brokers[0] = "localhost:9092"
+		}
+	}
+
 	// go metrics.Log(metrics.DefaultRegistry, 5*time.Second, log.New(os.Stderr, "metrics: ", log.LstdFlags))
 	return &Kafka{
 		Brokers: config.Brokers,
@@ -42,7 +48,7 @@ func NewInstance(config Config) *Kafka {
 
 func DefaultConfig() Config {
 	return Config{
-		Brokers: []string{"localhost:9092"},
+		Brokers: []string{os.Getenv("KAFKA_BROKERS")},
 		Version: sarama.DefaultVersion.String(),
 	}
 }
