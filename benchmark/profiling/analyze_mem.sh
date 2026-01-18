@@ -1,72 +1,85 @@
 #!/bin/bash
 
 # Memory Profile Analyzer
-# Analyzes memory profiling data and generates reports
+# Generates memory profile and analyzes the data
+# Usage: ./analyze_mem.sh [output_file]
 
 set -e
 
-PROFILE_FILE="${1:-mem.prof}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
-if [ ! -f "$PROFILE_FILE" ]; then
-    echo "Error: Profile file '$PROFILE_FILE' not found"
-    echo "Usage: $0 [profile_file]"
-    echo "Run benchmarks first: go test -bench=BenchmarkMemoryProfile -memprofile=mem.prof"
-    exit 1
-fi
+OUTPUT_FILE="${1:-mem_results.txt}"
+PROFILE_FILE="mem.prof"
 
-echo "========================================="
-echo "Memory Profile Analysis"
-echo "========================================="
-echo ""
-
-# Top 20 functions by memory allocation
-echo "Top 20 functions by allocated memory:"
-echo "------------------------------------"
-go tool pprof -top -nodecount=20 "$PROFILE_FILE"
-echo ""
-
-# Top allocations (inuse_space)
-echo "Top allocations (in-use space):"
-echo "-------------------------------"
-go tool pprof -top -nodecount=20 -sample_index=inuse_space "$PROFILE_FILE"
-echo ""
-
-# Top allocations (inuse_objects)
-echo "Top allocations (in-use objects):"
-echo "---------------------------------"
-go tool pprof -top -nodecount=20 -sample_index=inuse_objects "$PROFILE_FILE"
-echo ""
-
-# Generate memory flame graph
-if command -v dot &> /dev/null; then
-    echo "Generating memory flame graph..."
-    go tool pprof -svg "$PROFILE_FILE" > mem_flame.svg
-    echo "✓ Memory flame graph saved to: mem_flame.svg"
+{
+    echo "========================================="
+    echo "Memory Profile Analysis"
+    echo "========================================="
+    echo "Date: $(date)"
     echo ""
-fi
 
-# Generate call graph
-echo "Generating call graph..."
-go tool pprof -pdf "$PROFILE_FILE" > mem_graph.pdf 2>/dev/null || echo "Note: PDF generation requires graphviz"
-echo ""
+    # Generate memory profile first
+    echo "Generating memory profile..."
+    echo "-----------------------------"
+    go test -bench=BenchmarkMemoryProfile -benchtime=3s -run=^$ .
+    echo ""
 
-# Check for potential memory leaks
-echo "Checking for potential memory leaks..."
-echo "-------------------------------------"
-go tool pprof -list=. -sample_index=inuse_space "$PROFILE_FILE" | head -30
-echo ""
+    if [ ! -f "$PROFILE_FILE" ]; then
+        echo "Error: Profile file '$PROFILE_FILE' was not generated"
+        exit 1
+    fi
 
-# Interactive mode instructions
-echo "========================================="
-echo "For interactive analysis, run:"
-echo "  go tool pprof $PROFILE_FILE"
+    # Top 20 functions by memory allocation
+    echo "Top 20 functions by allocated memory:"
+    echo "------------------------------------"
+    go tool pprof -top -nodecount=20 "$PROFILE_FILE"
+    echo ""
+
+    # Top allocations (inuse_space)
+    echo "Top allocations (in-use space):"
+    echo "-------------------------------"
+    go tool pprof -top -nodecount=20 -sample_index=inuse_space "$PROFILE_FILE"
+    echo ""
+
+    # Top allocations (inuse_objects)
+    echo "Top allocations (in-use objects):"
+    echo "---------------------------------"
+    go tool pprof -top -nodecount=20 -sample_index=inuse_objects "$PROFILE_FILE"
+    echo ""
+
+    # Generate memory flame graph
+    if command -v dot &> /dev/null; then
+        echo "Generating memory flame graph..."
+        go tool pprof -svg "$PROFILE_FILE" > mem_flame.svg
+        echo "✓ Memory flame graph saved to: mem_flame.svg"
+        echo ""
+    fi
+
+    # Check for potential memory leaks
+    echo "Checking for potential memory leaks..."
+    echo "-------------------------------------"
+    go tool pprof -list=. -sample_index=inuse_space "$PROFILE_FILE" 2>/dev/null | head -30 || true
+    echo ""
+
+    # Summary
+    echo "========================================="
+    echo "Analysis Complete"
+    echo "========================================="
+    echo "Generated files:"
+    ls -lh "$PROFILE_FILE" mem_flame.svg 2>/dev/null || true
+    echo ""
+    echo "For interactive analysis, run:"
+    echo "  go tool pprof -http=:8080 $PROFILE_FILE"
+    echo ""
+    echo "Sample indices available:"
+    echo "  -sample_index=alloc_space   # Total allocated memory"
+    echo "  -sample_index=alloc_objects # Total allocated objects"
+    echo "  -sample_index=inuse_space   # Currently in-use memory"
+    echo "  -sample_index=inuse_objects # Currently in-use objects"
+    echo "========================================="
+
+} 2>&1 | tee "$OUTPUT_FILE"
+
 echo ""
-echo "Or for web UI:"
-echo "  go tool pprof -http=:8080 $PROFILE_FILE"
-echo ""
-echo "Sample indices available:"
-echo "  -sample_index=alloc_space   # Total allocated memory"
-echo "  -sample_index=alloc_objects # Total allocated objects"
-echo "  -sample_index=inuse_space   # Currently in-use memory"
-echo "  -sample_index=inuse_objects # Currently in-use objects"
-echo "========================================="
+echo "✓ Results saved to: $OUTPUT_FILE"
