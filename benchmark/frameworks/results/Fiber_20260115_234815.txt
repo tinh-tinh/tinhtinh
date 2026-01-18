@@ -1,0 +1,41 @@
+goos: linux
+goarch: amd64
+pkg: github.com/tinh-tinh/tinhtinh/v2/benchmark/frameworks
+cpu: 12th Gen Intel(R) Core(TM) i5-12400
+BenchmarkFiber_SimpleGET-12              	  821595	      7031 ns/op	    6675 B/op	      29 allocs/op
+BenchmarkFiber_SimpleGET-12              	  812806	      7196 ns/op	    6676 B/op	      29 allocs/op
+BenchmarkFiber_SimpleGET-12              	  847017	      7057 ns/op	    6676 B/op	      29 allocs/op
+BenchmarkFiber_SimpleGET-12              	  851194	      7084 ns/op	    6677 B/op	      29 allocs/op
+BenchmarkFiber_SimpleGET-12              	  725154	      7358 ns/op	    6677 B/op	      29 allocs/op
+BenchmarkFiber_JSONResponse-12           	  692557	      8130 ns/op	    6936 B/op	      31 allocs/op
+BenchmarkFiber_JSONResponse-12           	  676598	      8006 ns/op	    6936 B/op	      31 allocs/op
+BenchmarkFiber_JSONResponse-12           	  681825	      7854 ns/op	    6935 B/op	      31 allocs/op
+BenchmarkFiber_JSONResponse-12           	  724540	      8012 ns/op	    6936 B/op	      31 allocs/op
+BenchmarkFiber_JSONResponse-12           	  770144	      8275 ns/op	    6936 B/op	      31 allocs/op
+BenchmarkFiber_JSONRequestResponse-12    	  333774	     18609 ns/op	    9812 B/op	      55 allocs/op
+BenchmarkFiber_JSONRequestResponse-12    	  316993	     18490 ns/op	    9815 B/op	      55 allocs/op
+BenchmarkFiber_JSONRequestResponse-12    	  297128	     17651 ns/op	    9813 B/op	      55 allocs/op
+BenchmarkFiber_JSONRequestResponse-12    	  325882	     18717 ns/op	    9813 B/op	      55 allocs/op
+BenchmarkFiber_JSONRequestResponse-12    	  327549	     19198 ns/op	    9815 B/op	      55 allocs/op
+BenchmarkFiber_PathParam-12              	  598548	      8609 ns/op	    7095 B/op	      36 allocs/op
+BenchmarkFiber_PathParam-12              	  633388	      8554 ns/op	    7095 B/op	      36 allocs/op
+BenchmarkFiber_PathParam-12              	  596102	      8642 ns/op	    7095 B/op	      36 allocs/op
+BenchmarkFiber_PathParam-12              	  732862	      8363 ns/op	    7094 B/op	      36 allocs/op
+BenchmarkFiber_PathParam-12              	  640178	      8247 ns/op	    7094 B/op	      36 allocs/op
+BenchmarkFiber_QueryParam-12             	  608106	      8307 ns/op	    7111 B/op	      37 allocs/op
+BenchmarkFiber_QueryParam-12             	  689200	      8592 ns/op	    7111 B/op	      37 allocs/op
+BenchmarkFiber_QueryParam-12             	  659048	      8401 ns/op	    7110 B/op	      37 allocs/op
+BenchmarkFiber_QueryParam-12             	  674146	      8417 ns/op	    7111 B/op	      37 allocs/op
+BenchmarkFiber_QueryParam-12             	  683521	      8620 ns/op	    7111 B/op	      37 allocs/op
+BenchmarkFiber_WithMiddleware-12         	  755209	      7218 ns/op	    6675 B/op	      29 allocs/op
+BenchmarkFiber_WithMiddleware-12         	  726652	      7029 ns/op	    6676 B/op	      29 allocs/op
+BenchmarkFiber_WithMiddleware-12         	  783865	      7332 ns/op	    6676 B/op	      29 allocs/op
+BenchmarkFiber_WithMiddleware-12         	  825201	      7318 ns/op	    6676 B/op	      29 allocs/op
+BenchmarkFiber_WithMiddleware-12         	  837681	      7394 ns/op	    6675 B/op	      29 allocs/op
+BenchmarkFiber_ParallelRequests-12       	 3203570	      2027 ns/op	    6660 B/op	      29 allocs/op
+BenchmarkFiber_ParallelRequests-12       	 3040384	      2224 ns/op	    6660 B/op	      29 allocs/op
+BenchmarkFiber_ParallelRequests-12       	 2712240	      2245 ns/op	    6660 B/op	      29 allocs/op
+BenchmarkFiber_ParallelRequests-12       	 2857368	      2243 ns/op	    6660 B/op	      29 allocs/op
+BenchmarkFiber_ParallelRequests-12       	 2756148	      2233 ns/op	    6660 B/op	      29 allocs/op
+PASS
+ok  	github.com/tinh-tinh/tinhtinh/v2/benchmark/frameworks	236.010s
