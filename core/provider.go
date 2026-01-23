@@ -244,6 +244,16 @@ func Inject[P any](module RefProvider) *P {
 	return svc
 }
 
+func MustInject[P any](module RefProvider) *P {
+	var provider P
+	nameProvide := getProvideName(&provider)
+	svc, ok := module.Ref(Provide(nameProvide)).(*P)
+	if !ok {
+		panic("provider not found")
+	}
+	return svc
+}
+
 func getProvideName(param any) string {
 	// Get the type of the parameter for cache lookup
 	paramType := reflect.TypeOf(param)

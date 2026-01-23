@@ -343,3 +343,31 @@ func BenchmarkRequestModule(b *testing.B) {
 		}
 	})
 }
+
+func Test_MustInject(t *testing.T) {
+	type StructName struct {
+		Name string
+	}
+	service := func(module core.Module) core.Provider {
+		return module.NewProvider(&StructName{Name: "module"})
+	}
+
+	module := core.NewModule(core.NewModuleOptions{
+		Providers: []core.Providers{service},
+		Exports:   []core.Providers{service},
+	})
+
+	t.Run("success", func(t *testing.T) {
+		structName := core.MustInject[StructName](module)
+		require.Equal(t, "module", structName.Name)
+	})
+
+	t.Run("panic", func(t *testing.T) {
+		type Any struct {
+			Version int
+		}
+		require.Panics(t, func() {
+			core.MustInject[Any](module)
+		})
+	})
+}
