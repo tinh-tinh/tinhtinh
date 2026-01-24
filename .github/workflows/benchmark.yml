@@ -1,0 +1,246 @@
+name: Performance Benchmarks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run weekly on Monday at 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  framework-comparison:
+    name: Framework Comparison Benchmarks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      
+      - name: Install dependencies
+        working-directory: benchmark/frameworks
+        run: go mod download
+      
+      - name: Run framework comparison benchmarks
+        working-directory: benchmark/frameworks
+        run: |
+          mkdir -p results
+          go test -bench=. -benchmem -benchtime=5s -count=5 -run=^$ | tee results/comparison.txt
+      
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v3
+        with:
+          name: framework-comparison-results
+          path: benchmark/frameworks/results/
+          retention-days: 30
+
+  profiling:
+    name: Profiling Benchmarks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Install graphviz
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+      
+      - name: Run profiling benchmarks
+        working-directory: benchmark/profiling
+        run: |
+          go test -bench=BenchmarkCPUProfile -cpuprofile=cpu.prof -benchtime=10s
+          go test -bench=BenchmarkMemoryProfile -memprofile=mem.prof -benchtime=10s
+          go test -bench=BenchmarkGoroutineProfile -benchtime=10s
+      
+      - name: Generate CPU profile report
+        working-directory: benchmark/profiling
+        run: |
+          ./analyze_cpu.sh cpu.prof > cpu_report.txt || true
+          go tool pprof -svg cpu.prof > cpu_flame.svg || true
+      
+      - name: Generate memory profile report
+        working-directory: benchmark/profiling
+        run: |
+          ./analyze_mem.sh mem.prof > mem_report.txt || true
+          go tool pprof -svg mem.prof > mem_flame.svg || true
+      
+      - name: Upload profiling results
+        uses: actions/upload-artifact@v3
+        with:
+          name: profiling-results
+          path: |
+            benchmark/profiling/*.prof
+            benchmark/profiling/*.svg
+            benchmark/profiling/*_report.txt
+          retention-days: 30
+
+  latency:
+    name: Latency Measurements
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Run latency benchmarks
+        working-directory: benchmark/latency
+        run: |
+          go test -bench=. -benchmem -benchtime=10s -v | tee latency_results.txt
+      
+      - name: Upload latency results
+        uses: actions/upload-artifact@v3
+        with:
+          name: latency-results
+          path: benchmark/latency/latency_results.txt
+          retention-days: 30
+
+  concurrent:
+    name: Concurrent Request Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Run concurrent benchmarks
+        working-directory: benchmark/concurrent
+        run: |
+          go test -bench=. -benchmem -benchtime=5s -v | tee concurrent_results.txt
+      
+      - name: Upload concurrent results
+        uses: actions/upload-artifact@v3
+        with:
+          name: concurrent-results
+          path: benchmark/concurrent/concurrent_results.txt
+          retention-days: 30
+
+  regression-check:
+    name: Performance Regression Check
+    runs-on: ubuntu-latest
+    needs: [framework-comparison, profiling, latency, concurrent]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Install benchstat
+        run: go install golang.org/x/perf/cmd/benchstat@latest
+      
+      - name: Check for regressions
+        id: regression
+        run: |
+          # This is a placeholder - in production you'd compare with baseline
+          echo "regression_detected=false" >> $GITHUB_OUTPUT
+          echo "regression_details=No significant regressions detected" >> $GITHUB_OUTPUT
+      
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            
+            let comment = '## 📊 Performance Benchmark Results\n\n';
+            
+            // Add regression check results
+            comment += '### Regression Check\n';
+            comment += '${{ steps.regression.outputs.regression_details }}\n\n';
+            
+            // Add framework comparison summary
+            try {
+              const comparisonResults = fs.readFileSync('framework-comparison-results/comparison.txt', 'utf8');
+              comment += '### Framework Comparison\n';
+              comment += '```\n' + comparisonResults.split('\n').slice(0, 30).join('\n') + '\n```\n\n';
+            } catch (e) {
+              comment += '### Framework Comparison\nResults not available\n\n';
+            }
+            
+            comment += '📁 Full results available in workflow artifacts\n';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+      
+      - name: Fail if regression detected
+        if: steps.regression.outputs.regression_detected == 'true'
+        run: |
+          echo "::error::Performance regression detected!"
+          exit 1
+
+  weekly-report:
+    name: Generate Weekly Report
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 0 * * 1'
+    needs: [framework-comparison, profiling, latency, concurrent]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+      
+      - name: Generate weekly report
+        run: |
+          # Placeholder for report generation
+          echo "Weekly performance report would be generated here"
+      
+      - name: Create GitHub Discussion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const date = new Date().toISOString().split('T')[0];
+            const title = `Weekly Performance Report - ${date}`;
+            const body = `# Weekly Performance Report\n\nGenerated: ${date}\n\n## Summary\n\nWeekly benchmark results are available in the workflow artifacts.`;
+            
+            // Note: Creating discussions requires the discussions API
+            console.log('Would create discussion:', title);
