@@ -8,8 +8,10 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/common"
 )
 
-type PipeFnc func(val any) error
-type CtxKey string
+type (
+	PipeFnc func(val any) error
+	CtxKey  string
+)
 
 const (
 	InBody  CtxKey = "body"
