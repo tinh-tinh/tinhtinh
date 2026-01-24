@@ -96,19 +96,37 @@ func (client *Client) Timeout(duration time.Duration) microservices.ClientProxy 
 	return client
 }
 
-func (client *Client) Send(path string, request, response any, headers ...microservices.Header) error {
-	call := client.rpcClient.Go(path, request, response, nil)
+func (client *Client) Send(path string, data any, response any, headers ...microservices.Header) error {
+	msg := microservices.Message{
+		Event:   path,
+		Headers: microservices.AssignHeader(client.Config().Header, headers...),
+		Data:    data,
+	}
+
+	bytes, err := microservices.EncodeMessage(client, msg)
+	if err != nil {
+		client.config.ErrorHandler(err)
+		return err
+	}
+
+	resRaw := []byte{}
+	call := client.rpcClient.Go("RpcGateway.Call", &bytes, &resRaw, nil)
 	select {
 	case <-call.Done:
 		if call.Error != nil {
 			client.config.ErrorHandler(call.Error)
 			return call.Error
 		}
+		err := client.config.Deserializer(resRaw, response)
+		if err != nil {
+			client.config.ErrorHandler(err)
+			return err
+		}
 		return nil
+
 	case <-time.After(client.timeout):
 		err := errors.New("RPC call timed out")
 		client.config.ErrorHandler(err)
 		return err
 	}
-
 }

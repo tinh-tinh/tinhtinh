@@ -3,6 +3,7 @@ package tcp
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -66,29 +67,38 @@ func (svc *Server) Listen() {
 	}
 
 	var subscribers []*microservices.SubscribeHandler
-	var rpcHandlers []microservices.RpcHandler
+	var rpcHandlers microservices.RpcHandlers
 	store, ok := svc.Module.Ref(microservices.STORE).(*microservices.Store)
 	if ok && store != nil {
 		subscribers = append(subscribers, store.Subscribers...)
-		rpcHandlers = append(rpcHandlers, store.Rpcs...)
+		rpcHandlers = append(rpcHandlers, store.RpcHandlers...)
 	}
 	tcpStore, ok := svc.Module.Ref(microservices.ToTransport(microservices.TCP)).(*microservices.Store)
 	if ok && tcpStore != nil {
 		subscribers = append(subscribers, tcpStore.Subscribers...)
-		rpcHandlers = append(rpcHandlers, tcpStore.Rpcs...)
+		rpcHandlers = append(rpcHandlers, tcpStore.RpcHandlers...)
 	}
 
 	if store == nil && tcpStore == nil {
 		panic("store required")
 	}
 
+	var rpcServer *rpc.Server
 	if len(rpcHandlers) > 0 {
-		for _, rpcHandler := range rpcHandlers {
-			err := rpc.Register(rpcHandler)
-			if err != nil {
-				panic(err)
-			}
+		gateway := &RpcGateway{
+			handlers: rpcHandlers,
+			service:  svc,
 		}
+		rpcServer = rpc.NewServer()
+		err := rpcServer.Register(gateway)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if len(subscribers) == 0 && len(rpcHandlers) == 0 {
+		log.Println("no subscribers or rpc handlers")
+		return
 	}
 
 	go http.Serve(listener, nil)
@@ -101,7 +111,7 @@ func (svc *Server) Listen() {
 		// Route based on what's available
 		if len(rpcHandlers) > 0 && len(subscribers) == 0 {
 			// RPC-only mode
-			go rpc.ServeConn(conn)
+			go rpcServer.ServeConn(conn)
 		} else if len(subscribers) > 0 && len(rpcHandlers) == 0 {
 			// Pub/Sub-only mode
 			go svc.handler(conn, subscribers)

@@ -14,6 +14,15 @@ import (
 )
 
 func Test_Client_Error(t *testing.T) {
+	appProvider := func(module core.Module) core.Provider {
+		handler := microservices.NewHandler(module)
+
+		handler.OnEvent("abc", func(ctx microservices.Ctx) error {
+			return nil
+		})
+
+		return handler
+	}
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
@@ -35,7 +44,8 @@ func Test_Client_Error(t *testing.T) {
 
 	serverModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.Register()},
+			Imports:   []core.Modules{microservices.Register()},
+			Providers: []core.Providers{appProvider},
 		})
 		return module
 	}

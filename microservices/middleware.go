@@ -4,7 +4,7 @@ import "fmt"
 
 type Middleware func(ctx Ctx) error
 
-type middlewareRaw func(m Factory) Factory
+type middlewareRaw func(m EventFactory) EventFactory
 
 func (h *Handler) Use(middlewares ...Middleware) *Handler {
 	h.middlewares = append(h.middlewares, middlewares...)
@@ -18,8 +18,8 @@ func (h *Handler) Registry() *Handler {
 }
 
 func ParseCtxMiddleware(ctxMid Middleware) middlewareRaw {
-	return func(f Factory) Factory {
-		return FactoryFunc(func(ctx Ctx) error {
+	return func(f EventFactory) EventFactory {
+		return EventFactoryFunc(func(ctx Ctx) error {
 			var err error
 			defer func() {
 				if r := recover(); r != nil {
