@@ -56,7 +56,6 @@ type logEntry struct {
 type Logger struct {
 	Options
 	// Performance factors
-	mu             sync.Mutex
 	fileCache      map[string]*fileWriter
 	cacheMu        sync.RWMutex
 	stopCh         chan struct{}

@@ -98,7 +98,8 @@ func CreateFactory(module ModuleParam, opt ...AppOptions) *App {
 		encoder:      json.Marshal,
 		decoder:      json.Unmarshal,
 		errorHandler: ErrorHandlerDefault,
-		pipe:         v.Validate}
+		pipe:         v.Validate,
+	}
 
 	app.pool = sync.Pool{
 		New: func() any {

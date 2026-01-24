@@ -34,8 +34,7 @@ type PipeDto interface {
 	GetValue() interface{}
 }
 
-type PayloadParser[P any] struct {
-}
+type PayloadParser[P any] struct{}
 
 func (p PayloadParser[P]) GetValue() interface{} {
 	var payload P

@@ -38,7 +38,6 @@ func connect(addr string) (net.Conn, *rpc.Client, error) {
 
 func NewClient(opt Options) microservices.ClientProxy {
 	eventConn, rpcClient, err := connect(opt.Addr)
-
 	if err != nil {
 		if opt.RetryOptions.Retry != 0 {
 			time.Sleep(opt.RetryOptions.Delay)
