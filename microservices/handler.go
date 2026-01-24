@@ -26,7 +26,7 @@ type Handler struct {
 // OnEvent registers a provider with the given name and factory function to be
 // called when an event is triggered. The provider will be registered with the
 // same scope as the handler.
-func (h *Handler) OnEvent(name string, fnc FactoryFunc) {
+func (h *Handler) OnEvent(name string, fnc EventFactoryFunc) {
 	var refNames []core.Provide
 	if len(h.transports) > 0 {
 		refNames = append(refNames, h.transports...)
@@ -48,7 +48,7 @@ func (h *Handler) OnEvent(name string, fnc FactoryFunc) {
 	h.middlewares = nil
 }
 
-func (h *Handler) RegisterRPC(handler RpcHandler) {
+func (h *Handler) OnReply(name string, fnc RpcFactoryFnc) {
 	var refNames []core.Provide
 	if len(h.transports) > 0 {
 		refNames = append(refNames, h.transports...)
@@ -59,10 +59,15 @@ func (h *Handler) RegisterRPC(handler RpcHandler) {
 	for _, refName := range refNames {
 		store, ok := h.module.Ref(refName).(*Store)
 		if !ok {
-			return
+			continue
 		}
-		store.Rpcs = append(store.Rpcs, handler)
+		store.RpcHandlers = append(store.RpcHandlers, &RpcHandler{
+			Name:        name,
+			Factory:     fnc,
+			Middlewares: append(h.globalMiddlewares, h.middlewares...),
+		})
 	}
+	h.middlewares = nil
 }
 
 func (h *Handler) Ref(name core.Provide, ctx ...core.Ctx) interface{} {

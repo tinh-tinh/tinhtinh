@@ -1,6 +1,7 @@
 package tcp_test
 
 import (
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -21,21 +22,20 @@ type Args struct {
 
 // Calculator defines the service object that contains the RPC methods.
 // The type name ("Calculator") will be part of the method call signature (e.g., "Calculator.Add").
-type Calculator struct{}
-
-// Add is the RPC method. It must follow the signature:
-// func (t *T) MethodName(argType T1, replyType *T2) error
-func (t *Calculator) Add(args *Args, reply *int) error {
-	*reply = args.A + args.B
-	log.Printf("Server handled Add: %d + %d = %d\n", args.A, args.B, *reply)
-	return nil
-}
-
 func CalculateApp() *core.App {
 	handlers := func(module core.Module) core.Provider {
 		handler := microservices.NewHandler(module, microservices.TCP)
 
-		handler.RegisterRPC(new(Calculator))
+		handler.OnReply("add", func(ctx microservices.Ctx) (reply []byte, err error) {
+			args := Args{}
+			err = ctx.PayloadParser(&args)
+			if err != nil {
+				return nil, errors.New("invalid payload")
+			}
+			results := args.A + args.B
+			log.Printf("Server handled Add: %d + %d = %d\n", args.A, args.B, results)
+			return ctx.Reply(results)
+		})
 
 		return handler
 	}
@@ -59,11 +59,10 @@ func CallApp(addr string) *core.App {
 		client := microservices.InjectClient(module, microservices.TCP)
 
 		ctrl.Post("register", func(ctx core.Ctx) error {
-
-			args := &Args{A: 15, B: 27}
+			args := Args{A: 15, B: 27}
 			var reply int
 
-			err := client.Send("Calculator.Add", args, &reply)
+			err := client.Send("add", args, &reply)
 			if err != nil {
 				return err
 			}
@@ -97,7 +96,7 @@ func CallApp(addr string) *core.App {
 func TestRpc(t *testing.T) {
 	calculateApp := CalculateApp()
 	calculateApp.ConnectMicroservice(tcp.Open(tcp.Options{
-		Addr: "localhost:4379",
+		Addr: "localhost:5155",
 	}))
 	calculateApp.StartAllMicroservices()
 	testServerCalculate := httptest.NewServer(calculateApp.PrepareBeforeListen())
@@ -105,7 +104,7 @@ func TestRpc(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	callApp := CallApp("localhost:4379")
+	callApp := CallApp("localhost:5155")
 	testServerCall := httptest.NewServer(callApp.PrepareBeforeListen())
 	defer testServerCall.Close()
 
@@ -118,4 +117,103 @@ func TestRpc(t *testing.T) {
 	data, err := io.ReadAll(resp.Body)
 	require.Nil(t, err)
 	require.Equal(t, "42", string(data))
+}
+
+func MiddlewareApp() *core.App {
+	handlers := func(module core.Module) core.Provider {
+		handler := microservices.NewHandler(module, microservices.TCP)
+
+		handler.Use(func(ctx microservices.Ctx) error {
+			if ctx.Headers("auth") != "secret" {
+				return errors.New("unauthorized")
+			}
+			return nil
+		})
+
+		handler.OnReply("check", func(ctx microservices.Ctx) (reply []byte, err error) {
+			return ctx.Reply("authorized")
+		})
+
+		return handler
+	}
+
+	appModule := func() core.Module {
+		module := core.NewModule(core.NewModuleOptions{
+			Imports:   []core.Modules{microservices.Register(microservices.TCP)},
+			Providers: []core.Providers{handlers},
+		})
+		return module
+	}
+
+	return core.CreateFactory(appModule)
+}
+
+func PanicApp() *core.App {
+	handlers := func(module core.Module) core.Provider {
+		handler := microservices.NewHandler(module, microservices.TCP)
+
+		handler.OnReply("panic", func(ctx microservices.Ctx) (reply []byte, err error) {
+			panic("something went wrong")
+		})
+
+		return handler
+	}
+
+	appModule := func() core.Module {
+		module := core.NewModule(core.NewModuleOptions{
+			Imports:   []core.Modules{microservices.Register(microservices.TCP)},
+			Providers: []core.Providers{handlers},
+		})
+		return module
+	}
+
+	return core.CreateFactory(appModule)
+}
+
+func TestRpcMiddleware(t *testing.T) {
+	app := MiddlewareApp()
+	app.ConnectMicroservice(tcp.Open(tcp.Options{
+		Addr: "localhost:5156",
+	}))
+	app.StartAllMicroservices()
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	time.Sleep(100 * time.Millisecond)
+
+	client := tcp.NewClient(tcp.Options{
+		Addr: "localhost:5156",
+	})
+
+	var reply string
+	// Test unauthorized
+	err := client.Send("check", nil, &reply)
+	require.Error(t, err)
+	require.Equal(t, "unauthorized", err.Error())
+
+	// Test authorized
+	err = client.Send("check", nil, &reply, microservices.Header{"auth": "secret"})
+	require.Nil(t, err)
+	require.Equal(t, "authorized", reply)
+}
+
+func TestRpcPanic(t *testing.T) {
+	app := PanicApp()
+	app.ConnectMicroservice(tcp.Open(tcp.Options{
+		Addr: "localhost:5157",
+	}))
+	app.StartAllMicroservices()
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+
+	time.Sleep(100 * time.Millisecond)
+
+	client := tcp.NewClient(tcp.Options{
+		Addr: "localhost:5157",
+	})
+
+	var reply string
+	err := client.Send("panic", nil, &reply)
+	require.Error(t, err)
+	require.Equal(t, "something went wrong", err.Error())
 }
