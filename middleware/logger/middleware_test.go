@@ -438,3 +438,81 @@ func TestCustomFormatter(t *testing.T) {
 		require.GreaterOrEqual(t, capturedLatency.Milliseconds(), int64(50))
 	})
 }
+
+func TestSkipPaths(t *testing.T) {
+	t.Run("skip paths", func(t *testing.T) {
+		var logCalled bool
+
+		appController := func(module core.Module) core.Controller {
+			ctrl := module.NewController("test")
+			ctrl.Get("health", func(ctx core.Ctx) error {
+				return ctx.JSON(core.Map{"status": "ok"})
+			})
+			return ctrl
+		}
+
+		appModule := func() core.Module {
+			return core.NewModule(core.NewModuleOptions{
+				Controllers: []core.Controllers{appController},
+			})
+		}
+
+		app := core.CreateFactory(appModule)
+		app.SetGlobalPrefix("/api")
+		app.Use(logger.Handler(logger.MiddlewareOptions{
+			CustomFormatter: func(ctx logger.LogContext) string {
+				logCalled = true
+				return "log"
+			},
+			SkipPaths: []string{"/api/test/health"},
+		}))
+
+		testServer := httptest.NewServer(app.PrepareBeforeListen())
+		defer testServer.Close()
+
+		testClient := testServer.Client()
+		resp, err := testClient.Get(testServer.URL + "/api/test/health")
+		require.Nil(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		require.False(t, logCalled, "Logger should not be called for skipped path")
+	})
+
+	t.Run("non-skipped paths", func(t *testing.T) {
+		var logCalled bool
+
+		appController := func(module core.Module) core.Controller {
+			ctrl := module.NewController("test")
+			ctrl.Get("normal", func(ctx core.Ctx) error {
+				return ctx.JSON(core.Map{"data": "ok"})
+			})
+			return ctrl
+		}
+
+		appModule := func() core.Module {
+			return core.NewModule(core.NewModuleOptions{
+				Controllers: []core.Controllers{appController},
+			})
+		}
+
+		app := core.CreateFactory(appModule)
+		app.SetGlobalPrefix("/api")
+		app.Use(logger.Handler(logger.MiddlewareOptions{
+			CustomFormatter: func(ctx logger.LogContext) string {
+				logCalled = true
+				return "log"
+			},
+			SkipPaths: []string{"/api/test/health"},
+		}))
+
+		testServer := httptest.NewServer(app.PrepareBeforeListen())
+		defer testServer.Close()
+
+		testClient := testServer.Client()
+		resp, err := testClient.Get(testServer.URL + "/api/test/normal")
+		require.Nil(t, err)
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		require.True(t, logCalled, "Logger should be called for non-skipped path")
+	})
+}

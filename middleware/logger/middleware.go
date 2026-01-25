@@ -49,6 +49,7 @@ type MiddlewareOptions struct {
 	// CustomFormatter allows fully custom log formatting.
 	// When set, this takes precedence over Format.
 	CustomFormatter CustomFormatter
+	SkipPaths       []string
 }
 
 type wrappedWriter struct {
@@ -117,6 +118,13 @@ func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			for _, skip := range opt.SkipPaths {
+				if r.URL.Path == skip {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+
 			start := time.Now()
 
 			wrapped := &wrappedWriter{
