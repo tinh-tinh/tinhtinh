@@ -3,6 +3,7 @@ package tcp
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -16,9 +17,10 @@ import (
 )
 
 type Server struct {
-	Addr   string
-	Module core.Module
-	config microservices.Config
+	Addr     string
+	Module   core.Module
+	config   microservices.Config
+	listener net.Listener
 }
 
 func New(module core.Module, opts ...Options) microservices.Service {
@@ -65,6 +67,8 @@ func (svc *Server) Listen() {
 	if err != nil {
 		panic(err)
 	}
+	svc.listener = listener
+	svc.Addr = listener.Addr().String()
 
 	var subscribers []*microservices.SubscribeHandler
 	var rpcHandlers microservices.RpcHandlers
@@ -105,6 +109,10 @@ func (svc *Server) Listen() {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			// Check if it's a closed network connection error
+			if strings.Contains(err.Error(), "use of closed network connection") {
+				return
+			}
 			panic(err)
 		}
 
@@ -123,6 +131,13 @@ func (svc *Server) Listen() {
 	}
 }
 
+func (svc *Server) Close() error {
+	if svc.listener != nil {
+		return svc.listener.Close()
+	}
+	return nil
+}
+
 func (svc *Server) handler(conn net.Conn, subscribers []*microservices.SubscribeHandler) {
 	defer conn.Close()
 
@@ -130,7 +145,9 @@ func (svc *Server) handler(conn net.Conn, subscribers []*microservices.Subscribe
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println("Error reading message: ", err)
+			if err != io.EOF {
+				fmt.Println("Error reading message: ", err)
+			}
 			return
 		}
 

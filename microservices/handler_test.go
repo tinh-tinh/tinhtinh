@@ -19,16 +19,26 @@ type Message struct {
 }
 
 func Test_RPC(t *testing.T) {
-	app := appServer("localhost:8080")
+	app := appServer(":0")
 
 	go func() {
 		app.Listen()
+	}()
+	defer func() {
+		if server, ok := app.(*tcp.Server); ok {
+			server.Close()
+		}
 	}()
 
 	// Allow some time for the server to start
 	time.Sleep(100 * time.Millisecond)
 
-	clientApp := appClient("localhost:8080")
+	var addr string
+	if server, ok := app.(*tcp.Server); ok {
+		addr = server.Addr
+	}
+
+	clientApp := appClient(addr)
 	testServer := httptest.NewServer(clientApp.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
@@ -40,16 +50,26 @@ func Test_RPC(t *testing.T) {
 }
 
 func Test_Event(t *testing.T) {
-	app := appServer("localhost:4000")
+	app := appServer(":0")
 
 	go func() {
 		app.Listen()
+	}()
+	defer func() {
+		if server, ok := app.(*tcp.Server); ok {
+			server.Close()
+		}
 	}()
 
 	// Allow some time for the server to start
 	time.Sleep(1000 * time.Millisecond)
 
-	clientApp := appClient("localhost:4000")
+	var addr string
+	if server, ok := app.(*tcp.Server); ok {
+		addr = server.Addr
+	}
+
+	clientApp := appClient(addr)
 	testServer := httptest.NewServer(clientApp.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
