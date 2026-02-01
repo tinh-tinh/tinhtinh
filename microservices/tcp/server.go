@@ -8,11 +8,11 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
-	"reflect"
 	"slices"
 	"strings"
 
 	"github.com/tinh-tinh/tinhtinh/microservices"
+	"github.com/tinh-tinh/tinhtinh/v2/common"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
 )
 
@@ -23,39 +23,33 @@ type Server struct {
 	listener net.Listener
 }
 
-func New(module core.Module, opts ...Options) microservices.Service {
+func newServer(opts ...Options) *Server {
 	svc := &Server{
-		Module: module,
 		config: microservices.DefaultConfig(),
 	}
 
 	if len(opts) > 0 {
-		if !reflect.ValueOf(opts[0].Config).IsZero() {
-			svc.config = microservices.ParseConfig(opts[0].Config)
+		opt := common.MergeStruct(opts...)
+		if !opt.Config.IsZero() {
+			svc.config = microservices.ParseConfig(opt.Config)
 		}
-		if opts[0].Addr != "" {
-			svc.Addr = opts[0].Addr
+		if opt.Addr != "" {
+			svc.Addr = opt.Addr
 		}
 	}
 
 	return svc
 }
 
-func Open(opts ...Options) core.Service {
-	svc := &Server{
-		config: microservices.DefaultConfig(),
-	}
-
-	if len(opts) > 0 {
-		if !reflect.ValueOf(opts[0].Config).IsZero() {
-			svc.config = microservices.ParseConfig(opts[0].Config)
-		}
-		if opts[0].Addr != "" {
-			svc.Addr = opts[0].Addr
-		}
-	}
+func New(module core.Module, opts ...Options) microservices.Service {
+	svc := newServer(opts...)
+	svc.Module = module
 
 	return svc
+}
+
+func Open(opts ...Options) core.Service {
+	return newServer(opts...)
 }
 
 func (svc *Server) Create(module core.Module) {
