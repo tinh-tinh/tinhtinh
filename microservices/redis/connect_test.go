@@ -195,11 +195,12 @@ func DeliveryApp() microservices.Service {
 		return module
 	}
 
-	app := redis.New(appModule, redis.Options{
+	app := redis.New(redis.Options{
 		Options: &redis_store.Options{
 			Addr: "localhost:6379",
 		},
 	})
+	app.Create(appModule())
 
 	return app
 }
@@ -209,7 +210,7 @@ func Test_Practice(t *testing.T) {
 	go deliveryApp.Listen()
 
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(redis.Open(redis.Options{
+	orderApp.ConnectMicroservice(redis.New(redis.Options{
 		Options: &redis_store.Options{
 			Addr: "localhost:6379",
 		},
@@ -258,7 +259,7 @@ func Test_Practice(t *testing.T) {
 
 func Benchmark_Practice(b *testing.B) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(redis.Open(redis.Options{
+	orderApp.ConnectMicroservice(redis.New(redis.Options{
 		Options: &redis_store.Options{
 			Addr: "localhost:6379",
 		},
@@ -314,11 +315,12 @@ func Test_Client_Error(t *testing.T) {
 		return module
 	}
 
-	server := redis.New(serverModule, redis.Options{
+	server := redis.New(redis.Options{
 		Options: &redis_store.Options{
 			Addr: "localhost:6379",
 		},
 	})
+	server.Create(serverModule())
 	go server.Listen()
 
 	time.Sleep(100 * time.Millisecond)
@@ -378,11 +380,12 @@ func Test_Server_Error(t *testing.T) {
 			})
 			return module
 		}
-		server := redis.New(serverModule, redis.Options{
+		server := redis.New(redis.Options{
 			Options: &redis_store.Options{
 				Addr: "localhost:637",
 			},
 		})
+		server.Create(serverModule())
 		server.Listen()
 	})
 
@@ -391,11 +394,12 @@ func Test_Server_Error(t *testing.T) {
 			module := core.NewModule(core.NewModuleOptions{})
 			return module
 		}
-		server := redis.New(serverModule, redis.Options{
+		server := redis.New(redis.Options{
 			Options: &redis_store.Options{
 				Addr: "localhost:6379",
 			},
 		})
+		server.Create(serverModule())
 		server.Listen()
 	})
 }
