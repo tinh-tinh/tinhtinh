@@ -2,7 +2,6 @@ package microservices
 
 import (
 	"encoding/json"
-	"reflect"
 	"time"
 
 	"github.com/tinh-tinh/tinhtinh/v2/common"
@@ -67,7 +66,7 @@ func ParseConfig(cfg ...Config) Config {
 			defaultConfig.CompressAlg = mergeConfig.CompressAlg
 		}
 
-		if !reflect.ValueOf(mergeConfig.RetryOptions).IsZero() {
+		if mergeConfig.RetryOptions.Delay != 0 || mergeConfig.RetryOptions.Retry != 0 {
 			defaultConfig.RetryOptions = mergeConfig.RetryOptions
 		}
 
@@ -80,10 +79,19 @@ func ParseConfig(cfg ...Config) Config {
 }
 
 func NewConfig(config Config) Config {
-	if reflect.ValueOf(config).IsZero() {
-		config = DefaultConfig()
-	} else {
-		config = ParseConfig(config)
+	if config.IsZero() {
+		return DefaultConfig()
 	}
-	return config
+	return ParseConfig(config)
+}
+
+func (c Config) IsZero() bool {
+	return c.Serializer == nil &&
+		c.Deserializer == nil &&
+		len(c.Header) == 0 &&
+		c.ErrorHandler == nil &&
+		c.CompressAlg == "" &&
+		c.CustomValidation == nil &&
+		c.RetryOptions.Delay == 0 &&
+		c.RetryOptions.Retry == 0
 }
