@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/require"
 	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/microservices/kafka"
@@ -134,8 +135,8 @@ func ProductApp(addr string) *core.App {
 			Imports: []core.Modules{
 				microservices.RegisterClient(microservices.ClientOptions{
 					Name: microservices.KAFKA,
-					Transport: kafka.NewClient(kafka.Options{
-						Options: kafka.Config{
+					Transport: kafka.NewClient(kafka.Config{
+						Broker: kafka.BrokerConfig{
 							Brokers: []string{addr},
 						},
 					}),
@@ -154,12 +155,12 @@ func ProductApp(addr string) *core.App {
 
 func Test_Practice(t *testing.T) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(kafka.Open(kafka.Options{
-		Options: kafka.Config{
-			Brokers: []string{"127.0.0.1:9092"},
-		},
-		GroupID: "order--app",
-	}))
+
+	consumer := kafka.NewConsumer(kafka.BrokerConfig{
+		Brokers: []string{"127.0.0.1:9092"},
+	}).ApplyGroupID("order--app").ApplyAssignor(sarama.RangeBalanceStrategyName).ApplyOldest(true)
+
+	orderApp.ConnectMicroservice(consumer)
 
 	orderApp.StartAllMicroservices()
 	testOrderServer := httptest.NewServer(orderApp.PrepareBeforeListen())
