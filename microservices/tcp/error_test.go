@@ -50,9 +50,10 @@ func Test_Client_Error(t *testing.T) {
 		return module
 	}
 
-	server := tcp.New(serverModule(), tcp.Options{
+	server := tcp.NewServer(tcp.Options{
 		Addr: "localhost:9000",
 	})
+	server.Create(serverModule())
 	go server.Listen()
 
 	time.Sleep(100 * time.Millisecond)
@@ -110,9 +111,10 @@ func Test_Server_Error(t *testing.T) {
 			})
 			return module
 		}
-		server := tcp.New(serverModule(), tcp.Options{
+		server := tcp.NewServer(tcp.Options{
 			Addr: "localhost",
 		})
+		server.Create(serverModule())
 		server.Listen()
 	})
 
@@ -121,9 +123,10 @@ func Test_Server_Error(t *testing.T) {
 			module := core.NewModule(core.NewModuleOptions{})
 			return module
 		}
-		server := tcp.New(serverModule(), tcp.Options{
+		server := tcp.NewServer(tcp.Options{
 			Addr: "localhost:9090",
 		})
+		server.Create(serverModule())
 		server.Listen()
 	})
 }

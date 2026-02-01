@@ -23,7 +23,7 @@ type Server struct {
 	listener net.Listener
 }
 
-func newServer(opts ...Options) *Server {
+func NewServer(opts ...Options) *Server {
 	svc := &Server{
 		config: microservices.DefaultConfig(),
 	}
@@ -39,17 +39,6 @@ func newServer(opts ...Options) *Server {
 	}
 
 	return svc
-}
-
-func New(module core.Module, opts ...Options) microservices.Service {
-	svc := newServer(opts...)
-	svc.Module = module
-
-	return svc
-}
-
-func Open(opts ...Options) core.Service {
-	return newServer(opts...)
 }
 
 func (svc *Server) Create(module core.Module) {

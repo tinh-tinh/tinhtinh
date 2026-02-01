@@ -15,7 +15,7 @@ func Test_Ctx(t *testing.T) {
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
-	svc := tcp.New(nil, tcp.Options{Addr: "127.0.0.1:5173"})
+	svc := tcp.NewServer(tcp.Options{Addr: "127.0.0.1:5173"})
 	input := `"email": "xyz@gmail.com", "password": "12345678@Tc"`
 
 	// Wrap the string into valid JSON format

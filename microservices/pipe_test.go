@@ -74,12 +74,13 @@ func appPipe(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule(), tcp.Options{
+	app := tcp.NewServer(tcp.Options{
 		Addr: addr,
 		Config: microservices.Config{
 			CustomValidation: validator.Scanner,
 		},
 	})
+	app.Create(appModule())
 
 	return app
 }

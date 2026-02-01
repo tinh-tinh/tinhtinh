@@ -111,9 +111,10 @@ func appServer(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule(), tcp.Options{
+	app := tcp.NewServer(tcp.Options{
 		Addr: addr,
 	})
+	app.Create(appModule())
 
 	return app
 }

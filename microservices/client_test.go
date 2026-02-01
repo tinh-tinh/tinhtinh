@@ -95,7 +95,7 @@ func Test_HybridApp(t *testing.T) {
 	}
 
 	app := core.CreateFactory(appModule)
-	app.ConnectMicroservice(tcp.Open(tcp.Options{
+	app.ConnectMicroservice(tcp.NewServer(tcp.Options{
 		Addr: "localhost:3005",
 	}))
 
