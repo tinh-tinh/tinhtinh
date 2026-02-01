@@ -95,7 +95,7 @@ func CallApp(addr string) *core.App {
 
 func TestRpc(t *testing.T) {
 	calculateApp := CalculateApp()
-	calculateApp.ConnectMicroservice(tcp.Open(tcp.Options{
+	calculateApp.ConnectMicroservice(tcp.NewServer(tcp.Options{
 		Addr: "localhost:5155",
 	}))
 	calculateApp.StartAllMicroservices()
@@ -172,7 +172,7 @@ func PanicApp() *core.App {
 
 func TestRpcMiddleware(t *testing.T) {
 	app := MiddlewareApp()
-	app.ConnectMicroservice(tcp.Open(tcp.Options{
+	app.ConnectMicroservice(tcp.NewServer(tcp.Options{
 		Addr: "localhost:5156",
 	}))
 	app.StartAllMicroservices()
@@ -199,7 +199,7 @@ func TestRpcMiddleware(t *testing.T) {
 
 func TestRpcPanic(t *testing.T) {
 	app := PanicApp()
-	app.ConnectMicroservice(tcp.Open(tcp.Options{
+	app.ConnectMicroservice(tcp.NewServer(tcp.Options{
 		Addr: "localhost:5157",
 	}))
 	app.StartAllMicroservices()

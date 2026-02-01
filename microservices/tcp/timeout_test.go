@@ -13,7 +13,7 @@ import (
 
 func Test_Timeout(t *testing.T) {
 	directoryApp := DirectoryApp()
-	directoryApp.ConnectMicroservice(tcp.Open(tcp.Options{
+	directoryApp.ConnectMicroservice(tcp.NewServer(tcp.Options{
 		Addr: "localhost:4002",
 	}))
 	directoryApp.StartAllMicroservices()
@@ -65,7 +65,7 @@ func Test_Retry(t *testing.T) {
 
 	go func() {
 		directoryApp := DirectoryApp()
-		directoryApp.ConnectMicroservice(tcp.Open(tcp.Options{
+		directoryApp.ConnectMicroservice(tcp.NewServer(tcp.Options{
 			Addr: "localhost:4003",
 		}))
 		directoryApp.StartAllMicroservices()

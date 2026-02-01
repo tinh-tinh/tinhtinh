@@ -35,9 +35,10 @@ func appServerException(add string) microservices.Service {
 		return module
 	}
 
-	app := tcp.New(appModule(), tcp.Options{
+	app := tcp.NewServer(tcp.Options{
 		Addr: add,
 	})
+	app.Create(appModule())
 
 	return app
 }

@@ -225,7 +225,7 @@ func DirectoryApp() *core.App {
 
 func Test_Tenant(t *testing.T) {
 	directoryApp := DirectoryApp()
-	directoryApp.ConnectMicroservice(tcp.Open(tcp.Options{
+	directoryApp.ConnectMicroservice(tcp.NewServer(tcp.Options{
 		Addr: "localhost:4001",
 		Config: microservices.Config{
 			CompressAlg: compress.Gzip,
