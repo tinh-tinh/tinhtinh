@@ -14,7 +14,7 @@ type ConsumerConfig struct {
 	Oldest   bool
 }
 
-type Handler func(msg *sarama.ConsumerMessage)
+type Handler func(msg *sarama.ConsumerMessage) error
 
 type Consumer struct {
 	instance *Kafka
@@ -119,8 +119,10 @@ func (consumerChannel *ConsumerChannel) ConsumeClaim(session sarama.ConsumerGrou
 				return nil
 			}
 			log.Printf("Message claimed: value = %s, timestamp = %v, topic = %s", string(message.Value), message.Timestamp, message.Topic)
-			consumerChannel.handler(message)
-			session.MarkMessage(message, "")
+			err := consumerChannel.handler(message)
+			if err == nil {
+				session.MarkMessage(message, "")
+			}
 		// Should return when `session.Context()` is done.
 		// If not, will raise `ErrRebalanceInProgress` or `read tcp <ip>:<port>: i/o timeout` when kafka rebalance. see:
 		// https://github.com/IBM/sarama/issues/1192
