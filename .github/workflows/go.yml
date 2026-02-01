@@ -57,66 +57,66 @@ jobs:
     - name: Test Microservices 
       run: cd microservices; go test -count=1 -cover ./...
 
-  # test-redis:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       go-version: [ '1.22.x' ]
+  test-redis:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.22.x' ]
 
-  #   # Service containers to run with `container-job`
-  #   services:
-  #     # Label used to access the service container
-  #     redis:
-  #       # Docker Hub image
-  #       image: redis
-  #       # Set health checks to wait until redis has started
-  #       options: >-
-  #         --health-cmd "redis-cli ping"
-  #         --health-interval 10s
-  #         --health-timeout 5s
-  #         --health-retries 5
-  #       ports:
-  #         # Maps port 6379 on service container to the host
-  #         - 6379:6379
+    # Service containers to run with `container-job`
+    services:
+      # Label used to access the service container
+      redis:
+        # Docker Hub image
+        image: redis
+        # Set health checks to wait until redis has started
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps port 6379 on service container to the host
+          - 6379:6379
 
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #     with:
-  #       fetch-depth: 0  # Ensure full history for diffs
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Ensure full history for diffs
 
-  #   - name: Detect changes in microservices/redis
-  #     id: changes
-  #     run: |
-  #       if [ "${{ github.event_name }}" = "pull_request" ]; then
-  #         # Fetch the base branch (master) and PR commit (head)
-  #         git fetch origin ${{ github.event.pull_request.base.ref }}
-  #         TARGET="origin/${{ github.event.pull_request.base.ref }}"
-  #         PR_SHA="${{ github.event.pull_request.head.sha }}"
+    - name: Detect changes in microservices/redis
+      id: changes
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          # Fetch the base branch (master) and PR commit (head)
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          TARGET="origin/${{ github.event.pull_request.base.ref }}"
+          PR_SHA="${{ github.event.pull_request.head.sha }}"
           
-  #         # Get the diff between the base branch and PR branch
-  #         CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/redis/' || true)
-  #       else
-  #         # Regular push event, compare before and after commits
-  #         CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/redis/' || true)
-  #       fi
+          # Get the diff between the base branch and PR branch
+          CHANGED=$(git diff --name-only "$TARGET" "$PR_SHA" | grep '^microservices/redis/' || true)
+        else
+          # Regular push event, compare before and after commits
+          CHANGED=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^microservices/redis/' || true)
+        fi
 
-  #       if [ -z "$CHANGED" ]; then
-  #         echo "No changes in Redis code."
-  #         echo "should_run=false" >> $GITHUB_OUTPUT
-  #       else
-  #         echo "Found changes in Redis code."
-  #         echo "should_run=true" >> $GITHUB_OUTPUT
-  #       fi
+        if [ -z "$CHANGED" ]; then
+          echo "No changes in Redis code."
+          echo "should_run=false" >> $GITHUB_OUTPUT
+        else
+          echo "Found changes in Redis code."
+          echo "should_run=true" >> $GITHUB_OUTPUT
+        fi
 
-  #   - name: Set up Go
-  #     if: steps.changes.outputs.should_run == 'true'
-  #     uses: actions/setup-go@v4
-  #     with:
-  #       go-version: '1.22.0'
+    - name: Set up Go
+      if: steps.changes.outputs.should_run == 'true'
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.22.0'
 
-  #   - name: Test Redis
-  #     if: steps.changes.outputs.should_run == 'true'
-  #     run: cd microservices/redis; go test -cover ./...
+    - name: Test Redis
+      if: steps.changes.outputs.should_run == 'true'
+      run: cd microservices/redis; go test -count=1 -cover ./...
 
   # test-nats:
   #   runs-on: ubuntu-latest

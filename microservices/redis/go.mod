@@ -3,10 +3,10 @@ module github.com/tinh-tinh/tinhtinh/microservices/redis
 go 1.24.1
 
 require (
-	github.com/redis/go-redis/v9 v9.17.1
+	github.com/redis/go-redis/v9 v9.17.3
 	github.com/stretchr/testify v1.10.0
-	github.com/tinh-tinh/tinhtinh/microservices v1.4.0
-	github.com/tinh-tinh/tinhtinh/v2 v2.3.4
+	github.com/tinh-tinh/tinhtinh/microservices v1.5.0
+	github.com/tinh-tinh/tinhtinh/v2 v2.5.1
 )
 
 require (

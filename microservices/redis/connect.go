@@ -27,7 +27,7 @@ type Connect struct {
 }
 
 // Client usage
-func NewClient(opt Options) microservices.ClientProxy {
+func NewClient(opt Options) *Connect {
 	conn := redis_store.NewClient(opt.Options)
 
 	connect := &Connect{
@@ -93,10 +93,9 @@ func (c *Connect) emit(event string, message microservices.Message) error {
 }
 
 // Server usage
-func New(module core.ModuleParam, opts ...Options) microservices.Service {
+func New(opts ...Options) *Connect {
 	connect := &Connect{
 		Context: context.Background(),
-		Module:  module(),
 		config:  microservices.DefaultConfig(),
 	}
 
@@ -112,25 +111,6 @@ func New(module core.ModuleParam, opts ...Options) microservices.Service {
 
 	if err := connect.Conn.Ping(connect.Context).Err(); err != nil {
 		panic(err)
-	}
-
-	return connect
-}
-
-func Open(opts ...Options) core.Service {
-	connect := &Connect{
-		Context: context.Background(),
-		config:  microservices.DefaultConfig(),
-	}
-
-	if len(opts) > 0 {
-		if opts[0].Options != nil {
-			conn := redis_store.NewClient(opts[0].Options)
-			connect.Conn = conn
-		}
-		if !reflect.ValueOf(opts[0].Config).IsZero() {
-			connect.config = microservices.ParseConfig(opts[0].Config)
-		}
 	}
 
 	return connect
