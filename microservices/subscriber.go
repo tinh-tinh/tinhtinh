@@ -37,7 +37,7 @@ func ParseEventFactory(factory EventFactory) EventFactory {
 	})
 }
 
-func (s *SubscribeHandler) Handle(svc Service, data Message) {
+func (s *SubscribeHandler) Handle(svc Service, data Message) error {
 	mergeHandler := ParseEventFactory(s.Factory)
 
 	for i := len(s.Middlewares) - 1; i >= 0; i-- {
@@ -46,5 +46,5 @@ func (s *SubscribeHandler) Handle(svc Service, data Message) {
 		mergeHandler = mid(mergeHandler)
 	}
 
-	mergeHandler.Handle(NewCtx(data, svc))
+	return mergeHandler.Handle(NewCtx(data, svc))
 }
