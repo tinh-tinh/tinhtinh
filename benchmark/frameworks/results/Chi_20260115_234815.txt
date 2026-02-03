@@ -1,0 +1,39 @@
+goos: linux
+goarch: amd64
+pkg: github.com/tinh-tinh/tinhtinh/v2/benchmark/frameworks
+cpu: 12th Gen Intel(R) Core(TM) i5-12400
+BenchmarkChi_SimpleGET-12              	 2236450	      2506 ns/op	    6132 B/op	      19 allocs/op
+BenchmarkChi_SimpleGET-12              	 2265334	      2505 ns/op	    6132 B/op	      19 allocs/op
+BenchmarkChi_SimpleGET-12              	 2392052	      2512 ns/op	    6132 B/op	      19 allocs/op
+BenchmarkChi_SimpleGET-12              	 2355956	      2472 ns/op	    6132 B/op	      19 allocs/op
+BenchmarkChi_SimpleGET-12              	 2360923	      2463 ns/op	    6132 B/op	      19 allocs/op
+BenchmarkChi_JSONResponse-12           	 1852033	      3258 ns/op	    7127 B/op	      24 allocs/op
+BenchmarkChi_JSONResponse-12           	 1753842	      3360 ns/op	    7127 B/op	      24 allocs/op
+BenchmarkChi_JSONResponse-12           	 1755418	      3253 ns/op	    7127 B/op	      24 allocs/op
+BenchmarkChi_JSONResponse-12           	 1787509	      3185 ns/op	    7127 B/op	      24 allocs/op
+BenchmarkChi_JSONResponse-12           	 1751173	      3285 ns/op	    7127 B/op	      24 allocs/op
+--- FAIL: BenchmarkChi_JSONRequestResponse
+    chi_test.go:101: Expected status 200, got 400
+BenchmarkChi_PathParam-12              	 1968442	      3056 ns/op	    6886 B/op	      23 allocs/op
+BenchmarkChi_PathParam-12              	 1931758	      3202 ns/op	    6886 B/op	      23 allocs/op
+BenchmarkChi_PathParam-12              	 1987366	      3139 ns/op	    6886 B/op	      23 allocs/op
+BenchmarkChi_PathParam-12              	 1949744	      3107 ns/op	    6886 B/op	      23 allocs/op
+BenchmarkChi_PathParam-12              	 1999496	      3078 ns/op	    6886 B/op	      23 allocs/op
+BenchmarkChi_QueryParam-12             	 1799653	      3313 ns/op	    7327 B/op	      26 allocs/op
+BenchmarkChi_QueryParam-12             	 1795536	      3309 ns/op	    7327 B/op	      26 allocs/op
+BenchmarkChi_QueryParam-12             	 1769598	      3196 ns/op	    7327 B/op	      26 allocs/op
+BenchmarkChi_QueryParam-12             	 1784212	      3270 ns/op	    7327 B/op	      26 allocs/op
+BenchmarkChi_QueryParam-12             	 1762854	      3334 ns/op	    7327 B/op	      26 allocs/op
+BenchmarkChi_WithMiddleware-12         	 2183569	      2754 ns/op	    6132 B/op	      19 allocs/op
+BenchmarkChi_WithMiddleware-12         	 2301176	      2644 ns/op	    6132 B/op	      19 allocs/op
+BenchmarkChi_WithMiddleware-12         	 2278167	      2667 ns/op	    6132 B/op	      19 allocs/op
+BenchmarkChi_WithMiddleware-12         	 2154667	      2657 ns/op	    6132 B/op	      19 allocs/op
+BenchmarkChi_WithMiddleware-12         	 2183673	      2659 ns/op	    6132 B/op	      19 allocs/op
+BenchmarkChi_ParallelRequests-12       	 3103297	      1974 ns/op	    6130 B/op	      19 allocs/op
+BenchmarkChi_ParallelRequests-12       	 3161437	      1920 ns/op	    6130 B/op	      19 allocs/op
+BenchmarkChi_ParallelRequests-12       	 3057328	      1975 ns/op	    6130 B/op	      19 allocs/op
+BenchmarkChi_ParallelRequests-12       	 2918979	      1993 ns/op	    6130 B/op	      19 allocs/op
+BenchmarkChi_ParallelRequests-12       	 2940788	      1968 ns/op	    6130 B/op	      19 allocs/op
+FAIL
+exit status 1
+FAIL	github.com/tinh-tinh/tinhtinh/v2/benchmark/frameworks	263.785s

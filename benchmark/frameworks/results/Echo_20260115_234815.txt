@@ -1,0 +1,41 @@
+goos: linux
+goarch: amd64
+pkg: github.com/tinh-tinh/tinhtinh/v2/benchmark/frameworks
+cpu: 12th Gen Intel(R) Core(TM) i5-12400
+BenchmarkEcho_SimpleGET-12              	 2124322	      2671 ns/op	    6501 B/op	      21 allocs/op
+BenchmarkEcho_SimpleGET-12              	 2259991	      2542 ns/op	    6501 B/op	      21 allocs/op
+BenchmarkEcho_SimpleGET-12              	 2324331	      2579 ns/op	    6501 B/op	      21 allocs/op
+BenchmarkEcho_SimpleGET-12              	 2310224	      2638 ns/op	    6501 B/op	      21 allocs/op
+BenchmarkEcho_SimpleGET-12              	 2219688	      2778 ns/op	    6501 B/op	      21 allocs/op
+BenchmarkEcho_JSONResponse-12           	 1872321	      3246 ns/op	    6678 B/op	      22 allocs/op
+BenchmarkEcho_JSONResponse-12           	 1972897	      3008 ns/op	    6678 B/op	      22 allocs/op
+BenchmarkEcho_JSONResponse-12           	 1898481	      3223 ns/op	    6678 B/op	      22 allocs/op
+BenchmarkEcho_JSONResponse-12           	 1917591	      3148 ns/op	    6678 B/op	      22 allocs/op
+BenchmarkEcho_JSONResponse-12           	 1911037	      3005 ns/op	    6678 B/op	      22 allocs/op
+BenchmarkEcho_JSONRequestResponse-12    	 1000000	      5045 ns/op	    7986 B/op	      36 allocs/op
+BenchmarkEcho_JSONRequestResponse-12    	 1000000	      5220 ns/op	    7986 B/op	      36 allocs/op
+BenchmarkEcho_JSONRequestResponse-12    	  992613	      5312 ns/op	    7986 B/op	      36 allocs/op
+BenchmarkEcho_JSONRequestResponse-12    	 1000000	      5313 ns/op	    7986 B/op	      36 allocs/op
+BenchmarkEcho_JSONRequestResponse-12    	 1000000	      5188 ns/op	    7986 B/op	      36 allocs/op
+BenchmarkEcho_PathParam-12              	 1848759	      3224 ns/op	    6974 B/op	      26 allocs/op
+BenchmarkEcho_PathParam-12              	 1857178	      3287 ns/op	    6974 B/op	      26 allocs/op
+BenchmarkEcho_PathParam-12              	 1788138	      3396 ns/op	    6974 B/op	      26 allocs/op
+BenchmarkEcho_PathParam-12              	 1814120	      3272 ns/op	    6974 B/op	      26 allocs/op
+BenchmarkEcho_PathParam-12              	 1886024	      3371 ns/op	    6974 B/op	      26 allocs/op
+BenchmarkEcho_QueryParam-12             	 1624780	      3476 ns/op	    7367 B/op	      28 allocs/op
+BenchmarkEcho_QueryParam-12             	 1635872	      3412 ns/op	    7367 B/op	      28 allocs/op
+BenchmarkEcho_QueryParam-12             	 1710390	      3448 ns/op	    7367 B/op	      28 allocs/op
+BenchmarkEcho_QueryParam-12             	 1655418	      3504 ns/op	    7367 B/op	      28 allocs/op
+BenchmarkEcho_QueryParam-12             	 1726496	      3751 ns/op	    7367 B/op	      28 allocs/op
+BenchmarkEcho_WithMiddleware-12         	 2159004	      2824 ns/op	    6550 B/op	      24 allocs/op
+BenchmarkEcho_WithMiddleware-12         	 2142181	      2904 ns/op	    6549 B/op	      24 allocs/op
+BenchmarkEcho_WithMiddleware-12         	 2154248	      2887 ns/op	    6550 B/op	      24 allocs/op
+BenchmarkEcho_WithMiddleware-12         	 2143317	      2826 ns/op	    6549 B/op	      24 allocs/op
+BenchmarkEcho_WithMiddleware-12         	 2122183	      2824 ns/op	    6549 B/op	      24 allocs/op
+BenchmarkEcho_ParallelRequests-12       	 2973338	      2103 ns/op	    6500 B/op	      21 allocs/op
+BenchmarkEcho_ParallelRequests-12       	 2917460	      2104 ns/op	    6500 B/op	      21 allocs/op
+BenchmarkEcho_ParallelRequests-12       	 2929315	      2056 ns/op	    6499 B/op	      21 allocs/op
+BenchmarkEcho_ParallelRequests-12       	 2956914	      2099 ns/op	    6499 B/op	      21 allocs/op
+BenchmarkEcho_ParallelRequests-12       	 3034557	      2144 ns/op	    6499 B/op	      21 allocs/op
+PASS
+ok  	github.com/tinh-tinh/tinhtinh/v2/benchmark/frameworks	295.946s
