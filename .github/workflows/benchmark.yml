@@ -8,21 +8,29 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      
+      - name: Create results directory
+        run: mkdir -p ./results
+      
       - name: Run benchmarks
         run: |
-          echo 'Running benchmarks...'
-
+          go test -bench=. -benchmem -v ./... | tee ./results/benchmark.txt || true
+      
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
           path: ./results
-
+      
       - name: Download results
         uses: actions/download-artifact@v4
         with:
