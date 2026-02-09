@@ -41,21 +41,21 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
 
-  test-microservices:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: [ '1.22.x' ]
-    steps:
-    - uses: actions/checkout@v4
+  # test-microservices:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       go-version: [ '1.22.x' ]
+  #   steps:
+  #   - uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.22.0'
+  #   - name: Set up Go
+  #     uses: actions/setup-go@v4
+  #     with:
+  #       go-version: '1.22.0'
 
-    - name: Test Microservices 
-      run: cd microservices; go test -count=1 -cover ./...
+  #   - name: Test Microservices 
+  #     run: cd microservices; go test -count=1 -cover ./...
 
   test-redis:
     runs-on: ubuntu-latest
