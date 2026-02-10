@@ -67,7 +67,6 @@ type NewModuleOptions struct {
 	Imports     []Modules
 	Controllers []Controllers
 	Providers   []Providers
-	Exports     []Providers
 	Guards      []Guard
 	Middlewares []Middleware
 	Interceptor Interceptor
@@ -179,15 +178,6 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 			continue
 		}
 		ct(module)
-	}
-
-	// Exports
-	for _, e := range opt.Exports {
-		if e == nil {
-			continue
-		}
-		provider := e(module)
-		provider.SetStatus(PUBLIC)
 	}
 }
 

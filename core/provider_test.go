@@ -14,8 +14,9 @@ import (
 
 func ChildProvider(module core.Module) core.Provider {
 	provider := module.NewProvider(core.ProviderOptions{
-		Name:  "child",
-		Value: "child",
+		Name:   "child",
+		Value:  "child",
+		Status: core.PUBLIC,
 	})
 	return provider
 }
@@ -24,7 +25,6 @@ func ChildModule(module core.Module) core.Module {
 	childModule := module.New(core.NewModuleOptions{
 		Scope:     core.Global,
 		Providers: []core.Providers{ChildProvider},
-		Exports:   []core.Providers{ChildProvider},
 	})
 
 	return childModule
@@ -278,12 +278,13 @@ func Test_AutoNameProvider(t *testing.T) {
 		Name string
 	}
 	service := func(module core.Module) core.Provider {
-		return module.NewProvider(&StructName{Name: "module"})
+		prd := module.NewProvider(&StructName{Name: "module"})
+		prd.SetStatus(core.PUBLIC)
+		return prd
 	}
 
 	module := core.NewModule(core.NewModuleOptions{
 		Providers: []core.Providers{service},
-		Exports:   []core.Providers{service},
 	})
 
 	structName := core.Inject[StructName](module)
@@ -306,12 +307,13 @@ func (ProviderRef) ProvideName() string {
 
 func Test_RefProvide(t *testing.T) {
 	service := func(module core.Module) core.Provider {
-		return module.NewProvider(&ProviderRef{Name: "module"})
+		prd := module.NewProvider(&ProviderRef{Name: "module"})
+		prd.SetStatus(core.PUBLIC)
+		return prd
 	}
 
 	module := core.NewModule(core.NewModuleOptions{
 		Providers: []core.Providers{service},
-		Exports:   []core.Providers{service},
 	})
 
 	providerRef := core.Inject[ProviderRef](module)
@@ -349,12 +351,13 @@ func Test_MustInject(t *testing.T) {
 		Name string
 	}
 	service := func(module core.Module) core.Provider {
-		return module.NewProvider(&StructName{Name: "module"})
+		prd := module.NewProvider(&StructName{Name: "module"})
+		prd.SetStatus(core.PUBLIC)
+		return prd
 	}
 
 	module := core.NewModule(core.NewModuleOptions{
 		Providers: []core.Providers{service},
-		Exports:   []core.Providers{service},
 	})
 
 	t.Run("success", func(t *testing.T) {

@@ -24,8 +24,6 @@ const (
 
 type Factory func(param ...interface{}) interface{}
 
-type ProviderType string
-
 type Provider interface {
 	GetName() Provide
 	SetName(name Provide)
@@ -117,7 +115,8 @@ type ProviderOptions struct {
 	Factory Factory
 	// Providers that are injected with the provider.
 	Inject []Provide
-	Type   ProviderType
+	// Status of the provider. Default is PRIVATE.
+	Status ProvideStatus
 }
 
 type ProviderParams interface {
@@ -184,7 +183,7 @@ func InitProviders(module Module, opt ProviderOptions) Provider {
 	} else {
 		provider = &DynamicProvider{
 			Name:   opt.Name,
-			Status: PRIVATE,
+			Status: opt.Status,
 			Scope:  opt.Scope,
 		}
 		module.AppendDataProviders(provider)
@@ -192,6 +191,10 @@ func InitProviders(module Module, opt ProviderOptions) Provider {
 
 	if provider.GetScope() == "" {
 		provider.SetScope(module.GetScope())
+	}
+
+	if provider.GetStatus() == "" {
+		provider.SetStatus(PRIVATE)
 	}
 
 	// Handle transient
