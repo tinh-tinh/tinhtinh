@@ -180,7 +180,6 @@ func Test_Nil(t *testing.T) {
 			Controllers: []core.Controllers{nil},
 			Providers:   []core.Providers{nil},
 			Imports:     []core.Modules{nil},
-			Exports:     []core.Providers{nil},
 			Guards:      []core.Guard{nil},
 			Middlewares: []core.Middleware{nil},
 		})
@@ -218,6 +217,7 @@ func Test_Import(t *testing.T) {
 				return sub + "hihi"
 			},
 			Inject: []core.Provide{SUB_PROVIDER},
+			Status: core.PUBLIC,
 		})
 		return s
 	}
@@ -226,7 +226,6 @@ func Test_Import(t *testing.T) {
 		parent := module.New(core.NewModuleOptions{
 			Imports:   []core.Modules{subModule},
 			Providers: []core.Providers{parentService},
-			Exports:   []core.Providers{parentService},
 		})
 
 		return parent
