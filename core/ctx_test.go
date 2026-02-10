@@ -811,6 +811,55 @@ func Test_Ctx_QueryBool(t *testing.T) {
 	require.Equal(t, false, res.Data)
 }
 
+func Test_Ctx_SendString(t *testing.T) {
+	controller := func(module core.Module) core.Controller {
+		ctrl := module.NewController("test")
+
+		ctrl.Get("", func(ctx core.Ctx) error {
+			return ctx.SendString("hello world")
+		})
+
+		ctrl.Get("status", func(ctx core.Ctx) error {
+			return ctx.Status(http.StatusCreated).SendString("created")
+		})
+
+		return ctrl
+	}
+
+	module := func() core.Module {
+		appModule := core.NewModule(core.NewModuleOptions{
+			Controllers: []core.Controllers{controller},
+		})
+
+		return appModule
+	}
+
+	app := core.CreateFactory(module)
+	app.SetGlobalPrefix("/api")
+
+	testServer := httptest.NewServer(app.PrepareBeforeListen())
+	defer testServer.Close()
+	testClient := testServer.Client()
+
+	// Case: plain SendString
+	resp, err := testClient.Get(testServer.URL + "/api/test")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	data, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, "hello world", string(data))
+
+	// Case: Status + SendString
+	resp2, err := testClient.Get(testServer.URL + "/api/test/status")
+	require.Nil(t, err)
+	require.Equal(t, http.StatusCreated, resp2.StatusCode)
+
+	data2, err := io.ReadAll(resp2.Body)
+	require.Nil(t, err)
+	require.Equal(t, "created", string(data2))
+}
+
 func Test_Ctx_Status(t *testing.T) {
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
