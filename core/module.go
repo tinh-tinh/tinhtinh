@@ -47,13 +47,16 @@ type Module interface {
 
 type DynamicModule struct {
 	sync.Pool
-	isRoot        bool
-	Scope         Scope
-	Routers       []*Router
-	Middlewares   []Middleware
-	DataProviders []Provider
-	hooks         []HookModule
-	interceptor   Interceptor
+	isRoot          bool
+	Name            string
+	Scope           Scope
+	Routers         []*Router
+	SnapshotRouters []*Router
+	Middlewares     []Middleware
+	DataProviders   []Provider
+	SubModules      []*DynamicModule
+	hooks           []HookModule
+	interceptor     Interceptor
 }
 
 type (
@@ -80,7 +83,7 @@ func NewModule(opt NewModuleOptions) Module {
 	if opt.Scope == "" {
 		opt.Scope = Global
 	}
-	module := &DynamicModule{isRoot: true}
+	module := &DynamicModule{isRoot: true, Name: "AppModule"}
 	initModule(module, opt)
 
 	return module
@@ -142,13 +145,20 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 		if m == nil {
 			continue
 		}
+		name := common.GetFunctionName(m)
 		mod := m(module)
 		fmt.Printf("%s %s %s %s\n",
 			color.Green("[TT]"),
 			color.White(time.Now().Format("2006-01-02 15:04:05")),
 			color.Yellow("[Module Initializer]"),
-			color.Green(common.GetFunctionName(m)),
+			color.Green(name),
 		)
+		if dynMod, ok := mod.(*DynamicModule); ok {
+			dynMod.Name = name
+			// Snapshot own routers before free() clears them.
+			dynMod.SnapshotRouters = append([]*Router(nil), dynMod.Routers...)
+			module.SubModules = append(module.SubModules, dynMod)
+		}
 
 		mod.init()
 		module.Routers = append(module.Routers, mod.GetRouters()...)

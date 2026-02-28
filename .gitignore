@@ -4,6 +4,7 @@
 .vscode/
 coverage/
 test/
+tmp/
 
 # Benchmark binaries
 benchmark/loadtest/apps/*/main
