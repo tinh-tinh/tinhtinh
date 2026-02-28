@@ -346,6 +346,44 @@ func BenchmarkRequestModule(b *testing.B) {
 	})
 }
 
+func Test_ReInitProvider(t *testing.T) {
+	const providerName core.Provide = "singleton"
+
+	firstValue := "first"
+	secondValue := "second"
+
+	module := core.NewModule(core.NewModuleOptions{
+		Scope: core.Global,
+	})
+
+	// First initialization: creates a new provider.
+	first := module.NewProvider(core.ProviderOptions{
+		Name:  providerName,
+		Value: firstValue,
+	})
+	require.NotNil(t, first)
+	require.Equal(t, firstValue, module.Ref(providerName))
+
+	// Re-initialization with the same name: must return the existing provider.
+	second := module.NewProvider(core.ProviderOptions{
+		Name:  providerName,
+		Value: secondValue,
+	})
+	require.NotNil(t, second)
+
+	// The provider instance should be the same object.
+	require.Same(t, first, second)
+
+	// The number of registered providers must not grow.
+	count := 0
+	for _, p := range module.GetDataProviders() {
+		if p.GetName() == providerName {
+			count++
+		}
+	}
+	require.Equal(t, 1, count, "re-init must not register a duplicate provider")
+}
+
 func Test_MustInject(t *testing.T) {
 	type StructName struct {
 		Name string
