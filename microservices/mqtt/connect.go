@@ -111,6 +111,7 @@ func New(module core.ModuleParam, opts ...Options) microservices.Service {
 
 	return connect
 }
+
 func Open(opts ...Options) core.Service {
 	connect := &Connect{
 		config: microservices.DefaultConfig(),

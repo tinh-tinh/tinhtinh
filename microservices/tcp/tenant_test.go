@@ -56,7 +56,7 @@ func AuthApp(addr string) *core.App {
 			userService.users = append(userService.users, user)
 			atomic.AddInt64(&userService.total, 1)
 
-			go client.Send("user.created", user, microservices.Header{"x-tenant-id": tenantID})
+			go client.Publish("user.created", user, microservices.Header{"x-tenant-id": tenantID})
 			return ctx.JSON(core.Map{"data": user})
 		})
 
@@ -111,7 +111,6 @@ func AuthApp(addr string) *core.App {
 			},
 		})
 
-		module.NewController("auth")
 		return module
 	}
 
@@ -149,10 +148,10 @@ func DirectoryApp() *core.App {
 	}
 
 	handlers := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{}).Use(middleware).Registry()
+		handler := microservices.NewHandler(module, microservices.TCP).Use(middleware).Registry()
 
 		directoryService := module.Ref(DIRECTORY_SERVICE).(*DirectoryService)
-		handler.OnResponse("user.created", func(ctx microservices.Ctx) error {
+		handler.OnEvent("user.created", func(ctx microservices.Ctx) error {
 			tenantID := ctx.Get("tenant").(string)
 
 			if directoryService.directories[tenantID] == nil {
@@ -171,7 +170,7 @@ func DirectoryApp() *core.App {
 			return nil
 		})
 
-		handler.OnEvent("user.logined", func(ctx microservices.Ctx) error {
+		handler.OnEvent("user.login", func(ctx microservices.Ctx) error {
 			tenantID := ctx.Get("tenant").(string)
 
 			fmt.Println("User Logged Data:", ctx.Payload(), tenantID)
@@ -211,7 +210,7 @@ func DirectoryApp() *core.App {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports:     []core.Modules{microservices.Register()},
+			Imports:     []core.Modules{microservices.Register(microservices.TCP)},
 			Controllers: []core.Controllers{controller},
 			Providers:   []core.Providers{service, handlers},
 		})
@@ -226,7 +225,7 @@ func DirectoryApp() *core.App {
 
 func Test_Tenant(t *testing.T) {
 	directoryApp := DirectoryApp()
-	directoryApp.ConnectMicroservice(tcp.Open(tcp.Options{
+	directoryApp.ConnectMicroservice(tcp.NewServer(tcp.Options{
 		Addr: "localhost:4001",
 		Config: microservices.Config{
 			CompressAlg: compress.Gzip,

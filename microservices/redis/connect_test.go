@@ -46,10 +46,10 @@ func OrderApp() *core.App {
 	}
 
 	handlerService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module, microservices.REDIS)
 
 		orderService := module.Ref(ORDER).(*OrderService)
-		handler.OnResponse("order.created", func(ctx microservices.Ctx) error {
+		handler.OnEvent("order.created", func(ctx microservices.Ctx) error {
 			var data *Order
 			err := ctx.PayloadParser(&data)
 			if err != nil {
@@ -89,7 +89,7 @@ func OrderApp() *core.App {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports:     []core.Modules{microservices.Register()},
+			Imports:     []core.Modules{microservices.Register(microservices.REDIS)},
 			Controllers: []core.Controllers{controller},
 			Providers: []core.Providers{
 				service,
@@ -111,7 +111,7 @@ func ProductApp(addr string) *core.App {
 
 		client := microservices.InjectClient(module, microservices.REDIS)
 		ctrl.Post("", func(ctx core.Ctx) error {
-			go client.Send("order.created", &Order{
+			go client.Publish("order.created", &Order{
 				ID:   "order1",
 				Name: "order1",
 			})
@@ -158,7 +158,7 @@ func ProductApp(addr string) *core.App {
 
 func DeliveryApp() microservices.Service {
 	service := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module, microservices.REDIS)
 
 		handler.OnEvent("order.*", func(ctx microservices.Ctx) error {
 			var data *Order
@@ -187,7 +187,7 @@ func DeliveryApp() microservices.Service {
 
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.Register()},
+			Imports: []core.Modules{microservices.Register(microservices.REDIS)},
 			Providers: []core.Providers{
 				service,
 			},
@@ -195,11 +195,12 @@ func DeliveryApp() microservices.Service {
 		return module
 	}
 
-	app := redis.New(appModule, redis.Options{
+	app := redis.New(redis.Options{
 		Options: &redis_store.Options{
 			Addr: "localhost:6379",
 		},
 	})
+	app.Create(appModule())
 
 	return app
 }
@@ -209,7 +210,7 @@ func Test_Practice(t *testing.T) {
 	go deliveryApp.Listen()
 
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(redis.Open(redis.Options{
+	orderApp.ConnectMicroservice(redis.New(redis.Options{
 		Options: &redis_store.Options{
 			Addr: "localhost:6379",
 		},
@@ -258,7 +259,7 @@ func Test_Practice(t *testing.T) {
 
 func Benchmark_Practice(b *testing.B) {
 	orderApp := OrderApp()
-	orderApp.ConnectMicroservice(redis.Open(redis.Options{
+	orderApp.ConnectMicroservice(redis.New(redis.Options{
 		Options: &redis_store.Options{
 			Addr: "localhost:6379",
 		},
@@ -314,11 +315,12 @@ func Test_Client_Error(t *testing.T) {
 		return module
 	}
 
-	server := redis.New(serverModule, redis.Options{
+	server := redis.New(redis.Options{
 		Options: &redis_store.Options{
 			Addr: "localhost:6379",
 		},
 	})
+	server.Create(serverModule())
 	go server.Listen()
 
 	time.Sleep(100 * time.Millisecond)
@@ -328,7 +330,7 @@ func Test_Client_Error(t *testing.T) {
 
 		client := microservices.InjectClient(module, microservices.REDIS)
 		ctrl.Get("", func(ctx core.Ctx) error {
-			go client.Send("abc", 1000)
+			go client.Publish("abc", 1000)
 			return ctx.JSON(core.Map{"data": "ok"})
 		})
 
@@ -378,11 +380,12 @@ func Test_Server_Error(t *testing.T) {
 			})
 			return module
 		}
-		server := redis.New(serverModule, redis.Options{
+		server := redis.New(redis.Options{
 			Options: &redis_store.Options{
 				Addr: "localhost:637",
 			},
 		})
+		server.Create(serverModule())
 		server.Listen()
 	})
 
@@ -391,15 +394,15 @@ func Test_Server_Error(t *testing.T) {
 			module := core.NewModule(core.NewModuleOptions{})
 			return module
 		}
-		server := redis.New(serverModule, redis.Options{
+		server := redis.New(redis.Options{
 			Options: &redis_store.Options{
 				Addr: "localhost:6379",
 			},
 		})
+		server.Create(serverModule())
 		server.Listen()
 	})
 }
 
 func Test_Timeout(t *testing.T) {
-
 }

@@ -88,7 +88,6 @@ func Test_Csv(t *testing.T) {
 	require.Nil(t, err)
 
 	require.Equal(t, "UserID,FullName,Email\n", string(data))
-
 }
 
 func createCSVFile(filename string, data [][]string) error {

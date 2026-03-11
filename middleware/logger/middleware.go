@@ -2,10 +2,12 @@ package logger
 
 import (
 	"fmt"
+	"html"
 	"net/http"
 	"strings"
 	"time"
-	"html"
+
+	clogger "github.com/tinh-tinh/tinhtinh/v2/common/logger"
 )
 
 const (
@@ -14,14 +16,40 @@ const (
 	Combined string = "${ip}:${date} - '${method} ${path} ${http-version}' ${status} ${content-length} ${latency} - ${referer}:${user-agent}"
 )
 
+// LogContext contains all the information available for custom log formatting.
+type LogContext struct {
+	// Request is the original HTTP request
+	Request *http.Request
+	// StatusCode is the response status code
+	StatusCode int
+	// Latency is the time taken to process the request
+	Latency time.Duration
+	// ResponseHeaders contains the response headers
+	ResponseHeaders http.Header
+	// StartTime is when the request started
+	StartTime time.Time
+}
+
+// CustomFormatter is a function type for custom log formatting.
+// It receives LogContext and returns the formatted log string.
+type CustomFormatter func(ctx LogContext) string
+
 type MiddlewareOptions struct {
 	Path               string
 	Rotate             bool
 	SeparateBaseStatus bool
 	// Max Size in MB of each file log. Default is infinity.
-	Max    int64
+	Max int64
+	// Format is the log message template format (e.g., Dev, Common, Combined).
 	Format string
-	Level  Level
+	// OutputFormat specifies the log output format (text or json).
+	// Uses clogger.FormatText or clogger.FormatJSON.
+	OutputFormat clogger.Format
+	Level        clogger.Level
+	// CustomFormatter allows fully custom log formatting.
+	// When set, this takes precedence over Format.
+	CustomFormatter CustomFormatter
+	SkipPaths       []string
 }
 
 type wrappedWriter struct {
@@ -61,16 +89,42 @@ func (w *wrappedWriter) WriteHeader(statusCode int) {
 // - ${content-length}: the Content-Length header of the response
 // - ${latency}: the latency of the request in milliseconds
 // - ${date}: the current date and time in the format 2006-01-02 15:04:05
+//
+// Alternatively, use CustomFormatter for fully custom log formatting:
+//
+//	logger.Handler(logger.MiddlewareOptions{
+//	    CustomFormatter: func(ctx logger.LogContext) string {
+//	        return fmt.Sprintf("[%s] %s %s - %d (%s)",
+//	            ctx.Request.RemoteAddr,
+//	            ctx.Request.Method,
+//	            ctx.Request.URL.Path,
+//	            ctx.StatusCode,
+//	            ctx.Latency,
+//	        )
+//	    },
+//	})
+//
+// The OutputFormat option specifies the log output format:
+// - clogger.FormatText (default): key=value text format
+// - clogger.FormatJSON: JSON format
 func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
-	logger := Create(Options{
+	logger := clogger.Create(clogger.Options{
 		Path:   opt.Path,
 		Rotate: opt.Rotate,
 		Max:    opt.Max,
+		Format: opt.OutputFormat,
 	})
 	level := opt.Level
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			for _, skip := range opt.SkipPaths {
+				if r.URL.Path == skip {
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+
 			start := time.Now()
 
 			wrapped := &wrappedWriter{
@@ -78,37 +132,17 @@ func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 				statusCode:     http.StatusOK,
 			}
 			next.ServeHTTP(wrapped, r)
-			format := opt.Format
-			if format == "" {
-				format = Dev
+
+			ctx := LogContext{
+				Request:         r,
+				StatusCode:      wrapped.statusCode,
+				Latency:         time.Since(start),
+				ResponseHeaders: wrapped.Header(),
+				StartTime:       start,
 			}
-			content := format
-			specs := extractAllContent(format)
-			for _, spec := range specs {
-				switch spec {
-				case "http-version":
-					content = strings.Replace(content, "${http-version}", r.Proto, 1)
-				case "user-agent":
-					content = strings.Replace(content, "${user-agent}", html.EscapeString(r.UserAgent()), 1)
-				case "referer":
-					content = strings.Replace(content, "${referer}", r.Referer(), 1)
-				case "status":
-					content = strings.Replace(content, "${status}", fmt.Sprint(wrapped.statusCode), 1)
-				case "method":
-					content = strings.Replace(content, "${method}", r.Method, 1)
-				case "path":
-					content = strings.Replace(content, "${path}", r.URL.Path, 1)
-				case "ip":
-					content = strings.Replace(content, "${ip}", r.RemoteAddr, 1)
-				case "content-length":
-					content = strings.Replace(content, "${content-length}", fmt.Sprint(wrapped.Header().Get("Content-Length")), 1)
-				case "latency":
-					elapsed := time.Since(start)
-					content = strings.Replace(content, "${latency}", elapsed.String(), 1)
-				case "date":
-					content = strings.Replace(content, "${date}", time.Now().Format("2006-01-02 15:04:05"), 1)
-				}
-			}
+
+			content := formatLogMessage(opt, ctx)
+
 			if opt.SeparateBaseStatus {
 				level = SeparateBaseStatus(wrapped.statusCode)
 			}
@@ -117,14 +151,69 @@ func Handler(opt MiddlewareOptions) func(http.Handler) http.Handler {
 	}
 }
 
-func SeparateBaseStatus(statusCode int) Level {
+// formatLogMessage formats the log message based on options and context.
+func formatLogMessage(opt MiddlewareOptions, ctx LogContext) string {
+	if opt.CustomFormatter != nil {
+		return opt.CustomFormatter(ctx)
+	}
+	return formatTemplate(opt.Format, ctx)
+}
+
+// formatTemplate formats the log message using template placeholders.
+func formatTemplate(format string, ctx LogContext) string {
+	if format == "" {
+		format = Dev
+	}
+
+	content := format
+	specs := clogger.ExtractAllContent(format)
+
+	for _, spec := range specs {
+		content = replaceSpec(content, spec, ctx)
+	}
+
+	return content
+}
+
+// replaceSpec replaces all occurrences of a placeholder spec with its value.
+func replaceSpec(content, spec string, ctx LogContext) string {
+	r := ctx.Request
+
+	switch spec {
+	case "http-version":
+		return strings.ReplaceAll(content, "${http-version}", r.Proto)
+	case "user-agent":
+		return strings.ReplaceAll(content, "${user-agent}", html.EscapeString(r.UserAgent()))
+	case "referer":
+		return strings.ReplaceAll(content, "${referer}", html.EscapeString(r.Referer()))
+	case "status":
+		return strings.ReplaceAll(content, "${status}", fmt.Sprint(ctx.StatusCode))
+	case "method":
+		return strings.ReplaceAll(content, "${method}", r.Method)
+	case "path":
+		return strings.ReplaceAll(content, "${path}", html.EscapeString(r.URL.Path))
+	case "ip":
+		return strings.ReplaceAll(content, "${ip}", r.RemoteAddr)
+	case "content-length":
+		return strings.ReplaceAll(content, "${content-length}", ctx.ResponseHeaders.Get("Content-Length"))
+	case "latency":
+		return strings.ReplaceAll(content, "${latency}", ctx.Latency.String())
+	case "date":
+		return strings.ReplaceAll(content, "${date}", ctx.StartTime.Format("2006-01-02 15:04:05"))
+	default:
+		return content
+	}
+}
+
+// SeparateBaseStatus returns the log level based on HTTP status code.
+func SeparateBaseStatus(statusCode int) clogger.Level {
 	if statusCode < 300 {
-		return LevelInfo
+		return clogger.LevelInfo
 	} else if statusCode < 400 {
-		return LevelWarn
+		return clogger.LevelWarn
 	} else if statusCode < 500 {
-		return LevelError
+		return clogger.LevelError
 	} else {
-		return LevelFatal
+		return clogger.LevelFatal
 	}
 }

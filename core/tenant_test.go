@@ -21,7 +21,7 @@ func BenchmarkTenant(b *testing.B) {
 	)
 
 	type mapper map[string]interface{}
-	var mutex = sync.RWMutex{}
+	mutex := sync.RWMutex{}
 
 	forRoot := func(module core.Module) core.Module {
 		tenantModule := module.New(core.NewModuleOptions{})

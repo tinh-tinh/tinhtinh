@@ -15,9 +15,9 @@ import (
 
 func appServerException(add string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
-		handler.OnResponse("exception", func(ctx microservices.Ctx) error {
+		handler.OnEvent("exception", func(ctx microservices.Ctx) error {
 			panic(exception.ThrowRpc("error"))
 		})
 
@@ -35,9 +35,10 @@ func appServerException(add string) microservices.Service {
 		return module
 	}
 
-	app := tcp.New(appModule, tcp.Options{
+	app := tcp.NewServer(tcp.Options{
 		Addr: add,
 	})
+	app.Create(appModule())
 
 	return app
 }
@@ -48,7 +49,7 @@ func appClientException(addr string) *core.App {
 
 		ctrl.Get("", func(ctx core.Ctx) error {
 			client := microservices.InjectClient(module, TCP_SERVICE)
-			go client.Send("exception", map[string]interface{}{"data": "ok"})
+			go client.Publish("exception", map[string]interface{}{"data": "ok"})
 			return ctx.JSON(core.Map{})
 		})
 

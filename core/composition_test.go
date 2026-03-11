@@ -13,7 +13,7 @@ import (
 
 func Test_Compose(t *testing.T) {
 	// Guard
-	guard := func(ctrl core.RefProvider, ctx core.Ctx) bool {
+	guard := func(ctx core.Ctx) bool {
 		return ctx.Query("key") == "value"
 	}
 
@@ -28,7 +28,7 @@ func Test_Compose(t *testing.T) {
 		return core.SetMetadata(role_key, roles)
 	}
 
-	composite := core.Composition().Guard(guard).Pipe(core.Query(FilterDto{})).Metadata(roleFnc("admin"))
+	composite := core.Composition().Guard(guard).Pipe(core.QueryParser[FilterDto]{}).Metadata(roleFnc("admin"))
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 

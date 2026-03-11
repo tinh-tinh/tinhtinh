@@ -13,15 +13,15 @@ import (
 const Key core.CtxKey = "key"
 
 func TestGuard(t *testing.T) {
-	guardInCtrl := func(ctrl core.RefProvider, ctx core.Ctx) bool {
+	guardInCtrl := func(ctx core.Ctx) bool {
 		return ctx.Query("ctrl") == "value"
 	}
 
-	guardInModule := func(module core.RefProvider, ctx core.Ctx) bool {
+	guardInModule := func(ctx core.Ctx) bool {
 		return ctx.Query("module") == "value"
 	}
 
-	guardWithCtx := func(ctrl core.RefProvider, ctx core.Ctx) bool {
+	guardWithCtx := func(ctx core.Ctx) bool {
 		ctx.Set(Key, ctx.Query("ctx"))
 		return true
 	}

@@ -180,7 +180,6 @@ func Test_Nil(t *testing.T) {
 			Controllers: []core.Controllers{nil},
 			Providers:   []core.Providers{nil},
 			Imports:     []core.Modules{nil},
-			Exports:     []core.Providers{nil},
 			Guards:      []core.Guard{nil},
 			Middlewares: []core.Middleware{nil},
 		})
@@ -195,6 +194,7 @@ func Test_Nil(t *testing.T) {
 		_ = core.CreateFactory(appModule)
 	})
 }
+
 func Test_Import(t *testing.T) {
 	const SUB_PROVIDER core.Provide = "sub"
 	subModule := func(module core.Module) core.Module {
@@ -217,6 +217,7 @@ func Test_Import(t *testing.T) {
 				return sub + "hihi"
 			},
 			Inject: []core.Provide{SUB_PROVIDER},
+			Status: core.PUBLIC,
 		})
 		return s
 	}
@@ -225,7 +226,6 @@ func Test_Import(t *testing.T) {
 		parent := module.New(core.NewModuleOptions{
 			Imports:   []core.Modules{subModule},
 			Providers: []core.Providers{parentService},
-			Exports:   []core.Providers{parentService},
 		})
 
 		return parent
@@ -255,7 +255,7 @@ func Test_LifecycleModule(t *testing.T) {
 		return ctx.Next()
 	}
 
-	tenantGuard := func(module core.RefProvider, ctx core.Ctx) bool {
+	tenantGuard := func(ctx core.Ctx) bool {
 		return ctx.Get(Tenant) != nil
 	}
 
@@ -317,7 +317,7 @@ func Test_PassMiddlewareModule(t *testing.T) {
 		return ctx.Next()
 	}
 
-	tenantGuard := func(module core.RefProvider, ctx core.Ctx) bool {
+	tenantGuard := func(ctx core.Ctx) bool {
 		return ctx.Get(Tenant) != nil
 	}
 

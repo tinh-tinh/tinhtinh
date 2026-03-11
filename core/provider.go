@@ -1,10 +1,15 @@
 package core
 
 import (
+	"reflect"
 	"slices"
+	"sync"
 
 	"github.com/tinh-tinh/tinhtinh/v2/common"
 )
+
+// providerNameCache caches provider names by type to avoid repeated reflection calls
+var providerNameCache sync.Map
 
 type Provide string
 
@@ -18,8 +23,6 @@ const (
 )
 
 type Factory func(param ...interface{}) interface{}
-
-type ProviderType string
 
 type Provider interface {
 	GetName() Provide
@@ -112,7 +115,8 @@ type ProviderOptions struct {
 	Factory Factory
 	// Providers that are injected with the provider.
 	Inject []Provide
-	Type   ProviderType
+	// Status of the provider. Default is PRIVATE.
+	Status ProvideStatus
 }
 
 type ProviderParams interface {
@@ -124,7 +128,7 @@ func (module *DynamicModule) NewProvider(param ProviderParams) Provider {
 	if ok {
 		return InitProviders(module, providerOptions)
 	}
-	nameProvide := common.GetStructName(param)
+	nameProvide := getProvideName(param)
 	options := ProviderOptions{
 		Name:  Provide(nameProvide),
 		Value: param,
@@ -172,38 +176,30 @@ func (module *DynamicModule) appendProvider(providers ...Provider) {
 }
 
 func InitProviders(module Module, opt ProviderOptions) Provider {
-	var provider Provider
-	providerIdx := module.findIdx(opt.Name)
-	if providerIdx != -1 {
-		provider = module.GetDataProviders()[providerIdx]
-	} else {
-		provider = &DynamicProvider{
-			Name:   opt.Name,
-			Status: PRIVATE,
-			Scope:  opt.Scope,
-		}
-		module.AppendDataProviders(provider)
-	}
+	// Retrieve existing provider or create a new one.
+	provider := getOrCreateProvider(module, opt)
 
+	// Apply defaults for scope and status.
 	if provider.GetScope() == "" {
 		provider.SetScope(module.GetScope())
 	}
+	if provider.GetStatus() == "" {
+		provider.SetStatus(PRIVATE)
+	}
 
-	// Handle transient
+	// Handle transient scope: defer factory execution on every call.
 	if provider.GetScope() == Transient {
 		provider.SetInject(opt.Inject)
 		provider.SetFactory(opt.Factory)
 		return provider
 	}
 
-	// Handle request scope
-	reqInject := slices.ContainsFunc(opt.Inject, func(p Provide) bool {
-		return p == REQUEST
-	})
-	if reqInject {
+	// Promote to request scope when REQUEST token is in the inject list.
+	if slices.ContainsFunc(opt.Inject, func(p Provide) bool { return p == REQUEST }) {
 		provider.SetScope(Request)
 	}
 
+	// Handle request scope: store factory/inject for per-request resolution.
 	if provider.GetScope() == Request {
 		provider.SetInject(opt.Inject)
 		provider.SetFactory(opt.Factory)
@@ -211,15 +207,14 @@ func InitProviders(module Module, opt ProviderOptions) Provider {
 		return provider
 	}
 
-	// Handle singleton
+	// Handle singleton scope: resolve and cache value immediately.
 	provider.SetValue(opt.Value)
 	if opt.Value == nil {
-		var values []interface{}
+		values := make([]interface{}, 0, len(opt.Inject))
 		for _, p := range opt.Inject {
 			values = append(values, module.Ref(p))
 		}
-		val := opt.Factory(values...)
-		if val != nil {
+		if val := opt.Factory(values...); val != nil {
 			provider.SetValue(val)
 		} else {
 			provider.SetFactory(opt.Factory)
@@ -229,12 +224,63 @@ func InitProviders(module Module, opt ProviderOptions) Provider {
 	return provider
 }
 
+// getOrCreateProvider retrieves an existing provider by name, or registers a
+// new one with the module if it does not yet exist.
+func getOrCreateProvider(module Module, opt ProviderOptions) Provider {
+	if idx := module.findIdx(opt.Name); idx != -1 {
+		return module.GetDataProviders()[idx]
+	}
+	p := &DynamicProvider{
+		Name:   opt.Name,
+		Status: opt.Status,
+		Scope:  opt.Scope,
+	}
+	module.AppendDataProviders(p)
+	return p
+}
+
 func Inject[P any](module RefProvider) *P {
 	var provider P
-	name := common.GetStructName(provider)
-	svc, ok := module.Ref(Provide(name)).(*P)
+	nameProvide := getProvideName(&provider)
+	svc, ok := module.Ref(Provide(nameProvide)).(*P)
 	if !ok {
 		return nil
 	}
 	return svc
+}
+
+func MustInject[P any](module RefProvider) *P {
+	var provider P
+	nameProvide := getProvideName(&provider)
+	svc, ok := module.Ref(Provide(nameProvide)).(*P)
+	if !ok {
+		panic("provider not found")
+	}
+	return svc
+}
+
+func getProvideName(param any) string {
+	// Get the type of the parameter for cache lookup
+	paramType := reflect.TypeOf(param)
+
+	// Check if the name is already cached
+	if cached, ok := providerNameCache.Load(paramType); ok {
+		return cached.(string)
+	}
+
+	// Not in cache, perform reflection
+	ctModel := reflect.ValueOf(param).Elem()
+
+	fnc := ctModel.MethodByName("ProvideName")
+	var name string
+	if fnc.IsValid() {
+		name = fnc.Call(nil)[0].String()
+	} else {
+		name = common.GetStructName(param)
+	}
+
+	// Store in cache for future use
+	providerNameCache.Store(paramType, name)
+
+	return name
 }

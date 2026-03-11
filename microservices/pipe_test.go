@@ -11,6 +11,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/microservices/tcp"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
+	"github.com/tinh-tinh/tinhtinh/v2/dto/validator"
 )
 
 const TCP_SERVICE core.Provide = "TCP_SERVICE"
@@ -49,14 +50,14 @@ func Test_Pipe(t *testing.T) {
 
 func appPipe(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
-		handler.Pipe(microservices.Payload(User{})).OnResponse("user.created", func(ctx microservices.Ctx) error {
+		handler.Pipe(microservices.PayloadParser[User]{}).OnEvent("user.created", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
 			return nil
 		})
 
-		handler.Pipe(microservices.Payload(User{})).OnResponse("user.failed", func(ctx microservices.Ctx) error {
+		handler.Pipe(microservices.PayloadParser[User]{}).OnEvent("user.failed", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Get(microservices.PIPE))
 			return nil
 		})
@@ -73,9 +74,13 @@ func appPipe(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule, tcp.Options{
+	app := tcp.NewServer(tcp.Options{
 		Addr: addr,
+		Config: microservices.Config{
+			CustomValidation: validator.Scanner,
+		},
 	})
+	app.Create(appModule())
 
 	return app
 }
@@ -96,7 +101,7 @@ func clientPipe(addr string) *core.App {
 			}
 
 			for _, msg := range messages {
-				client.Send("user.created", msg)
+				client.Publish("user.created", msg)
 			}
 
 			return ctx.JSON(core.Map{"data": "ok"})
@@ -108,7 +113,7 @@ func clientPipe(addr string) *core.App {
 				return ctx.Status(http.StatusInternalServerError).JSON(core.Map{"error": "client not found"})
 			}
 
-			client.Send("user.failed", 23)
+			client.Publish("user.failed", 23)
 			return ctx.JSON(core.Map{"data": "ok"})
 		})
 

@@ -19,9 +19,9 @@ func appGuard(addr string) microservices.Service {
 	}
 
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
-		handler.Guard(guard).OnResponse("guard", func(ctx microservices.Ctx) error {
+		handler.Guard(guard).OnEvent("guard", func(ctx microservices.Ctx) error {
 			fmt.Printf("Receive data %v\n", ctx.Payload())
 			return nil
 		})
@@ -38,9 +38,10 @@ func appGuard(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule, tcp.Options{
+	app := tcp.NewServer(tcp.Options{
 		Addr: addr,
 	})
+	app.Create(appModule())
 
 	return app
 }
@@ -66,9 +67,9 @@ func clientGuard(addr string, event string) *core.App {
 
 			for i, msg := range messages {
 				if i%2 == 0 {
-					client.Send(event, msg, microservices.Header{"key": "value"})
+					client.Publish(event, msg, microservices.Header{"key": "value"})
 				} else {
-					client.Send(event, msg)
+					client.Publish(event, msg)
 				}
 			}
 

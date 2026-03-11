@@ -19,16 +19,26 @@ type Message struct {
 }
 
 func Test_RPC(t *testing.T) {
-	app := appServer("localhost:8080")
+	app := appServer(":0")
 
 	go func() {
 		app.Listen()
+	}()
+	defer func() {
+		if server, ok := app.(*tcp.Server); ok {
+			server.Close()
+		}
 	}()
 
 	// Allow some time for the server to start
 	time.Sleep(100 * time.Millisecond)
 
-	clientApp := appClient("localhost:8080")
+	var addr string
+	if server, ok := app.(*tcp.Server); ok {
+		addr = server.Addr
+	}
+
+	clientApp := appClient(addr)
 	testServer := httptest.NewServer(clientApp.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
@@ -40,16 +50,26 @@ func Test_RPC(t *testing.T) {
 }
 
 func Test_Event(t *testing.T) {
-	app := appServer("localhost:4000")
+	app := appServer(":0")
 
 	go func() {
 		app.Listen()
+	}()
+	defer func() {
+		if server, ok := app.(*tcp.Server); ok {
+			server.Close()
+		}
 	}()
 
 	// Allow some time for the server to start
 	time.Sleep(1000 * time.Millisecond)
 
-	clientApp := appClient("localhost:4000")
+	var addr string
+	if server, ok := app.(*tcp.Server); ok {
+		addr = server.Addr
+	}
+
+	clientApp := appClient(addr)
 	testServer := httptest.NewServer(clientApp.PrepareBeforeListen())
 	defer testServer.Close()
 	testClient := testServer.Client()
@@ -62,9 +82,9 @@ func Test_Event(t *testing.T) {
 
 func appServer(addr string) microservices.Service {
 	appService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
-		handler.OnResponse("user.created", func(ctx microservices.Ctx) error {
+		handler.OnEvent("user.created", func(ctx microservices.Ctx) error {
 			fmt.Println("User Created Data:", ctx.Payload())
 			return nil
 		})
@@ -91,9 +111,10 @@ func appServer(addr string) microservices.Service {
 		})
 		return module
 	}
-	app := tcp.New(appModule, tcp.Options{
+	app := tcp.NewServer(tcp.Options{
 		Addr: addr,
 	})
+	app.Create(appModule())
 
 	return app
 }
@@ -130,7 +151,7 @@ func appClient(addr string) *core.App {
 			}
 
 			for _, msg := range messages {
-				client.Send("user.created", msg)
+				client.Publish("user.created", msg)
 			}
 
 			return ctx.JSON(core.Map{"data": "ok"})

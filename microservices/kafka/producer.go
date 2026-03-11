@@ -140,7 +140,7 @@ func (p *txnProducer) borrow() (producer sarama.AsyncProducer) {
 		for {
 			producer = p.producerProvider()
 			if producer != nil {
-				return
+				return producer
 			}
 		}
 	}
@@ -148,7 +148,7 @@ func (p *txnProducer) borrow() (producer sarama.AsyncProducer) {
 	index := len(p.producers) - 1
 	producer = p.producers[index]
 	p.producers = p.producers[:index]
-	return
+	return producer
 }
 
 func (p *txnProducer) release(producer sarama.AsyncProducer) {

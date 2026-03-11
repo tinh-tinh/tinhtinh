@@ -304,6 +304,7 @@ func newDefault(options Options) *Options {
 
 	return h
 }
+
 func handleOptions(cspOptions OptionSecurityPolicy) string {
 	policies := []string{}
 

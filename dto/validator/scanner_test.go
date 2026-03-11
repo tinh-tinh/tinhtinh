@@ -11,9 +11,8 @@ import (
 )
 
 func Test_Scanner(t *testing.T) {
-	assert.Panics(t, func() {
-		_ = validator.Scanner(nil)
-	})
+	err := validator.Scanner(nil)
+	assert.NotNil(t, err)
 	type Enum int
 	const (
 		Pending Enum = iota
@@ -46,9 +45,8 @@ func Test_Scanner(t *testing.T) {
 		MinLength        string    `validate:"minLength=3"`
 		MaxLength        string    `validate:"maxLength=10"`
 	}
-	assert.Panics(t, func() {
-		_ = validator.Scanner(Input{})
-	})
+	err = validator.Scanner(Input{})
+	assert.NotNil(t, err)
 
 	happyCase := &Input{
 		Required:         "required",
@@ -76,7 +74,7 @@ func Test_Scanner(t *testing.T) {
 		MaxLength: "xyz",
 	}
 
-	err := validator.Scanner(happyCase)
+	err = validator.Scanner(happyCase)
 	assert.Nil(t, err)
 
 	badCaseStr := &Input{
@@ -95,7 +93,7 @@ func Test_Scanner(t *testing.T) {
 	}
 	err = validator.Scanner(badCaseStr)
 	assert.NotNil(t, err)
-	assert.Equal(t, "Required is required\nIsAlpha is not a valid alpha\nIsAlphanumeric is not a valid alpha numeric\nIsEmail is not a valid email\nIsStrongPassword is not a valid strong password\nIsUUID is not a valid UUID\nIsObjectId is not a valid ObjectID\nIsAlpha is not a valid alpha\nIsAlpha is not a valid alpha\nMinLength is minimim length is 3\nMaxLength is maximum length is 10", err.Error())
+	assert.Equal(t, "Required is required\nIsAlpha is not a valid alpha\nIsAlphanumeric is not a valid alpha numeric\nIsEmail is not a valid email\nIsStrongPassword is not a valid strong password\nIsUUID is not a valid UUID\nIsObjectId is not a valid ObjectID\nIsAlpha is not a valid alpha\nIsAlpha is not a valid alpha\nMinLength minimum length is 3\nMaxLength maximum length is 10", err.Error())
 
 	type BadCase struct {
 		IsFloat      any `validate:"isFloat"`
@@ -121,7 +119,7 @@ func Test_Scanner(t *testing.T) {
 	})
 	assert.Nil(t, err)
 
-	var customScanner = &CustomScanner{
+	customScanner := &CustomScanner{
 		IsCustom: "def",
 	}
 	err = validator.Scanner(customScanner)
@@ -138,57 +136,6 @@ func (c *CustomScanner) Scan() error {
 		return nil
 	}
 	return fmt.Errorf("custom scan error")
-}
-
-func Benchmark_Scanner(b *testing.B) {
-
-	type UserDetail struct {
-		ID       string    `validate:"isObjectId"`
-		Name     string    `validate:"required,isAlpha"`
-		Username string    `validate:"isAlphaNumeric"`
-		Email    string    `validate:"required,isEmail"`
-		Password string    `validate:"isStrongPassword"`
-		UserID   string    `validate:"isUUID"`
-		Point    string    `validate:"isFloat"`
-		Height   float64   `validate:"isFloat"`
-		Age      int       `validate:"isInt"`
-		Active   bool      `validate:"isBool"`
-		IsAdmin  string    `validate:"isBool"`
-		Birth    string    `validate:"isDateString"`
-		Total    int       `validate:"isNumber"`
-		Join     time.Time `validate:"isDate"`
-	}
-
-	type User struct {
-		ID     int         `validate:"required,isInt"`
-		Detail *UserDetail `validate:"nested"`
-		Banner string      `validate:"isAlpha"`
-	}
-
-	type UserList struct {
-		Users []*User `validate:"nested"`
-	}
-	b.Run("test_validator", func(b *testing.B) {
-		var userList []*User
-		count := b.N
-		for n := 0; n < count; n++ {
-			userDetail := &UserDetail{
-				Name:     "Haha",
-				Email:    fmt.Sprintf("abc%d@gmail.com", n),
-				Password: fmt.Sprintf("1234567%d@Abc", n),
-			}
-			user := &User{
-				ID:     n,
-				Detail: userDetail,
-			}
-			require.Nil(b, validator.Scanner(user))
-			userList = append(userList, user)
-		}
-
-		require.Nil(b, validator.Scanner(&UserList{
-			Users: userList,
-		}))
-	})
 }
 
 func TestDefault(t *testing.T) {
@@ -223,4 +170,30 @@ func Test_Array(t *testing.T) {
 		ArrBool:  []bool{true, false},
 	}
 	require.Nil(t, validator.Scanner(user))
+}
+
+func TestOptional(t *testing.T) {
+	type Contact struct {
+		ContactName  string `json:"name" validator:"isAlphanumeric"`
+		ContactEmail string `json:"email" validate:"isEmail"`
+		ContactPhone string `json:"phone"`
+	}
+
+	type Location struct {
+		Name     *string  `json:"name,omitempty"`
+		Line     *string  `json:"addressLine,omitempty"`
+		City     *string  `json:"city,omitempty"`
+		State    *string  `json:"state,omitempty"`
+		Country  *string  `json:"country,omitempty"`
+		Zipcode  *string  `json:"zipCode,omitempty"`
+		Timezone *string  `json:"timezone,omitempty"`
+		MapUrl   *string  `json:"mapUrl,omitempty"`
+		Contact  *Contact `json:"contact,omitempty" validate:"nested"`
+	}
+
+	input := &Location{}
+	name := "name"
+	input.Name = &name
+	err := validator.Scanner(input)
+	require.Nil(t, err)
 }

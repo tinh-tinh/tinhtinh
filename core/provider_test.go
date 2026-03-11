@@ -14,8 +14,9 @@ import (
 
 func ChildProvider(module core.Module) core.Provider {
 	provider := module.NewProvider(core.ProviderOptions{
-		Name:  "child",
-		Value: "child",
+		Name:   "child",
+		Value:  "child",
+		Status: core.PUBLIC,
 	})
 	return provider
 }
@@ -24,7 +25,6 @@ func ChildModule(module core.Module) core.Module {
 	childModule := module.New(core.NewModuleOptions{
 		Scope:     core.Global,
 		Providers: []core.Providers{ChildProvider},
-		Exports:   []core.Providers{ChildProvider},
 	})
 
 	return childModule
@@ -278,16 +278,46 @@ func Test_AutoNameProvider(t *testing.T) {
 		Name string
 	}
 	service := func(module core.Module) core.Provider {
-		return module.NewProvider(&StructName{Name: "module"})
+		prd := module.NewProvider(&StructName{Name: "module"})
+		prd.SetStatus(core.PUBLIC)
+		return prd
 	}
 
 	module := core.NewModule(core.NewModuleOptions{
 		Providers: []core.Providers{service},
-		Exports:   []core.Providers{service},
 	})
 
 	structName := core.Inject[StructName](module)
 	require.Equal(t, "module", structName.Name)
+
+	type Any struct {
+		Version int
+	}
+	nilValue := core.Inject[Any](module)
+	require.Nil(t, nilValue)
+}
+
+type ProviderRef struct {
+	Name string
+}
+
+func (ProviderRef) ProvideName() string {
+	return "ref"
+}
+
+func Test_RefProvide(t *testing.T) {
+	service := func(module core.Module) core.Provider {
+		prd := module.NewProvider(&ProviderRef{Name: "module"})
+		prd.SetStatus(core.PUBLIC)
+		return prd
+	}
+
+	module := core.NewModule(core.NewModuleOptions{
+		Providers: []core.Providers{service},
+	})
+
+	providerRef := core.Inject[ProviderRef](module)
+	require.Equal(t, "module", providerRef.Name)
 
 	type Any struct {
 		Version int
@@ -313,5 +343,72 @@ func BenchmarkRequestModule(b *testing.B) {
 			require.Nil(b, err)
 			require.Equal(b, http.StatusOK, resp.StatusCode)
 		}
+	})
+}
+
+func Test_ReInitProvider(t *testing.T) {
+	const providerName core.Provide = "singleton"
+
+	firstValue := "first"
+	secondValue := "second"
+
+	module := core.NewModule(core.NewModuleOptions{
+		Scope: core.Global,
+	})
+
+	// First initialization: creates a new provider.
+	first := module.NewProvider(core.ProviderOptions{
+		Name:  providerName,
+		Value: firstValue,
+	})
+	require.NotNil(t, first)
+	require.Equal(t, firstValue, module.Ref(providerName))
+
+	// Re-initialization with the same name: must return the existing provider.
+	second := module.NewProvider(core.ProviderOptions{
+		Name:  providerName,
+		Value: secondValue,
+	})
+	require.NotNil(t, second)
+
+	// The provider instance should be the same object.
+	require.Same(t, first, second)
+
+	// The number of registered providers must not grow.
+	count := 0
+	for _, p := range module.GetDataProviders() {
+		if p.GetName() == providerName {
+			count++
+		}
+	}
+	require.Equal(t, 1, count, "re-init must not register a duplicate provider")
+}
+
+func Test_MustInject(t *testing.T) {
+	type StructName struct {
+		Name string
+	}
+	service := func(module core.Module) core.Provider {
+		prd := module.NewProvider(&StructName{Name: "module"})
+		prd.SetStatus(core.PUBLIC)
+		return prd
+	}
+
+	module := core.NewModule(core.NewModuleOptions{
+		Providers: []core.Providers{service},
+	})
+
+	t.Run("success", func(t *testing.T) {
+		structName := core.MustInject[StructName](module)
+		require.Equal(t, "module", structName.Name)
+	})
+
+	t.Run("panic", func(t *testing.T) {
+		type Any struct {
+			Version int
+		}
+		require.Panics(t, func() {
+			core.MustInject[Any](module)
+		})
 	})
 }

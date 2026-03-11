@@ -10,12 +10,15 @@ import (
 
 type Ctx interface {
 	Headers(key string) string
-	Payload() interface{}
-	PayloadParser(schema interface{}) error
+	Payload() any
+	PayloadParser(schema any) error
 	ErrorHandler(err error)
-	Set(key interface{}, value interface{})
-	Get(key interface{}) interface{}
+	Set(key any, value any)
+	Get(key any) any
 	Next() error
+	Scan(val any) error
+	Path() string
+	Reply(data any) ([]byte, error)
 }
 
 type DefaultCtx struct {
@@ -84,4 +87,16 @@ func (c *DefaultCtx) Get(key interface{}) interface{} {
 
 func (c *DefaultCtx) Headers(key string) string {
 	return c.message.Headers[key]
+}
+
+func (c *DefaultCtx) Scan(val any) error {
+	return c.service.Config().CustomValidation(val)
+}
+
+func (c *DefaultCtx) Path() string {
+	return c.message.Event
+}
+
+func (c *DefaultCtx) Reply(data any) ([]byte, error) {
+	return c.service.Config().Serializer(data)
 }

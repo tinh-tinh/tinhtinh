@@ -10,7 +10,6 @@ type Service interface {
 type ClientProxy interface {
 	Config() Config
 	Timeout(duration time.Duration) ClientProxy
-	Emit(event string, message Message) error
-	Send(event string, data interface{}, headers ...Header) error
-	Publish(event string, data interface{}, headers ...Header) error
+	Publish(event string, data any, headers ...Header) error
+	Send(path string, request any, response any, headers ...Header) error
 }

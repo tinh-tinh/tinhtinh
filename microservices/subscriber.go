@@ -2,24 +2,24 @@ package microservices
 
 import "fmt"
 
-type Factory interface {
+type EventFactory interface {
 	Handle(ctx Ctx) error
 }
 
 type SubscribeHandler struct {
 	Name        string
-	Factory     Factory
+	Factory     EventFactory
 	Middlewares []Middleware
 }
 
-type FactoryFunc func(ctx Ctx) error
+type EventFactoryFunc func(ctx Ctx) error
 
-func (f FactoryFunc) Handle(ctx Ctx) error {
+func (f EventFactoryFunc) Handle(ctx Ctx) error {
 	return f(ctx)
 }
 
-func ParseFactory(factory Factory) Factory {
-	return FactoryFunc(func(ctx Ctx) error {
+func ParseEventFactory(factory EventFactory) EventFactory {
+	return EventFactoryFunc(func(ctx Ctx) error {
 		var err error
 		defer func() {
 			if r := recover(); r != nil {
@@ -37,9 +37,8 @@ func ParseFactory(factory Factory) Factory {
 	})
 }
 
-func (s *SubscribeHandler) Handle(svc Service, data Message) {
-	var mergeHandler Factory
-	mergeHandler = ParseFactory(s.Factory)
+func (s *SubscribeHandler) Handle(svc Service, data Message) error {
+	mergeHandler := ParseEventFactory(s.Factory)
 
 	for i := len(s.Middlewares) - 1; i >= 0; i-- {
 		v := s.Middlewares[i]
@@ -47,5 +46,5 @@ func (s *SubscribeHandler) Handle(svc Service, data Message) {
 		mergeHandler = mid(mergeHandler)
 	}
 
-	mergeHandler.Handle(NewCtx(data, svc))
+	return mergeHandler.Handle(NewCtx(data, svc))
 }

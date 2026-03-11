@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"log"
 	"reflect"
 	"strings"
 	"time"
@@ -26,7 +27,7 @@ type Connect struct {
 }
 
 // Client usage
-func NewClient(opt Options) microservices.ClientProxy {
+func NewClient(opt Options) *Connect {
 	conn := redis_store.NewClient(opt.Options)
 
 	connect := &Connect{
@@ -51,12 +52,17 @@ func (c *Connect) Config() microservices.Config {
 	return c.config
 }
 
-func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	return microservices.DefaultSend(c)(event, data, headers...)
+func (c *Connect) Send(path string, request any, response any, headers ...microservices.Header) error {
+	log.Println("Redis not support rpc")
+	return nil
 }
 
 func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	return microservices.DefaultPublish(c)(event, data, headers...)
+	return c.emit(event, microservices.Message{
+		Event:   event,
+		Headers: microservices.AssignHeader(c.Config().Header, headers...),
+		Data:    data,
+	})
 }
 
 func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
@@ -64,7 +70,7 @@ func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
 	return c
 }
 
-func (c *Connect) Emit(event string, message microservices.Message) error {
+func (c *Connect) emit(event string, message microservices.Message) error {
 	payload, err := microservices.EncodeMessage(c, message)
 	if err != nil {
 		c.config.ErrorHandler(err)
@@ -87,10 +93,9 @@ func (c *Connect) Emit(event string, message microservices.Message) error {
 }
 
 // Server usage
-func New(module core.ModuleParam, opts ...Options) microservices.Service {
+func New(opts ...Options) *Connect {
 	connect := &Connect{
 		Context: context.Background(),
-		Module:  module(),
 		config:  microservices.DefaultConfig(),
 	}
 
@@ -111,52 +116,33 @@ func New(module core.ModuleParam, opts ...Options) microservices.Service {
 	return connect
 }
 
-func Open(opts ...Options) core.Service {
-	connect := &Connect{
-		Context: context.Background(),
-		config:  microservices.DefaultConfig(),
-	}
-
-	if len(opts) > 0 {
-		if opts[0].Options != nil {
-			conn := redis_store.NewClient(opts[0].Options)
-			connect.Conn = conn
-		}
-		if !reflect.ValueOf(opts[0].Config).IsZero() {
-			connect.config = microservices.ParseConfig(opts[0].Config)
-		}
-	}
-
-	return connect
-}
-
 func (c *Connect) Create(module core.Module) {
 	c.Module = module
 }
 
 func (c *Connect) Listen() {
+	var subscribers []*microservices.SubscribeHandler
 	store, ok := c.Module.Ref(microservices.STORE).(*microservices.Store)
-	if !ok {
-		panic("store not found")
+	if ok && store != nil {
+		subscribers = append(subscribers, store.Subscribers...)
+	}
+	redisStore, ok := c.Module.Ref(microservices.ToTransport(microservices.REDIS)).(*microservices.Store)
+	if ok && redisStore != nil {
+		subscribers = append(subscribers, redisStore.Subscribers...)
 	}
 
-	if store.GetRPC() != nil {
-		for _, sub := range store.GetRPC() {
-			subscriber := c.Conn.Subscribe(c.Context, sub.Name)
-			go c.Handler(subscriber, sub)
-		}
+	if store == nil && redisStore == nil {
+		panic("store required")
 	}
 
-	if store.GetPubSub() != nil {
-		var subscriber *redis_store.PubSub
-		for _, sub := range store.GetPubSub() {
-			if strings.HasSuffix(sub.Name, "*") {
-				subscriber = c.Conn.PSubscribe(c.Context, sub.Name)
-			} else {
-				subscriber = c.Conn.Subscribe(c.Context, sub.Name)
-			}
-			go c.Handler(subscriber, sub)
+	var subscriber *redis_store.PubSub
+	for _, sub := range subscribers {
+		if strings.HasSuffix(sub.Name, "*") {
+			subscriber = c.Conn.PSubscribe(c.Context, sub.Name)
+		} else {
+			subscriber = c.Conn.Subscribe(c.Context, sub.Name)
 		}
+		go c.Handler(subscriber, sub)
 	}
 }
 

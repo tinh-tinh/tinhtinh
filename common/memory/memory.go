@@ -1,7 +1,6 @@
 package memory
 
 import (
-	"slices"
 	"sync"
 	"time"
 
@@ -69,15 +68,20 @@ func (m *Store) Set(key string, val interface{}, ttl ...time.Duration) {
 }
 
 func (m *Store) Keys() []string {
+	m.RLock()
 	keys := make([]string, 0, len(m.data))
 	for k := range m.data {
 		keys = append(keys, k)
 	}
+	m.RUnlock()
 	return keys
 }
 
 func (m *Store) Count() int {
-	return len(m.Keys())
+	m.RLock()
+	count := len(m.data)
+	m.RUnlock()
+	return count
 }
 
 // func (m *Store) removeOldEle() {
@@ -94,7 +98,10 @@ func (m *Store) Count() int {
 // }
 
 func (m *Store) Has(key string) bool {
-	return slices.Contains(m.Keys(), key)
+	m.RLock()
+	_, exists := m.data[key]
+	m.RUnlock()
+	return exists
 }
 
 func (m *Store) Delete(key string) {

@@ -1,5 +1,7 @@
 package microservices
 
+import "time"
+
 const (
 	RMQ   = "RMQ"
 	KAFKA = "KAFKA"
@@ -8,3 +10,5 @@ const (
 	REDIS = "REDIS"
 	TCP   = "TCP"
 )
+
+const DEFAULT_TIMEOUT = 5 * time.Minute

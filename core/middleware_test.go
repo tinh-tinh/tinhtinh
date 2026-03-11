@@ -192,8 +192,8 @@ func TestErrorMiddleware(t *testing.T) {
 
 func TestRefMiddleware(t *testing.T) {
 	const KEY core.Provide = "key"
-	middleware := func(ref core.RefProvider, ctx core.Ctx) error {
-		svc := ref.Ref(KEY)
+	middleware := func(ctx core.Ctx) error {
+		svc := ctx.Ref(KEY)
 		if svc == nil {
 			return fmt.Errorf("service not found")
 		}
@@ -213,7 +213,7 @@ func TestRefMiddleware(t *testing.T) {
 	controller := func(module core.Module) core.Controller {
 		ctrl := module.NewController("test")
 
-		ctrl.UseRef(middleware).Get("", func(ctx core.Ctx) error {
+		ctrl.Use(middleware).Get("", func(ctx core.Ctx) error {
 			return ctx.JSON(core.Map{
 				"data": ctx.Get(KEY),
 			})
@@ -254,8 +254,8 @@ func TestRefMiddleware(t *testing.T) {
 
 func TestRefMiddlewareModule(t *testing.T) {
 	const KEY core.Provide = "key"
-	middleware := func(ref core.RefProvider, ctx core.Ctx) error {
-		svc := ref.Ref(KEY)
+	middleware := func(ctx core.Ctx) error {
+		svc := ctx.Ref(KEY)
 		if svc == nil {
 			return fmt.Errorf("service not found")
 		}
@@ -288,7 +288,7 @@ func TestRefMiddlewareModule(t *testing.T) {
 		appModule := core.NewModule(core.NewModuleOptions{
 			Controllers: []core.Controllers{controller},
 			Providers:   []core.Providers{service},
-		}).UseRef(middleware)
+		}).Use(middleware)
 
 		return appModule
 	}

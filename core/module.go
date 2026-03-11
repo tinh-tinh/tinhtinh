@@ -40,7 +40,6 @@ type Module interface {
 	Consumer(consumer *Consumer) Module
 	Guard(guards ...Guard) Module
 	Use(middleware ...Middleware) Module
-	UseRef(middlewareRefs ...MiddlewareRef) Module
 	GetDataProviders() []Provider
 	AppendDataProviders(providers ...Provider)
 	GetScope() Scope
@@ -48,25 +47,29 @@ type Module interface {
 
 type DynamicModule struct {
 	sync.Pool
-	isRoot        bool
-	Scope         Scope
-	Routers       []*Router
-	Middlewares   []Middleware
-	DataProviders []Provider
-	hooks         []HookModule
-	interceptor   Interceptor
+	isRoot          bool
+	Name            string
+	Scope           Scope
+	Routers         []*Router
+	SnapshotRouters []*Router
+	Middlewares     []Middleware
+	DataProviders   []Provider
+	SubModules      []*DynamicModule
+	hooks           []HookModule
+	interceptor     Interceptor
 }
 
-type Modules func(module Module) Module
-type Controllers func(module Module) Controller
-type Providers func(module Module) Provider
+type (
+	Modules     func(module Module) Module
+	Controllers func(module Module) Controller
+	Providers   func(module Module) Provider
+)
 
 type NewModuleOptions struct {
 	Scope       Scope
 	Imports     []Modules
 	Controllers []Controllers
 	Providers   []Providers
-	Exports     []Providers
 	Guards      []Guard
 	Middlewares []Middleware
 	Interceptor Interceptor
@@ -80,7 +83,7 @@ func NewModule(opt NewModuleOptions) Module {
 	if opt.Scope == "" {
 		opt.Scope = Global
 	}
-	module := &DynamicModule{isRoot: true}
+	module := &DynamicModule{isRoot: true, Name: "AppModule"}
 	initModule(module, opt)
 
 	return module
@@ -100,6 +103,9 @@ func (m *DynamicModule) New(opt NewModuleOptions) Module {
 	newMod := &DynamicModule{isRoot: false}
 	newMod.DataProviders = append(newMod.DataProviders, m.GetExports()...)
 	newMod.Middlewares = append(newMod.Middlewares, m.Middlewares...)
+	if newMod.interceptor == nil {
+		newMod.interceptor = m.interceptor
+	}
 
 	initModule(newMod, opt)
 	return newMod
@@ -130,20 +136,29 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 	}
 
 	// Parse interceptor
-	module.interceptor = opt.Interceptor
+	if opt.Interceptor != nil {
+		module.interceptor = opt.Interceptor
+	}
 
 	// Imports
 	for _, m := range opt.Imports {
 		if m == nil {
 			continue
 		}
+		name := common.GetFunctionName(m)
 		mod := m(module)
 		fmt.Printf("%s %s %s %s\n",
 			color.Green("[TT]"),
 			color.White(time.Now().Format("2006-01-02 15:04:05")),
 			color.Yellow("[Module Initializer]"),
-			color.Green(common.GetFunctionName(m)),
+			color.Green(name),
 		)
+		if dynMod, ok := mod.(*DynamicModule); ok {
+			dynMod.Name = name
+			// Snapshot own routers before free() clears them.
+			dynMod.SnapshotRouters = append([]*Router(nil), dynMod.Routers...)
+			module.SubModules = append(module.SubModules, dynMod)
+		}
 
 		mod.init()
 		module.Routers = append(module.Routers, mod.GetRouters()...)
@@ -173,15 +188,6 @@ func initModule(module *DynamicModule, opt NewModuleOptions) {
 			continue
 		}
 		ct(module)
-	}
-
-	// Exports
-	for _, e := range opt.Exports {
-		if e == nil {
-			continue
-		}
-		provider := e(module)
-		provider.SetStatus(PUBLIC)
 	}
 }
 

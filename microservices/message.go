@@ -5,15 +5,7 @@ import (
 	"github.com/tinh-tinh/tinhtinh/v2/common/compress"
 )
 
-type EventType string
-
-const (
-	RPC    EventType = "rpc"
-	PubSub EventType = "pubsub"
-)
-
 type Message struct {
-	Type    EventType         `json:"type"`
 	Event   string            `json:"event"`
 	Headers map[string]string `json:"headers"`
 	Data    interface{}       `json:"data"`
@@ -61,4 +53,11 @@ func AssignHeader(original Header, toMerge ...Header) Header {
 	}
 
 	return cloned
+}
+
+func (m Message) IsZero() bool {
+	return m.Event == "" &&
+		len(m.Headers) == 0 &&
+		m.Data == nil &&
+		len(m.Bytes) == 0
 }

@@ -1,16 +1,13 @@
 package tcp
 
 import (
+	"errors"
 	"net"
+	"net/rpc"
 	"time"
 
 	"github.com/tinh-tinh/tinhtinh/microservices"
 )
-
-type RetryOptions struct {
-	Retry int
-	Delay time.Duration
-}
 
 type Options struct {
 	microservices.Config
@@ -19,12 +16,28 @@ type Options struct {
 }
 
 type Client struct {
-	config microservices.Config
-	Conn   net.Conn
+	config    microservices.Config
+	eventConn net.Conn
+	rpcClient *rpc.Client
+	timeout   time.Duration
+}
+
+func connect(addr string) (net.Conn, *rpc.Client, error) {
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rpcClient, err := rpc.Dial("tcp", addr)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return conn, rpcClient, nil
 }
 
 func NewClient(opt Options) microservices.ClientProxy {
-	conn, err := net.Dial("tcp", opt.Addr)
+	eventConn, rpcClient, err := connect(opt.Addr)
 	if err != nil {
 		if opt.RetryOptions.Retry != 0 {
 			time.Sleep(opt.RetryOptions.Delay)
@@ -35,12 +48,14 @@ func NewClient(opt Options) microservices.ClientProxy {
 	}
 
 	if opt.Timeout > 0 {
-		conn.SetDeadline(time.Now().Add(opt.Timeout))
+		eventConn.SetDeadline(time.Now().Add(opt.Timeout))
 	}
 
 	client := &Client{
-		Conn:   conn,
-		config: microservices.NewConfig(opt.Config),
+		eventConn: eventConn,
+		rpcClient: rpcClient,
+		config:    microservices.NewConfig(opt.Config),
+		timeout:   microservices.DEFAULT_TIMEOUT,
 	}
 
 	return client
@@ -50,35 +65,67 @@ func (client *Client) Config() microservices.Config {
 	return client.config
 }
 
-func (client *Client) Send(event string, data interface{}, headers ...microservices.Header) error {
-	return microservices.DefaultSend(client)(event, data, headers...)
-}
-
-func (client *Client) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	return microservices.DefaultPublish(client)(event, data, headers...)
-}
-
-func (client *Client) Timeout(duration time.Duration) microservices.ClientProxy {
-	err := client.Conn.SetWriteDeadline(time.Now().Add(duration))
-	if err != nil {
-		panic(err)
-	}
-	return client
-}
-
-func (client *Client) Emit(event string, message microservices.Message) error {
-	payload, err := microservices.EncodeMessage(client, message)
+func (client *Client) Publish(event string, data any, headers ...microservices.Header) error {
+	payload, err := microservices.EncodeMessage(client, microservices.Message{
+		Event:   event,
+		Headers: microservices.AssignHeader(client.Config().Header, headers...),
+		Data:    data,
+	})
 	if err != nil {
 		client.config.ErrorHandler(err)
 		return err
 	}
 
 	payload = append(payload, '\n')
-	_, err = client.Conn.Write(payload)
+	_, err = client.eventConn.Write(payload)
 	if err != nil {
 		client.config.ErrorHandler(err)
 		return err
 	}
 
 	return nil
+}
+
+func (client *Client) Timeout(duration time.Duration) microservices.ClientProxy {
+	client.timeout = duration
+	err := client.eventConn.SetWriteDeadline(time.Now().Add(duration))
+	if err != nil {
+		panic(err)
+	}
+	return client
+}
+
+func (client *Client) Send(path string, data any, response any, headers ...microservices.Header) error {
+	msg := microservices.Message{
+		Event:   path,
+		Headers: microservices.AssignHeader(client.Config().Header, headers...),
+		Data:    data,
+	}
+
+	bytes, err := microservices.EncodeMessage(client, msg)
+	if err != nil {
+		client.config.ErrorHandler(err)
+		return err
+	}
+
+	resRaw := []byte{}
+	call := client.rpcClient.Go("RpcGateway.Call", &bytes, &resRaw, nil)
+	select {
+	case <-call.Done:
+		if call.Error != nil {
+			client.config.ErrorHandler(call.Error)
+			return call.Error
+		}
+		err := client.config.Deserializer(resRaw, response)
+		if err != nil {
+			client.config.ErrorHandler(err)
+			return err
+		}
+		return nil
+
+	case <-time.After(client.timeout):
+		err := errors.New("RPC call timed out")
+		client.config.ErrorHandler(err)
+		return err
+	}
 }

@@ -2,7 +2,6 @@ package core
 
 import (
 	"net/http"
-	"runtime"
 	"strings"
 )
 
@@ -15,7 +14,6 @@ type Controller interface {
 	Guard(guards ...Guard) Controller
 	Interceptor(interceptor Interceptor) Controller
 	Use(middleware ...Middleware) Controller
-	UseRef(middlewareRefs ...MiddlewareRef) Controller
 	Composition(ctrl Controller) Controller
 	Registry() Controller
 	Get(path string, handler Handler)
@@ -26,7 +24,6 @@ type Controller interface {
 	Handler(path string, handler http.Handler)
 	Ref(name Provide, ctx ...Ctx) interface{}
 	getMiddlewares() []Middleware
-	getGlobalMiddlewares() []Middleware
 	getMetadata() []*Metadata
 	GetDtos() []PipeDto
 	Sse(path string, sseFnc SseFnc)
@@ -108,8 +105,10 @@ func (c *DynamicController) Registry() Controller {
 	c.globalMiddlewares = append(c.globalMiddlewares, c.middlewares...)
 	c.middlewares = []Middleware{}
 	c.globalMetadata = append(c.globalMetadata, c.metadata...)
-	c.globalInterceptor = c.interceptor
 	c.metadata = []*Metadata{}
+	if c.interceptor != nil {
+		c.globalInterceptor = c.interceptor
+	}
 
 	return c
 }
@@ -209,7 +208,6 @@ func (c *DynamicController) free() {
 	c.Dtos = nil
 	c.interceptor = nil
 	c.metadata = []*Metadata{}
-	runtime.GC()
 }
 
 func (c *DynamicController) Ref(name Provide, ctx ...Ctx) interface{} {

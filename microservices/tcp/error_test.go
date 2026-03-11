@@ -14,6 +14,15 @@ import (
 )
 
 func Test_Client_Error(t *testing.T) {
+	appProvider := func(module core.Module) core.Provider {
+		handler := microservices.NewHandler(module)
+
+		handler.OnEvent("abc", func(ctx microservices.Ctx) error {
+			return nil
+		})
+
+		return handler
+	}
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
@@ -35,14 +44,16 @@ func Test_Client_Error(t *testing.T) {
 
 	serverModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
-			Imports: []core.Modules{microservices.Register()},
+			Imports:   []core.Modules{microservices.Register()},
+			Providers: []core.Providers{appProvider},
 		})
 		return module
 	}
 
-	server := tcp.New(serverModule, tcp.Options{
+	server := tcp.NewServer(tcp.Options{
 		Addr: "localhost:9000",
 	})
+	server.Create(serverModule())
 	go server.Listen()
 
 	time.Sleep(100 * time.Millisecond)
@@ -52,7 +63,7 @@ func Test_Client_Error(t *testing.T) {
 
 		client := microservices.InjectClient(module, microservices.TCP)
 		ctrl.Get("", func(ctx core.Ctx) error {
-			go client.Timeout(1*time.Microsecond).Send("abc", 1000)
+			go client.Timeout(1*time.Microsecond).Publish("abc", 1000)
 			return ctx.JSON(core.Map{"data": "ok"})
 		})
 
@@ -100,9 +111,10 @@ func Test_Server_Error(t *testing.T) {
 			})
 			return module
 		}
-		server := tcp.New(serverModule, tcp.Options{
+		server := tcp.NewServer(tcp.Options{
 			Addr: "localhost",
 		})
+		server.Create(serverModule())
 		server.Listen()
 	})
 
@@ -111,9 +123,10 @@ func Test_Server_Error(t *testing.T) {
 			module := core.NewModule(core.NewModuleOptions{})
 			return module
 		}
-		server := tcp.New(serverModule, tcp.Options{
+		server := tcp.NewServer(tcp.Options{
 			Addr: "localhost:9090",
 		})
+		server.Create(serverModule())
 		server.Listen()
 	})
 }

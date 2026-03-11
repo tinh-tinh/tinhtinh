@@ -66,11 +66,9 @@ func (b *SseBroker) Start() {
 	// Start a goroutine
 	//
 	go func() {
-
 		// Loop endlessly
 		//
 		for {
-
 			// Block until we receive from one of the
 			// three following channels.
 			select {
@@ -122,7 +120,6 @@ func (b *SseBroker) Close() {
 // received. The client should close the connection when it is finished listening
 // to events.
 func (b *SseBroker) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
 	// Make sure that the writer supports flushing.
 	//
 	f, ok := w.(http.Flusher)

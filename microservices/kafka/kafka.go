@@ -7,7 +7,7 @@ import (
 	"github.com/IBM/sarama"
 )
 
-type Config struct {
+type BrokerConfig struct {
 	Brokers []string
 	Version string
 	Topics  []string
@@ -19,7 +19,7 @@ type Kafka struct {
 	Version sarama.KafkaVersion
 }
 
-func NewInstance(config Config) *Kafka {
+func NewInstance(config BrokerConfig) *Kafka {
 	if config.Verbose {
 		sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)
 	}
@@ -40,9 +40,13 @@ func NewInstance(config Config) *Kafka {
 	}
 }
 
-func DefaultConfig() Config {
-	return Config{
+func DefaultConfig() BrokerConfig {
+	return BrokerConfig{
 		Brokers: []string{"localhost:9092"},
 		Version: sarama.DefaultVersion.String(),
 	}
+}
+
+func (c BrokerConfig) IsZero() bool {
+	return len(c.Brokers) == 0 && c.Version == "" && len(c.Topics) == 0 && !c.Verbose
 }

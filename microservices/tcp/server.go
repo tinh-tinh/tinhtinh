@@ -3,9 +3,11 @@ package tcp
 import (
 	"bufio"
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"net/http"
-	"reflect"
+	"net/rpc"
 	"slices"
 	"strings"
 
@@ -15,40 +17,24 @@ import (
 )
 
 type Server struct {
-	Addr   string
-	Module core.Module
-	config microservices.Config
+	Addr     string
+	Module   core.Module
+	config   microservices.Config
+	listener net.Listener
 }
 
-func New(module core.ModuleParam, opts ...Options) microservices.Service {
-	svc := &Server{
-		Module: module(),
-		config: microservices.DefaultConfig(),
-	}
-
-	if len(opts) > 0 {
-		if !reflect.ValueOf(opts[0].Config).IsZero() {
-			svc.config = microservices.ParseConfig(opts[0].Config)
-		}
-		if opts[0].Addr != "" {
-			svc.Addr = opts[0].Addr
-		}
-	}
-
-	return svc
-}
-
-func Open(opts ...Options) core.Service {
+func NewServer(opts ...Options) *Server {
 	svc := &Server{
 		config: microservices.DefaultConfig(),
 	}
 
 	if len(opts) > 0 {
-		if !reflect.ValueOf(opts[0].Config).IsZero() {
-			svc.config = microservices.ParseConfig(opts[0].Config)
+		opt := common.MergeStruct(opts...)
+		if !opt.Config.IsZero() {
+			svc.config = microservices.ParseConfig(opt.Config)
 		}
-		if opts[0].Addr != "" {
-			svc.Addr = opts[0].Addr
+		if opt.Addr != "" {
+			svc.Addr = opt.Addr
 		}
 	}
 
@@ -64,60 +50,105 @@ func (svc *Server) Listen() {
 	if err != nil {
 		panic(err)
 	}
+	svc.listener = listener
+	svc.Addr = listener.Addr().String()
+
+	var subscribers []*microservices.SubscribeHandler
+	var rpcHandlers microservices.RpcHandlers
 	store, ok := svc.Module.Ref(microservices.STORE).(*microservices.Store)
-	if !ok {
-		panic("store not found")
+	if ok && store != nil {
+		subscribers = append(subscribers, store.Subscribers...)
+		rpcHandlers = append(rpcHandlers, store.RpcHandlers...)
+	}
+	tcpStore, ok := svc.Module.Ref(microservices.ToTransport(microservices.TCP)).(*microservices.Store)
+	if ok && tcpStore != nil {
+		subscribers = append(subscribers, tcpStore.Subscribers...)
+		rpcHandlers = append(rpcHandlers, tcpStore.RpcHandlers...)
+	}
+
+	if store == nil && tcpStore == nil {
+		panic("store required")
+	}
+
+	var rpcServer *rpc.Server
+	if len(rpcHandlers) > 0 {
+		gateway := &RpcGateway{
+			handlers: rpcHandlers,
+			service:  svc,
+		}
+		rpcServer = rpc.NewServer()
+		err := rpcServer.Register(gateway)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if len(subscribers) == 0 && len(rpcHandlers) == 0 {
+		log.Println("no subscribers or rpc handlers")
+		return
 	}
 
 	go http.Serve(listener, nil)
 	for {
-		conn, errr := listener.Accept()
-		if errr != nil {
-			panic(errr)
+		conn, err := listener.Accept()
+		if err != nil {
+			// Check if it's a closed network connection error
+			if strings.Contains(err.Error(), "use of closed network connection") {
+				return
+			}
+			panic(err)
 		}
-		go svc.handler(conn, store)
+
+		// Route based on what's available
+		if len(rpcHandlers) > 0 && len(subscribers) == 0 {
+			// RPC-only mode
+			go rpcServer.ServeConn(conn)
+		} else if len(subscribers) > 0 && len(rpcHandlers) == 0 {
+			// Pub/Sub-only mode
+			go svc.handler(conn, subscribers)
+		} else {
+			// Both available - need protocol multiplexing or separate ports
+			conn.Close()
+			panic("cannot serve both RPC and pub/sub on same connection without multiplexing")
+		}
 	}
 }
 
-func (svc *Server) handler(conn net.Conn, store *microservices.Store) {
+func (svc *Server) Close() error {
+	if svc.listener != nil {
+		return svc.listener.Close()
+	}
+	return nil
+}
+
+func (svc *Server) handler(conn net.Conn, subscribers []*microservices.SubscribeHandler) {
 	defer conn.Close()
 
 	reader := bufio.NewReader(conn)
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Println("Error reading message: ", err)
+			if err != io.EOF {
+				fmt.Println("Error reading message: ", err)
+			}
 			return
 		}
 
 		msg := microservices.DecodeMessage(svc, []byte(message))
-		if msg.Type == microservices.RPC {
-			svc.handlerRPC(store.GetRPC(), msg)
-		} else if msg.Type == microservices.PubSub {
-			svc.handlerPubSub(store.GetPubSub(), msg)
-		}
-	}
-}
-
-func (svc *Server) handlerRPC(handlers []*microservices.SubscribeHandler, msg microservices.Message) {
-	subscriber := common.Filter(handlers, func(e *microservices.SubscribeHandler) bool {
-		return e.Name == msg.Event
-	})
-	for _, sub := range subscriber {
-		sub.Handle(svc, msg)
+		svc.handlerPubSub(subscribers, msg)
 	}
 }
 
 func (svc *Server) handlerPubSub(handlers []*microservices.SubscribeHandler, msg microservices.Message) {
 	if msg.Event == "*" {
 		for _, sub := range handlers {
-			sub.Handle(svc, msg)
+			go sub.Handle(svc, msg)
 		}
 	} else if strings.ContainsAny(msg.Event, "*") {
 		prefix := strings.TrimSuffix(msg.Event, "*")
 		for _, sub := range handlers {
 			if strings.HasPrefix(string(sub.Name), prefix) {
-				sub.Handle(svc, msg)
+				go sub.Handle(svc, msg)
 			}
 		}
 	} else {
@@ -126,7 +157,7 @@ func (svc *Server) handlerPubSub(handlers []*microservices.SubscribeHandler, msg
 		})
 		if findEvent != -1 {
 			sub := handlers[findEvent]
-			sub.Handle(svc, msg)
+			go sub.Handle(svc, msg)
 		}
 	}
 }

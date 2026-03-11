@@ -16,6 +16,10 @@ lint:
 tidy:
 	go mod tidy -v
 
+.PHONY: test
+test:
+	go test -cover ./...
+
 .PHONY: coverage
 coverage:
 	go clean -testcache
