@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/rabbitmq/amqp091-go"
+	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
 type Options struct {
@@ -28,9 +28,11 @@ type Connect struct {
 func NewClient(opt Options) microservices.ClientProxy {
 	conn, err := amqp091.Dial(opt.Addr)
 	if err != nil {
+		fmt.Printf("Failed to connect to RabbitMQ: %v\n", err)
 		panic(err)
 	}
 
+	fmt.Printf("Connected to RabbitMQ at %s\n", opt.Addr)
 	connect := &Connect{
 		Context: context.Background(),
 		Conn:    conn,
@@ -53,7 +55,7 @@ func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
 	return c
 }
 
-func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
+func (c *Connect) Send(event string, data any, res any, headers ...microservices.Header) error {
 	defer c.Conn.Close()
 
 	ch, err := c.Conn.Channel()
@@ -82,7 +84,6 @@ func (c *Connect) Send(event string, data interface{}, headers ...microservices.
 	defer cancel()
 
 	body, err := microservices.EncodeMessage(c, microservices.Message{
-		Type:    microservices.RPC,
 		Event:   event,
 		Data:    data,
 		Headers: microservices.AssignHeader(c.config.Header, headers...),
@@ -137,7 +138,6 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 	defer cancel()
 
 	body, err := microservices.EncodeMessage(c, microservices.Message{
-		Type:    microservices.PubSub,
 		Event:   event,
 		Data:    data,
 		Headers: microservices.AssignHeader(c.config.Header, headers...),
@@ -199,6 +199,7 @@ func Open(opts ...Options) core.Service {
 				panic(err)
 			}
 			connect.Conn = conn
+			fmt.Printf("Connected to RabbitMQ at %s\n", opts[0].Addr)
 		}
 		if !reflect.ValueOf(opts[0].Config).IsZero() {
 			connect.config = microservices.ParseConfig(opts[0].Config)
@@ -237,20 +238,20 @@ func (c *Connect) Listen() {
 		panic(err)
 	}
 
-	q, err := ch.QueueDeclare(
-		"",    // name
-		false, // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // no-wait
-		nil,   // arguments
-	)
-	if err != nil {
-		panic(err)
-	}
+	if store.Subscribers != nil {
+		for _, sub := range store.Subscribers {
+			q, err := ch.QueueDeclare(
+				"",    // name
+				false, // durable
+				false, // delete when unused
+				true,  // exclusive
+				false, // no-wait
+				nil,   // arguments
+			)
+			if err != nil {
+				panic(err)
+			}
 
-	if store.GetRPC() != nil {
-		for _, sub := range store.GetRPC() {
 			err = ch.QueueBind(
 				q.Name,        // queue name
 				sub.Name,      // routing key
@@ -260,12 +261,23 @@ func (c *Connect) Listen() {
 			if err != nil {
 				panic(err)
 			}
-			go c.Handler(ch, q.Name, sub)
+			go c.HandlerPubSub(ch, q.Name, sub)
 		}
 	}
 
-	if store.GetPubSub() != nil {
-		for _, sub := range store.GetPubSub() {
+	if store.RpcHandlers != nil {
+		for _, sub := range store.RpcHandlers {
+			q, err := ch.QueueDeclare(
+				"",    // name
+				false, // durable
+				false, // delete when unused
+				true,  // exclusive
+				false, // no-wait
+				nil,   // arguments
+			)
+			if err != nil {
+				panic(err)
+			}
 			err = ch.QueueBind(
 				q.Name,        // queue name
 				sub.Name,      // routing key
@@ -275,12 +287,39 @@ func (c *Connect) Listen() {
 			if err != nil {
 				panic(err)
 			}
-			go c.Handler(ch, q.Name, sub)
+			go c.HandlerRPC(ch, q.Name, sub)
 		}
 	}
 }
 
-func (c *Connect) Handler(ch *amqp091.Channel, q string, sub *microservices.SubscribeHandler) {
+func (c *Connect) HandlerPubSub(ch *amqp091.Channel, q string, sub *microservices.SubscribeHandler) {
+	msgs, err := ch.Consume(
+		q,     // queue
+		"",    // consumer
+		true,  // auto-ack
+		false, // exclusive
+		false, // no-local
+		false, // no-wait
+		nil,   // args
+	)
+	if err != nil {
+		fmt.Printf("Error consuming messages: %v\n", err)
+		return
+	}
+	for d := range msgs {
+		message := microservices.DecodeMessage(c, d.Body)
+		fmt.Printf("Received message: %v for event %s\n", message.Data, message.Event)
+		if reflect.ValueOf(message).IsZero() {
+			sub.Handle(c, microservices.Message{
+				Bytes: d.Body,
+			})
+		} else {
+			sub.Handle(c, message)
+		}
+	}
+}
+
+func (c *Connect) HandlerRPC(ch *amqp091.Channel, q string, sub *microservices.RpcHandler) {
 	msgs, err := ch.Consume(
 		q,     // queue
 		"",    // consumer
@@ -295,12 +334,35 @@ func (c *Connect) Handler(ch *amqp091.Channel, q string, sub *microservices.Subs
 	}
 	for d := range msgs {
 		message := microservices.DecodeMessage(c, d.Body)
+		var ctx microservices.Ctx
 		if reflect.ValueOf(message).IsZero() {
-			sub.Handle(c, microservices.Message{
+			ctx = microservices.NewCtx(microservices.Message{
 				Data: d.Body,
-			})
+			}, c)
 		} else {
-			sub.Handle(c, message)
+			ctx = microservices.NewCtx(message, c)
+		}
+
+		reply, err := sub.Factory(ctx)
+		if err != nil {
+			ctx.ErrorHandler(err)
+			continue
+		}
+
+		if d.ReplyTo != "" {
+			err = ch.PublishWithContext(c.Context,
+				"",        // exchange
+				d.ReplyTo, // routing key
+				false,     // mandatory
+				false,     // immediate
+				amqp091.Publishing{
+					ContentType:   "application/json",
+					CorrelationId: d.CorrelationId,
+					Body:          reply,
+				})
+			if err != nil {
+				ctx.ErrorHandler(err)
+			}
 		}
 	}
 }

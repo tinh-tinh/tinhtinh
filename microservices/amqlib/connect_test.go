@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tinh-tinh/tinhtinh/microservices"
 	"github.com/tinh-tinh/tinhtinh/microservices/amqlib"
 	"github.com/tinh-tinh/tinhtinh/v2/core"
-	"github.com/tinh-tinh/tinhtinh/v2/microservices"
 )
 
 type Order struct {
@@ -39,11 +39,15 @@ func OrderApp() *core.App {
 	}
 
 	handlerService := func(module core.Module) core.Provider {
-		handler := microservices.NewHandler(module, core.ProviderOptions{})
+		handler := microservices.NewHandler(module)
 
 		orderService := module.Ref(ORDER).(*OrderService)
-		handler.OnResponse("order.created", func(ctx microservices.Ctx) error {
-			data := ctx.Payload(&Order{}).(*Order)
+		handler.OnEvent("order.created", func(ctx microservices.Ctx) error {
+			var order Order
+			if err := ctx.PayloadParser(&order); err != nil {
+				return err
+			}
+			data := &order
 
 			orderService.mutex.Lock()
 			if orderService.orders[data.ID] == nil {
@@ -92,12 +96,15 @@ func ProductApp(addr string) *core.App {
 		ctrl := module.NewController("products")
 
 		ctrl.Post("", func(ctx core.Ctx) error {
-			client := microservices.Inject(module)
+			client := microservices.InjectClient(module, "my-client")
 
-			client.Send("order.created", &Order{
+			err := client.Send("order.created", &Order{
 				ID:   "order1",
 				Name: "order1",
-			})
+			}, nil)
+			if err != nil {
+				return ctx.JSON(core.Map{"error": err.Error()})
+			}
 			return ctx.JSON(core.Map{
 				"data": []string{"product1", "product2"},
 			})
@@ -109,9 +116,12 @@ func ProductApp(addr string) *core.App {
 	appModule := func() core.Module {
 		module := core.NewModule(core.NewModuleOptions{
 			Imports: []core.Modules{
-				microservices.RegisterClient(amqlib.NewClient(amqlib.Options{
-					Addr: addr,
-				})),
+				microservices.RegisterClient(microservices.ClientOptions{
+					Name: "my-client",
+					Transport: amqlib.NewClient(amqlib.Options{
+						Addr: addr,
+					}),
+				}),
 			},
 			Controllers: []core.Controllers{controller},
 		})
@@ -154,13 +164,13 @@ func Test_Practice(t *testing.T) {
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	time.Sleep(1000 * time.Millisecond)
+	time.Sleep(2000 * time.Millisecond)
 
 	resp, err = testClientOrder.Get(testOrderServer.URL + "/order-api/orders")
 	require.Nil(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	// data, err = io.ReadAll(resp.Body)
-	// require.Nil(t, err)
-	// require.Equal(t, `{"data":{"order1":true}}`, string(data))
+	data, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	require.Equal(t, `{"data":{"order1":true}}`, string(data))
 }
