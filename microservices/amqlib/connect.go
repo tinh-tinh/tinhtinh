@@ -55,8 +55,8 @@ func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
 	return c
 }
 
-func (c *Connect) Send(event string, data interface{}, headers ...microservices.Header) error {
-	// defer c.Conn.Close()
+func (c *Connect) Send(event string, data any, res any, headers ...microservices.Header) error {
+	defer c.Conn.Close()
 
 	ch, err := c.Conn.Channel()
 	if err != nil {
@@ -84,7 +84,6 @@ func (c *Connect) Send(event string, data interface{}, headers ...microservices.
 	defer cancel()
 
 	body, err := microservices.EncodeMessage(c, microservices.Message{
-		Type:    microservices.RPC,
 		Event:   event,
 		Data:    data,
 		Headers: microservices.AssignHeader(c.config.Header, headers...),
@@ -139,7 +138,6 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 	defer cancel()
 
 	body, err := microservices.EncodeMessage(c, microservices.Message{
-		Type:    microservices.PubSub,
 		Event:   event,
 		Data:    data,
 		Headers: microservices.AssignHeader(c.config.Header, headers...),
@@ -240,20 +238,20 @@ func (c *Connect) Listen() {
 		panic(err)
 	}
 
-	q, err := ch.QueueDeclare(
-		"",    // name
-		false, // durable
-		false, // delete when unused
-		true,  // exclusive
-		false, // no-wait
-		nil,   // arguments
-	)
-	if err != nil {
-		panic(err)
-	}
+	if store.Subscribers != nil {
+		for _, sub := range store.Subscribers {
+			q, err := ch.QueueDeclare(
+				"",    // name
+				false, // durable
+				false, // delete when unused
+				true,  // exclusive
+				false, // no-wait
+				nil,   // arguments
+			)
+			if err != nil {
+				panic(err)
+			}
 
-	if store.GetRPC() != nil {
-		for _, sub := range store.GetRPC() {
 			err = ch.QueueBind(
 				q.Name,        // queue name
 				sub.Name,      // routing key
@@ -263,11 +261,23 @@ func (c *Connect) Listen() {
 			if err != nil {
 				panic(err)
 			}
+			go c.HandlerPubSub(ch, q.Name, sub)
 		}
 	}
 
-	if store.GetPubSub() != nil {
-		for _, sub := range store.GetPubSub() {
+	if store.RpcHandlers != nil {
+		for _, sub := range store.RpcHandlers {
+			q, err := ch.QueueDeclare(
+				"",    // name
+				false, // durable
+				false, // delete when unused
+				true,  // exclusive
+				false, // no-wait
+				nil,   // arguments
+			)
+			if err != nil {
+				panic(err)
+			}
 			err = ch.QueueBind(
 				q.Name,        // queue name
 				sub.Name,      // routing key
@@ -277,13 +287,12 @@ func (c *Connect) Listen() {
 			if err != nil {
 				panic(err)
 			}
+			go c.HandlerRPC(ch, q.Name, sub)
 		}
 	}
-	subscribers := append(store.GetRPC(), store.GetPubSub()...)
-	c.Handler(ch, q.Name, subscribers)
 }
 
-func (c *Connect) Handler(ch *amqp091.Channel, q string, subscribers []*microservices.SubscribeHandler) {
+func (c *Connect) HandlerPubSub(ch *amqp091.Channel, q string, sub *microservices.SubscribeHandler) {
 	msgs, err := ch.Consume(
 		q,     // queue
 		"",    // consumer
@@ -300,13 +309,6 @@ func (c *Connect) Handler(ch *amqp091.Channel, q string, subscribers []*microser
 	for d := range msgs {
 		message := microservices.DecodeMessage(c, d.Body)
 		fmt.Printf("Received message: %v for event %s\n", message.Data, message.Event)
-		sub, ok := Find(subscribers, func(sub *microservices.SubscribeHandler) bool {
-			return sub.Name == message.Event
-		})
-		if !ok {
-			fmt.Printf("No subscriber found for event %s\n", message.Event)
-			continue
-		}
 		if reflect.ValueOf(message).IsZero() {
 			sub.Handle(c, microservices.Message{
 				Bytes: d.Body,
@@ -317,12 +319,50 @@ func (c *Connect) Handler(ch *amqp091.Channel, q string, subscribers []*microser
 	}
 }
 
-func Find[T any](list []T, match func(T) bool) (T, bool) {
-	var zero T
-	for _, item := range list {
-		if match(item) {
-			return item, true
+func (c *Connect) HandlerRPC(ch *amqp091.Channel, q string, sub *microservices.RpcHandler) {
+	msgs, err := ch.Consume(
+		q,     // queue
+		"",    // consumer
+		true,  // auto-ack
+		false, // exclusive
+		false, // no-local
+		false, // no-wait
+		nil,   // args
+	)
+	if err != nil {
+		return
+	}
+	for d := range msgs {
+		message := microservices.DecodeMessage(c, d.Body)
+		var ctx microservices.Ctx
+		if reflect.ValueOf(message).IsZero() {
+			ctx = microservices.NewCtx(microservices.Message{
+				Data: d.Body,
+			}, c)
+		} else {
+			ctx = microservices.NewCtx(message, c)
+		}
+
+		reply, err := sub.Factory(ctx)
+		if err != nil {
+			ctx.ErrorHandler(err)
+			continue
+		}
+
+		if d.ReplyTo != "" {
+			err = ch.PublishWithContext(c.Context,
+				"",        // exchange
+				d.ReplyTo, // routing key
+				false,     // mandatory
+				false,     // immediate
+				amqp091.Publishing{
+					ContentType:   "application/json",
+					CorrelationId: d.CorrelationId,
+					Body:          reply,
+				})
+			if err != nil {
+				ctx.ErrorHandler(err)
+			}
 		}
 	}
-	return zero, false
 }

@@ -5,8 +5,8 @@ go 1.24.1
 require (
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/stretchr/testify v1.10.0
-	github.com/tinh-tinh/tinhtinh/microservices v1.0.0
-	github.com/tinh-tinh/tinhtinh/v2 v2.2.0
+	github.com/tinh-tinh/tinhtinh/microservices v1.5.0
+	github.com/tinh-tinh/tinhtinh/v2 v2.5.1
 )
 
 require (
@@ -16,4 +16,5 @@ require (
 )
 
 replace github.com/tinh-tinh/tinhtinh/v2 => ../../
+
 replace github.com/tinh-tinh/tinhtinh/microservices => ../
