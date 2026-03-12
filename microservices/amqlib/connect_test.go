@@ -98,7 +98,7 @@ func ProductApp(addr string) *core.App {
 		ctrl.Post("", func(ctx core.Ctx) error {
 			client := microservices.InjectClient(module, "my-client")
 
-			err := client.Send("order.created", &Order{
+			err := client.Publish("order.created", &Order{
 				ID:   "order1",
 				Name: "order1",
 			}, nil)
