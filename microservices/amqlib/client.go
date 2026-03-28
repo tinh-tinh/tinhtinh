@@ -41,8 +41,6 @@ func (c *Connect) Timeout(duration time.Duration) microservices.ClientProxy {
 }
 
 func (c *Connect) Send(event string, data any, res any, headers ...microservices.Header) error {
-	defer c.Conn.Close()
-
 	ch, err := c.Conn.Channel()
 	if err != nil {
 		return err
@@ -66,10 +64,10 @@ func (c *Connect) Send(event string, data any, res any, headers ...microservices
 		return err
 	}
 	err = ch.PublishWithContext(ctx,
-		"",           // exchange
-		"rpc_queue",  // routing key
-		false,         // mandatory
-		false,         // immediate
+		"",          // exchange
+		"rpc_queue", // routing key
+		false,       // mandatory
+		false,       // immediate
 		amqp091.Publishing{
 			ContentType: "text/plain",
 			Body:        body,
@@ -84,8 +82,6 @@ func (c *Connect) Send(event string, data any, res any, headers ...microservices
 }
 
 func (c *Connect) Publish(event string, data interface{}, headers ...microservices.Header) error {
-	defer c.Conn.Close()
-
 	ch, err := c.Conn.Channel()
 	if err != nil {
 		return err
@@ -93,13 +89,13 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 	defer ch.Close()
 
 	err = ch.ExchangeDeclare(
-		"logs",        // name
-		"fanout",      // type
-		true,          // durable
-		false,         // auto-deleted
-		false,         // internal
-		false,         // no-wait
-		nil,           // arguments
+		"logs",   // name
+		"fanout", // type
+		true,     // durable
+		false,    // auto-deleted
+		false,    // internal
+		false,    // no-wait
+		nil,      // arguments
 	)
 	if err != nil {
 		return err
@@ -120,10 +116,10 @@ func (c *Connect) Publish(event string, data interface{}, headers ...microservic
 		return err
 	}
 	err = ch.PublishWithContext(ctx,
-		"logs",        // exchange
-		"",            // routing key
-		false,         // mandatory
-		false,         // immediate
+		"logs", // exchange
+		"",     // routing key
+		false,  // mandatory
+		false,  // immediate
 		amqp091.Publishing{
 			ContentType: "text/plain",
 			Body:        body,
